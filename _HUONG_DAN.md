@@ -13,6 +13,19 @@ tự research → design → code → test → review, và **ghi thẳng kết q
    `genius-debug` (5 tools) phải có **chấm xanh + gạt bật**.
 3. Có mạng (agy/gemini + codex + claude gọi qua CLI local).
 4. Gõ thử `/` trong chat → thấy `genius` trong danh sách là OK.
+5. **2 env bắt buộc bật** (đã kiểm chứng qua lần chạy thử 14/07): mở
+   `~/.gemini/config/mcp_config.json`, trong server `genius` → mục `"env"` thêm:
+   ```json
+   "GENIUS_PROJECT_GATE": "1",
+   "GENIUS_CLI_TIMEOUT": "1800"
+   ```
+   - `GENIUS_PROJECT_GATE=1`: sau khi code xong, Genius chạy **thật**
+     `npm install/test/lint/build` của sản phẩm (project Node/Next.js) và
+     **chặn job báo "hoàn thành ảo"** khi test/lint/build đỏ — lần chạy thử
+     chính nhờ gate này mà bắt được 3 lỗi thật.
+   - `GENIUS_CLI_TIMEOUT=1800`: call model chậm có 30 phút thay vì 10 —
+     tránh job chết oan giữa stage code (đã xảy ra ở lần thử đầu).
+   Sửa xong: tắt/bật lại server `genius` trong Customizations → MCP.
 
 > Không cần tự bật server nào. Lần build đầu tiên Genius **tự khởi động** các
 > skill server (mất thêm ~30–45s) — cứ để nó chạy.
@@ -64,6 +77,9 @@ Ngay trong folder này sau khi build:
 - **Code dự án** + thư mục `tests/`
 - `research.md`, `design.md`, `plan.md`, `review.md`, `audit.md`, `deploy.md`
   (Genius tự tạo — chính là "hồ sơ quá trình", nộp kèm rất hợp cho cuộc thi AI)
+- Trong `review.md` chú ý 3 mục: **Verification coverage** (file nào được chạy
+  test thật), **Project gates** (kết quả npm test/lint/build) và
+  **Release readiness** (`release-ready: YES/NO` — YES mới đáng nộp).
 - File hướng dẫn này (`_HUONG_DAN.md`) và `.agents/` **không bị đụng tới**.
 
 ---
