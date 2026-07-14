@@ -1,0 +1,23 @@
+# Dependencies
+/node_modules
+
+# Next.js build output
+/.next
+/out
+
+# Local SQLite database (Prisma datasource url = "file:./dev.db")
+/prisma/dev.db
+/prisma/dev.db-journal
+
+# Logs
+*.log
+
+# macOS finder metadata
+.DS_Store
+
+# Environment files — ignored defensively; this app hardcodes its Prisma
+# datasource url in schema.prisma and creates no .env file.
+.env*
+# SQLite sidecar files (WAL mode)
+/prisma/dev.db-wal
+/prisma/dev.db-shm

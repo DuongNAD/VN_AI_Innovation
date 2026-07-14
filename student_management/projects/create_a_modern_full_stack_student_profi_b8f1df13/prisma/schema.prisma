@@ -1,0 +1,28 @@
+// Prisma schema for the Student Profile System.
+//
+// The SQLite datasource url is a hardcoded literal ("file:./dev.db"), NOT an
+// env() reference, so no .env file needs to be created, read, or parsed.
+// Running `npx prisma db push` creates prisma/dev.db with the Student table.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// A single student record. `studentId` carries a DB-level @unique constraint,
+// which is the guarantee behind the API's 409 duplicate contract. `email` is
+// intentionally NOT unique (multiple students may share a contact address).
+model Student {
+  id        Int      @id @default(autoincrement())
+  studentId String   @unique
+  fullName  String
+  email     String
+  major     String
+  gpa       Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

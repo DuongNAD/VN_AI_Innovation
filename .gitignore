@@ -1,0 +1,12 @@
+# Genius pipeline internals (raw traces, logs, generated-test scratch, venvs)
+.genius/
+**/.genius/
+
+# Node / Next.js (per-project .gitignore also applies)
+node_modules/
+.next/
+
+# SQLite sidecars & OS noise
+*.db-wal
+*.db-shm
+.DS_Store
