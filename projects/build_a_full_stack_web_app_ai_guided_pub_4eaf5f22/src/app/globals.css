@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    line-height: 1.6;
+  }
+
+  /* Strong focus-visible outline for accessibility */
+  :focus-visible {
+    outline: 3px solid #d97706;
+    outline-offset: 2px;
+  }
+
+  /* Minimum 44px tap targets on buttons and inputs */
+  button,
+  input,
+  select,
+  textarea {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@layer components {
+  /* Button class with large padding, rounded-lg, and font-semibold */
+  .btn {
+    @apply px-6 py-3 rounded-lg font-semibold inline-flex items-center justify-center transition-all duration-200;
+  }
+
+  /* Card class: white, rounded-xl, shadow-sm, p-5 */
+  .card {
+    @apply bg-white rounded-xl shadow-sm p-5;
+  }
+
+  /* Badge-eco class: amber pill, labeled 'Chế độ tiết kiệm' if empty */
+  .badge-eco {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200;
+  }
+
+  .badge-eco:empty::before {
+    content: "Chế độ tiết kiệm";
+  }
+}

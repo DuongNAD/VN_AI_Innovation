@@ -16,6 +16,15 @@ the folder, use its new absolute path). That makes the built files — code,
 `tests/`, and the `research/design/review/audit/deploy` reports — land RIGHT
 HERE so they are ready to submit. Never leave this folder to build.
 
+**NEVER call `genius_code` to CREATE a new project.** `genius_code` (and
+`gdbg_code`) are single-file DEBUG tools that scan the MCP server's working
+directory and return ONE file — not a project with `tests/`, Docker, README.
+A new build ALWAYS goes through `genius_orchestrate` (BUILD steps below).
+Besides skipping the pipeline, `genius_code` on a build request hangs when the
+MCP server was launched with no working directory — it tries to scan the whole
+disk. (The server now refuses that scan with a clear error instead of hanging,
+but the right tool for a build is still `genius_orchestrate`.)
+
 **MODE SELECTION:**
 - **BUILD** — the message describes something NEW to create → steps 1–6.
 - **DEBUG** — the message reports that something ALREADY BUILT is wrong (a
@@ -24,6 +33,10 @@ HERE so they are ready to submit. Never leave this folder to build.
   re-orchestrate; use the DEBUG LOOP at the bottom.
 
 BUILD steps:
+
+0. PREFLIGHT: call `genius_doctor` first. If it reports any role with no working
+   backend (NOT READY), show the user the failing line and STOP — do not start a
+   run that will die deep inside a stage. Otherwise continue.
 
 1. REWRITE the user's request (any language) into the Genius **golden prompt**
    (English) before submitting — unless it already follows this shape:

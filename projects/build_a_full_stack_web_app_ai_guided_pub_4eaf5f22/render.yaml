@@ -1,0 +1,29 @@
+databases:
+  - name: psp-db
+    plan: free
+
+services:
+  - type: web
+    name: psp-assistant
+    runtime: docker
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: psp-db
+          property: connectionString
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: AI_PROVIDER
+        value: openai
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: TRUST_PROXY
+        value: "1"
+      - key: SESSION_TTL_HOURS
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "120"

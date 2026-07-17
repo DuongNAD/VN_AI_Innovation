@@ -10,3 +10,8 @@ node_modules/
 *.db-wal
 *.db-shm
 .DS_Store
+
+# pipeline state & archives (local only)
+*.bak
+job.json
+.agents/CURRENT_PROG.md

@@ -1,0 +1,38 @@
+{
+  "name": "ai-public-service-assistant",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts",
+    "test": "vitest run",
+    "test:unit": "vitest run --exclude tests/integration/**",
+    "postinstall": "prisma generate"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5",
+    "music-metadata": "^10",
+    "next": "^14",
+    "react": "^18",
+    "react-dom": "^18",
+    "safe-regex2": "^4",
+    "tsx": "^4"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10",
+    "postcss": "^8",
+    "prisma": "^5",
+    "tailwindcss": "^3",
+    "typescript": "^5",
+    "vitest": "^1"
+  }
+}

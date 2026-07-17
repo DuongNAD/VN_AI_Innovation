@@ -1,0 +1,1619 @@
+openapi: 3.0.3
+info:
+  title: AI Public Service Assistant API
+  version: 1.0.0
+  description: |
+    The API contract served at /api/openapi for the Vietnamese public-service assistant.
+    Limitation: This contract is kept in sync manually with the implementation served at src/app/api/openapi/route.ts.
+    Global rule: JSON request bodies over 1 MiB are rejected with a 413 PAYLOAD_TOO_LARGE error.
+servers:
+  - url: /api/v1
+paths:
+  /procedures/search:
+    post:
+      summary: Search procedures by user query
+      description: Search procedures by user query.
+      operationId: searchProcedures
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  maxLength: 1000
+                province:
+                  type: string
+                  maxLength: 100
+      responses:
+        '200':
+          description: Search results returned successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - procedure
+                  - confidence
+                  - matchedBy
+                  - province
+                  - aiMode
+                  - degraded
+                properties:
+                  procedure:
+                    $ref: '#/components/schemas/ProcedureDto'
+                  confidence:
+                    type: number
+                  matchedBy:
+                    type: string
+                    enum: [keyword, llm]
+                  province:
+                    type: string
+                    nullable: true
+                  aiMode:
+                    type: string
+                  degraded:
+                    type: boolean
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /guided-intake/start:
+    post:
+      summary: Start a guided-intake session
+      description: |
+        Start a guided-intake session. The accessToken is a bearer credential, its responses are never cacheable, and it must never be written to logs.
+      operationId: startGuidedIntake
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - procedureCode
+              properties:
+                procedureCode:
+                  $ref: '#/components/schemas/Code'
+                presetAnswers:
+                  type: object
+                  maxProperties: 100
+                  additionalProperties:
+                    $ref: '#/components/schemas/FieldValue'
+                  description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+                intentMessage:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '201':
+          description: Intake session started successfully
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum: [no-store]
+              description: prevents any cache from retaining the session credential
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum: [no-cache]
+              description: HTTP/1.0 intermediary equivalent
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - sessionId
+                  - accessToken
+                  - procedure
+                  - done
+                  - question
+                  - progress
+                  - disclaimer
+                properties:
+                  sessionId:
+                    $ref: '#/components/schemas/OpaqueId'
+                  accessToken:
+                    type: string
+                  procedure:
+                    type: object
+                    additionalProperties: false
+                    required:
+                      - code
+                      - name
+                    properties:
+                      code:
+                        $ref: '#/components/schemas/Code'
+                      name:
+                        type: string
+                  done:
+                    type: boolean
+                  question:
+                    $ref: '#/components/schemas/QuestionRow'
+                    nullable: true
+                  progress:
+                    type: object
+                    additionalProperties: false
+                    required:
+                      - answered
+                      - total
+                    properties:
+                      answered:
+                        type: integer
+                      total:
+                        type: integer
+                  disclaimer:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /guided-intake/{sessionId}/answer:
+    post:
+      summary: Record an answer and return the next question
+      description: Record one answer and return the next question. The presented SessionToken must be bound to the sessionId specified in the path.
+      operationId: answerQuestion
+      security:
+        - SessionToken: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/OpaqueId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - questionCode
+                - value
+              properties:
+                questionCode:
+                  $ref: '#/components/schemas/Code'
+                value:
+                  $ref: '#/components/schemas/FieldValue'
+                messageId:
+                  $ref: '#/components/schemas/OpaqueId'
+      responses:
+        '200':
+          description: Answer recorded successfully
+          headers:
+            X-Idempotent-Replay:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - done
+                  - question
+                  - progress
+                  - removedAnswers
+                properties:
+                  done:
+                    type: boolean
+                  question:
+                    $ref: '#/components/schemas/QuestionRow'
+                    nullable: true
+                  progress:
+                    type: object
+                    additionalProperties: false
+                    required:
+                      - answered
+                      - total
+                    properties:
+                      answered:
+                        type: integer
+                      total:
+                        type: integer
+                  removedAnswers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Code'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/OwnershipMismatch'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ConcurrentUpdate'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /guided-intake/{sessionId}/guidance:
+    get:
+      summary: Retrieve the guidance document checklist and steps
+      description: Retrieve the guidance document checklist and steps. The presented SessionToken must be bound to the sessionId specified in the path.
+      operationId: getGuidance
+      security:
+        - SessionToken: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/OpaqueId'
+      responses:
+        '200':
+          description: Grounded guidance compiled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - procedure
+                  - checklist
+                  - steps
+                  - durationText
+                  - feesText
+                  - disclaimer
+                  - formAvailable
+                  - meta
+                properties:
+                  procedure:
+                    type: object
+                    additionalProperties: false
+                    required:
+                      - code
+                      - name
+                      - agency
+                      - sourceUrl
+                      - version
+                      - lastCheckedAt
+                      - legalBasisText
+                    properties:
+                      code:
+                        $ref: '#/components/schemas/Code'
+                      name:
+                        type: string
+                      agency:
+                        type: string
+                      sourceUrl:
+                        $ref: '#/components/schemas/SourceUrl'
+                      version:
+                        $ref: '#/components/schemas/VersionTag'
+                      lastCheckedAt:
+                        type: string
+                        format: date-time
+                      legalBasisText:
+                        type: string
+                        nullable: true
+                  checklist:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DocumentRow'
+                  steps:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StepDto'
+                  durationText:
+                    type: string
+                  feesText:
+                    type: string
+                  disclaimer:
+                    type: string
+                  formAvailable:
+                    type: boolean
+                  meta:
+                    type: object
+                    additionalProperties: false
+                    required:
+                      - cached
+                    properties:
+                      cached:
+                        type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/OwnershipMismatch'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /forms/{formCode}/active:
+    get:
+      summary: Retrieve the active form structure
+      description: Retrieve the active form structure.
+      operationId: getActiveForm
+      security: []
+      parameters:
+        - name: formCode
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Code'
+      responses:
+        '200':
+          description: Active form details
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - formCode
+                  - version
+                  - effectiveFrom
+                  - fields
+                properties:
+                  formCode:
+                    $ref: '#/components/schemas/Code'
+                  version:
+                    $ref: '#/components/schemas/VersionTag'
+                  effectiveFrom:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  fields:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FieldDef'
+        '403':
+          $ref: '#/components/responses/VersionNotAccessible'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /forms/{formCode}/validate:
+    post:
+      summary: Validate form data and explain issues
+      description: Validate form data and explain issues.
+      operationId: validateForm
+      security:
+        - SessionToken: []
+      parameters:
+        - name: formCode
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Code'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - formVersion
+                - data
+              properties:
+                formVersion:
+                  $ref: '#/components/schemas/VersionTag'
+                data:
+                  type: object
+                  maxProperties: 300
+                  additionalProperties:
+                    $ref: '#/components/schemas/FieldValue'
+                  description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - valid
+                  - errors
+                  - formCode
+                  - formVersion
+                  - aiMode
+                  - degraded
+                properties:
+                  valid:
+                    type: boolean
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ValidationErrorItem'
+                  aiExplanation:
+                    type: string
+                  formCode:
+                    $ref: '#/components/schemas/Code'
+                  formVersion:
+                    $ref: '#/components/schemas/VersionTag'
+                  aiMode:
+                    type: string
+                  degraded:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/VersionNotAccessible'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /applications:
+    post:
+      summary: Create a new application
+      description: Create a new application. The presented SessionToken must be bound to the sessionId specified in the request body.
+      operationId: createApplication
+      security:
+        - SessionToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - sessionId
+              properties:
+                sessionId:
+                  $ref: '#/components/schemas/OpaqueId'
+                messageId:
+                  $ref: '#/components/schemas/OpaqueId'
+      responses:
+        '201':
+          description: Application draft created successfully
+          headers:
+            X-Idempotent-Replay:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - applicationId
+                  - formCode
+                  - formVersion
+                  - status
+                  - data
+                  - revision
+                properties:
+                  applicationId:
+                    $ref: '#/components/schemas/OpaqueId'
+                  formCode:
+                    $ref: '#/components/schemas/Code'
+                  formVersion:
+                    $ref: '#/components/schemas/VersionTag'
+                  status:
+                    type: string
+                    enum: [DRAFT]
+                  data:
+                    type: object
+                    maxProperties: 300
+                    additionalProperties:
+                      $ref: '#/components/schemas/FieldValue'
+                    description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+                  revision:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/OwnershipMismatch'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /applications/{id}:
+    get:
+      summary: Read application details
+      description: Read application details. The presented SessionToken must be bound to the application id specified in the path.
+      operationId: getApplication
+      security:
+        - SessionToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/OpaqueId'
+      responses:
+        '200':
+          description: Application details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - applicationId
+                  - formCode
+                  - formVersion
+                  - status
+                  - data
+                  - revision
+                  - fields
+                  - rules
+                  - updateAvailable
+                  - procedure
+                properties:
+                  applicationId:
+                    $ref: '#/components/schemas/OpaqueId'
+                  formCode:
+                    $ref: '#/components/schemas/Code'
+                  formVersion:
+                    $ref: '#/components/schemas/VersionTag'
+                  status:
+                    type: string
+                  data:
+                    type: object
+                    maxProperties: 300
+                    additionalProperties:
+                      $ref: '#/components/schemas/FieldValue'
+                    description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+                  revision:
+                    type: integer
+                  fields:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FieldDef'
+                  rules:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RuleDef'
+                  updateAvailable:
+                    type: boolean
+                  newVersion:
+                    $ref: '#/components/schemas/VersionTag'
+                  procedure:
+                    type: object
+                    additionalProperties: false
+                    required:
+                      - name
+                      - sourceUrl
+                      - lastCheckedAt
+                    properties:
+                      name:
+                        type: string
+                      sourceUrl:
+                        $ref: '#/components/schemas/SourceUrl'
+                      lastCheckedAt:
+                        type: string
+                        format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/OwnershipMismatch'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+    put:
+      summary: Save application form data with optimistic lock check
+      description: Save application form data with optimistic lock check. The presented SessionToken must be bound to the application id specified in the path.
+      operationId: updateApplication
+      security:
+        - SessionToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/OpaqueId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - data
+                - revision
+              properties:
+                data:
+                  type: object
+                  maxProperties: 300
+                  additionalProperties:
+                    $ref: '#/components/schemas/FieldValue'
+                  description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+                revision:
+                  type: integer
+      responses:
+        '200':
+          description: Application saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - applicationId
+                  - formCode
+                  - formVersion
+                  - status
+                  - data
+                  - revision
+                properties:
+                  applicationId:
+                    $ref: '#/components/schemas/OpaqueId'
+                  formCode:
+                    $ref: '#/components/schemas/Code'
+                  formVersion:
+                    $ref: '#/components/schemas/VersionTag'
+                  status:
+                    type: string
+                  data:
+                    type: object
+                    maxProperties: 300
+                    additionalProperties:
+                      $ref: '#/components/schemas/FieldValue'
+                    description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+                  revision:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/OwnershipMismatch'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ConcurrentUpdate'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /applications/{id}/migrate:
+    post:
+      summary: Migrate application to the newer active form version
+      description: Migrate application to the newer active form version. The presented SessionToken must be bound to the application id specified in the path.
+      operationId: migrateApplication
+      security:
+        - SessionToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/OpaqueId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                confirm:
+                  type: boolean
+                resolutions:
+                  type: object
+                  maxProperties: 100
+                  additionalProperties:
+                    $ref: '#/components/schemas/Code'
+                  description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+      responses:
+        '200':
+          description: Successful migration response (preview or committed)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/MigrationPreviewResponse'
+                  - $ref: '#/components/schemas/MigrationCommitResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/OwnershipMismatch'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: No newer active form version available, or concurrent update conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /speech/transcribe:
+    post:
+      summary: Transcribe audio speech to Vietnamese text
+      description: Transcribe audio speech to Vietnamese text.
+      operationId: transcribeSpeech
+      security:
+        - SessionToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - audio
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                  maxLength: 10485760
+                  description: "maximum 10 MiB and 60 seconds of audio; accepted types audio/webm, audio/ogg, audio/wav, audio/mpeg; servers MUST enforce the byte cap while streaming (rejecting before buffering or forwarding) and MUST verify MIME type, magic-byte signature, duration, and codec server-side."
+      responses:
+        '200':
+          description: Transcription results returned successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - text
+                  - model
+                  - audioSeconds
+                  - language
+                  - aiMode
+                  - degraded
+                properties:
+                  text:
+                    type: string
+                  model:
+                    type: string
+                  audioSeconds:
+                    type: number
+                  language:
+                    type: string
+                    enum: [vi]
+                  aiMode:
+                    type: string
+                  degraded:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /speech/synthesize:
+    post:
+      summary: Synthesize Vietnamese text to audio speech
+      description: Synthesize Vietnamese text to audio speech.
+      operationId: synthesizeSpeech
+      security:
+        - SessionToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  maxLength: 5000
+                voice:
+                  type: string
+                  enum: [vi-female, vi-male]
+                  default: vi-female
+                speed:
+                  type: number
+                  minimum: 0.5
+                  maximum: 2.0
+                  default: 1.0
+                language:
+                  type: string
+                  enum: [vi]
+                  default: vi
+      responses:
+        '200':
+          description: Binary audio payload
+          headers:
+            Content-Type:
+              schema:
+                type: string
+              description: Audio mime type (e.g. audio/wav)
+            X-Cache-Hit:
+              schema:
+                type: string
+            X-Model:
+              schema:
+                type: string
+            X-Degraded:
+              schema:
+                type: string
+          content:
+            audio/*:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /admin/change-requests:
+    get:
+      summary: List change requests for admin review
+      description: List change requests for admin review.
+      operationId: listChangeRequests
+      security:
+        - AdminToken: []
+      responses:
+        '200':
+          description: List of change requests
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - changeRequests
+                properties:
+                  changeRequests:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChangeRequestDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /admin/change-requests/{id}/approve:
+    post:
+      summary: Approve and activate a change request
+      description: Approve and activate a change request.
+      operationId: approveChangeRequest
+      security:
+        - AdminToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/OpaqueId'
+      responses:
+        '200':
+          description: Change request approved and form version activated
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - changeRequestId
+                  - status
+                  - formCode
+                  - activatedVersion
+                  - closedVersion
+                  - effectiveFrom
+                properties:
+                  changeRequestId:
+                    $ref: '#/components/schemas/OpaqueId'
+                  status:
+                    type: string
+                    enum: [APPROVED]
+                  formCode:
+                    $ref: '#/components/schemas/Code'
+                  activatedVersion:
+                    $ref: '#/components/schemas/VersionTag'
+                  closedVersion:
+                    type: string
+                    nullable: true
+                  effectiveFrom:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Change request already processed or concurrent update conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /admin/overview:
+    get:
+      summary: Retrieve procedure catalog and usage stats summary
+      description: Retrieve procedure catalog and usage stats summary.
+      operationId: getAdminOverview
+      security:
+        - AdminToken: []
+      responses:
+        '200':
+          description: Overview data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - procedures
+                  - usage
+                properties:
+                  procedures:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CatalogOverviewItem'
+                  usage:
+                    $ref: '#/components/schemas/UsageSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+components:
+  securitySchemes:
+    SessionToken:
+      type: apiKey
+      in: header
+      name: X-Session-Token
+      description: "the token is an opaque capability minted by POST /guided-intake/start, bound to exactly one intake session and to the applications created from it; for every operation referencing a sessionId or application id — in the path OR in the request body (e.g., sessionId inside POST /applications) — the server MUST verify that the referenced object is bound to the presented token before any other processing; possession of a valid token never suffices and identifier existence never implies authorization; on mismatch respond 403 with ErrorEnvelope code OWNERSHIP_MISMATCH."
+    AdminToken:
+      type: apiKey
+      in: header
+      name: X-Admin-Token
+      description: "grants access to /admin/* operations only and is never a substitute for SessionToken."
+
+  schemas:
+    Code:
+      type: string
+      minLength: 1
+      maxLength: 64
+      pattern: '^[A-Za-z][A-Za-z0-9_-]{0,63}$'
+      description: "Code identifier. Non-conforming values are rejected with 400 VALIDATION_ERROR."
+
+    OpaqueId:
+      type: string
+      minLength: 1
+      maxLength: 64
+      pattern: '^[A-Za-z0-9_-]{1,64}$'
+      description: "Opaque database identifier. Non-conforming values are rejected with 400 VALIDATION_ERROR."
+
+    VersionTag:
+      type: string
+      minLength: 1
+      maxLength: 32
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$'
+      description: "Version tag identifier. Non-conforming values are rejected with 400 VALIDATION_ERROR."
+
+    FieldValue:
+      description: "Caps nesting depth structurally. Holds dynamic, validation-engine compliant value types."
+      oneOf:
+        - type: string
+          maxLength: 10000
+        - type: number
+        - type: boolean
+        - type: array
+          maxItems: 100
+          items:
+            oneOf:
+              - type: string
+                maxLength: 10000
+              - type: number
+              - type: boolean
+
+    SourceUrl:
+      type: string
+      format: uri
+      pattern: '^https://'
+      maxLength: 2048
+      description: "URLs are validated against a government-domain allowlist when regulation data is ingested."
+
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+
+    ProcedureDto:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - name
+        - sector
+        - agency
+        - sourceUrl
+        - version
+        - lastCheckedAt
+      properties:
+        code:
+          $ref: '#/components/schemas/Code'
+        name:
+          type: string
+        sector:
+          type: string
+        agency:
+          type: string
+        sourceUrl:
+          $ref: '#/components/schemas/SourceUrl'
+        version:
+          $ref: '#/components/schemas/VersionTag'
+        lastCheckedAt:
+          type: string
+          format: date-time
+
+    QuestionRow:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - orderNumber
+        - fieldType
+        - options
+        - condition
+        - questionText
+      properties:
+        code:
+          $ref: '#/components/schemas/Code'
+        orderNumber:
+          type: integer
+        fieldType:
+          type: string
+          enum: [radio, select, text, province]
+        options:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - value
+              - label
+            properties:
+              value:
+                $ref: '#/components/schemas/FieldValue'
+              label:
+                type: string
+          nullable: true
+        condition:
+          $ref: '#/components/schemas/ConditionDef'
+          nullable: true
+        questionText:
+          type: string
+
+    ConditionDef:
+      type: object
+      additionalProperties: false
+      required:
+        - field
+        - operator
+      properties:
+        field:
+          $ref: '#/components/schemas/Code'
+        operator:
+          type: string
+          enum: [equals, not_equals, in, greater_than, less_than, is_empty, not_empty]
+        value:
+          $ref: '#/components/schemas/FieldValue'
+
+    DocumentRow:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - name
+        - originals
+        - copies
+        - submissionType
+      properties:
+        code:
+          $ref: '#/components/schemas/Code'
+        name:
+          type: string
+        originals:
+          type: integer
+        copies:
+          type: integer
+        submissionType:
+          type: string
+          enum: [SUBMIT, PRESENT, SYSTEM_LOOKUP]
+        reason:
+          type: string
+          nullable: true
+
+    StepDto:
+      type: object
+      additionalProperties: false
+      required:
+        - order
+        - title
+        - description
+        - example
+      properties:
+        order:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        example:
+          type: string
+
+    FieldDef:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - label
+      properties:
+        id:
+          $ref: '#/components/schemas/Code'
+        type:
+          type: string
+          enum: [text, textarea, number, date, select, radio, checkbox, file, province]
+        label:
+          type: string
+        required:
+          type: boolean
+        options:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - value
+              - label
+            properties:
+              value:
+                $ref: '#/components/schemas/FieldValue'
+              label:
+                type: string
+        visibleWhen:
+          $ref: '#/components/schemas/ConditionDef'
+        placeholder:
+          type: string
+
+    RuleDef:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - params
+        - message
+        - suggestion
+        - severity
+        - orderNumber
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [required, regex, date_not_future, date_after, number_range, conditional_required, cross_field_conflict, conditional_document]
+        fieldId:
+          $ref: '#/components/schemas/Code'
+        params:
+          type: object
+          maxProperties: 100
+          additionalProperties:
+            $ref: '#/components/schemas/FieldValue'
+          description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+        message:
+          type: string
+        suggestion:
+          type: string
+        severity:
+          type: string
+          enum: [error, warning]
+        orderNumber:
+          type: integer
+
+    ValidationErrorItem:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+        - suggestion
+        - severity
+      properties:
+        code:
+          type: string
+        field:
+          $ref: '#/components/schemas/Code'
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/Code'
+        message:
+          type: string
+        suggestion:
+          type: string
+        severity:
+          type: string
+          enum: [error, warning]
+
+    MigrationPreviewResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - mode
+        - fromVersion
+        - toVersion
+        - migrated
+        - needsConfirmation
+        - dropped
+      properties:
+        mode:
+          type: string
+          enum: [preview]
+        fromVersion:
+          $ref: '#/components/schemas/VersionTag'
+        toVersion:
+          $ref: '#/components/schemas/VersionTag'
+        migrated:
+          type: array
+          items:
+            $ref: '#/components/schemas/Code'
+        needsConfirmation:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - from
+              - value
+              - options
+            properties:
+              from:
+                $ref: '#/components/schemas/Code'
+              value:
+                $ref: '#/components/schemas/FieldValue'
+              options:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Code'
+        dropped:
+          type: array
+          items:
+            $ref: '#/components/schemas/Code'
+
+    MigrationCommitResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - mode
+        - fromVersion
+        - toVersion
+        - migrated
+        - applied
+        - dropped
+        - revision
+        - message
+      properties:
+        mode:
+          type: string
+          enum: [committed]
+        fromVersion:
+          $ref: '#/components/schemas/VersionTag'
+        toVersion:
+          $ref: '#/components/schemas/VersionTag'
+        migrated:
+          type: array
+          items:
+            $ref: '#/components/schemas/Code'
+        applied:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - from
+              - to
+            properties:
+              from:
+                $ref: '#/components/schemas/Code'
+              to:
+                $ref: '#/components/schemas/Code'
+        dropped:
+          type: array
+          items:
+            $ref: '#/components/schemas/Code'
+        revision:
+          type: integer
+        message:
+          type: string
+
+    ChangeRequestDto:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - status
+        - sourceUrl
+        - diff
+        - proposedTargetVersion
+        - oldVersion
+        - createdAt
+      properties:
+        id:
+          $ref: '#/components/schemas/OpaqueId'
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        sourceUrl:
+          $ref: '#/components/schemas/SourceUrl'
+        diff:
+          type: object
+          additionalProperties: false
+          required:
+            - summary
+            - added
+            - removed
+            - changed
+          properties:
+            summary:
+              type: string
+            added:
+              type: array
+              items:
+                type: string
+            removed:
+              type: array
+              items:
+                type: string
+            changed:
+              type: array
+              items:
+                type: string
+        proposedTargetVersion:
+          $ref: '#/components/schemas/VersionTag'
+        oldVersion:
+          type: object
+          additionalProperties: false
+          required:
+            - formCode
+            - version
+          properties:
+            formCode:
+              $ref: '#/components/schemas/Code'
+            version:
+              $ref: '#/components/schemas/VersionTag'
+        createdAt:
+          type: string
+          format: date-time
+        reviewedBy:
+          type: string
+          nullable: true
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    CatalogOverviewItem:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - name
+        - agency
+        - sourceUrl
+        - lastCheckedAt
+        - activeVersion
+        - formVersions
+      properties:
+        code:
+          $ref: '#/components/schemas/Code'
+        name:
+          type: string
+        agency:
+          type: string
+        sourceUrl:
+          $ref: '#/components/schemas/SourceUrl'
+        lastCheckedAt:
+          type: string
+          format: date-time
+        activeVersion:
+          type: object
+          additionalProperties: false
+          required:
+            - version
+          properties:
+            version:
+              $ref: '#/components/schemas/VersionTag'
+            effectiveFrom:
+              type: string
+              format: date-time
+              nullable: true
+            effectiveTo:
+              type: string
+              format: date-time
+              nullable: true
+          nullable: true
+        formVersions:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - version
+              - status
+            properties:
+              version:
+                $ref: '#/components/schemas/VersionTag'
+              status:
+                type: string
+                enum: [DRAFT, ACTIVE, RETIRED]
+              effectiveFrom:
+                type: string
+                format: date-time
+                nullable: true
+              effectiveTo:
+                type: string
+                format: date-time
+                nullable: true
+
+    UsageSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - services
+      properties:
+        services:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ServiceUsageStats'
+
+    ServiceUsageStats:
+      type: object
+      additionalProperties: false
+      required:
+        - calls
+        - avgLatencyMs
+        - cacheHits
+        - degradedCount
+        - estimatedCostUsd
+      properties:
+        calls:
+          type: integer
+        tokens:
+          type: integer
+        audioSeconds:
+          type: number
+        avgLatencyMs:
+          type: number
+        cacheHits:
+          type: integer
+        degradedCount:
+          type: integer
+        estimatedCostUsd:
+          type: number
+
+  responses:
+    ValidationError:
+      description: "Validation error. The error code returned in the envelope is VALIDATION_ERROR."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+    Unauthorized:
+      description: "Missing or invalid token. The error code returned in the envelope is UNAUTHORIZED."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+    OwnershipMismatch:
+      description: "The presented token is not authorized for the requested session or application (OWNERSHIP_MISMATCH). On PUT /applications/{id} and POST /applications/{id}/migrate, this can also return VERSION_NOT_ACCESSIBLE if the form version is not accessible."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+    VersionNotAccessible:
+      description: "This form version is not accessible. The error code returned in the envelope is VERSION_NOT_ACCESSIBLE."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+    NotFound:
+      description: "The requested resource was not found. The error code returned in the envelope is NOT_FOUND."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+    ConcurrentUpdate:
+      description: "Concurrent update conflict detected. The database-backed optimistic-concurrency field (revision) mismatch occurs when the application was updated by another process. The error code returned in the envelope is CONCURRENT_UPDATE."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+    PayloadTooLarge:
+      description: "Payload too large. The error code returned in the envelope is PAYLOAD_TOO_LARGE."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+    UnsupportedMediaType:
+      description: "Unsupported media type. The error code returned in the envelope is UNSUPPORTED_MEDIA_TYPE."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+    RateLimited:
+      description: "Rate limit exceeded. The error code returned in the envelope is RATE_LIMITED."
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: "Number of seconds to wait before retrying."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'

@@ -1,0 +1,167 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Procedure {
+  id                  String                @id @default(cuid())
+  code                String                @unique
+  name                String
+  sector              String
+  agency              String
+  sourceUrl           String
+  lastCheckedAt       DateTime
+  versions            ProcedureVersion[]
+  clarifyingQuestions ClarifyingQuestion[]
+  documentRequirements DocumentRequirement[]
+  forms               Form[]
+}
+
+model ProcedureVersion {
+  id             String    @id @default(cuid())
+  procedureId    String
+  procedure      Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+  version        String
+  status         String
+  effectiveFrom  DateTime?
+  effectiveTo    DateTime?
+  stepsJson      Json
+  durationText   String
+  feesText       String
+  legalBasisText String?
+
+  @@unique([procedureId, version])
+}
+
+model ClarifyingQuestion {
+  id            String    @id @default(cuid())
+  procedureId   String
+  procedure     Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+  code          String
+  orderNumber   Int
+  fieldType     String
+  optionsJson   Json?
+  conditionJson Json?
+  questionText  String
+
+  @@unique([procedureId, code])
+}
+
+model DocumentRequirement {
+  id             String    @id @default(cuid())
+  procedureId    String
+  procedure      Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+  code           String
+  name           String
+  originals      Int
+  copies         Int
+  orderNumber    Int
+  conditionJson  Json?
+  reasonText     String?
+  submissionType String    @default("SUBMIT")
+}
+
+model Form {
+  id          String        @id @default(cuid())
+  code        String        @unique
+  procedureId String
+  procedure   Procedure     @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+  name        String
+  revision    Int           @default(0)
+  versions    FormVersion[]
+}
+
+model FormVersion {
+  id             String           @id @default(cuid())
+  formId         String
+  form           Form             @relation(fields: [formId], references: [id], onDelete: Cascade)
+  version        String
+  status         String
+  effectiveFrom  DateTime?
+  effectiveTo    DateTime?
+  schemaJson     Json
+  rules          ValidationRule[]
+  applications   Application[]
+  changeRequests ChangeRequest[]
+
+  @@unique([formId, version])
+}
+
+model ValidationRule {
+  id            String      @id @default(cuid())
+  formVersionId String
+  formVersion   FormVersion @relation(fields: [formVersionId], references: [id], onDelete: Cascade)
+  type          String
+  fieldId       String?
+  paramsJson    Json
+  message       String
+  suggestion    String
+  severity      String      @default("error")
+  orderNumber   Int
+}
+
+model Session {
+  id              String        @id @default(cuid())
+  accessTokenHash String        @unique
+  procedureCode   String
+  intent          String?
+  answersJson     Json
+  currentStep     Int           @default(0)
+  expiresAt       DateTime
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  applications    Application[]
+}
+
+model Application {
+  id            String      @id @default(cuid())
+  sessionId     String
+  session       Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  formVersionId String
+  formVersion   FormVersion @relation(fields: [formVersionId], references: [id], onDelete: Cascade)
+  status        String      @default("DRAFT")
+  dataJson      Json
+  revision      Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model ChangeRequest {
+  id               String      @id @default(cuid())
+  oldVersionId     String
+  oldVersion       FormVersion @relation(fields: [oldVersionId], references: [id], onDelete: Cascade)
+  status           String      @default("PENDING")
+  sourceUrl        String
+  diffJson         Json
+  proposedDataJson Json
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime    @default(now())
+}
+
+model AiUsageLog {
+  id               String   @id @default(cuid())
+  serviceType      String
+  model            String
+  promptTokens     Int?
+  completionTokens Int?
+  audioSeconds     Float?
+  latencyMs        Int
+  cacheHit         Boolean  @default(false)
+  degraded         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+}
+
+model IdempotencyRecord {
+  principalId  String
+  key          String
+  httpStatus   Int
+  responseJson Json
+  createdAt    DateTime @default(now())
+
+  @@id([principalId, key])
+}
