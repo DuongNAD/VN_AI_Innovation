@@ -118,7 +118,8 @@ export function optionalString(body: Record<string, unknown>, key: string, maxLe
   }
   const trimmed = val.trim();
   if (trimmed === '') {
-    throw new AppError(400, 'INVALID_INPUT', 'Trường dữ liệu không hợp lệ.', { field: key });
+    // An optional field sent as an empty string means "not provided".
+    return undefined;
   }
   if (trimmed.length > maxLen) {
     throw new AppError(400, 'VALUE_TOO_LONG', 'Giá trị quá dài.', { field: key });

@@ -404,8 +404,10 @@ export default function ChatIntake({
 
     const body: any = {
       procedureCode,
-      intentMessage,
     };
+    if (intentMessage && intentMessage.trim()) {
+      body.intentMessage = intentMessage.trim();
+    }
     if (knownProvince) {
       body.presetAnswers = { province: knownProvince };
     }
