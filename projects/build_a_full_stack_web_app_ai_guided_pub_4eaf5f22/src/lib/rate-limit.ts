@@ -103,13 +103,17 @@ export function rateLimitCheck(
 /**
  * Consumes/increments the rate limit count for a specific bucket.
  */
-export function rateLimitConsume(bucket: string, req: Request): void {
+export function rateLimitConsume(
+  bucket: string,
+  req: Request,
+  windowMs = 60000
+): void {
   const ip = getClientIp(req);
   const key = bucket + '|' + ip;
   const now = Date.now();
 
   let entry = rateLimitMap.get(key);
-  if (!entry || now - entry.windowStart >= 60000) {
+  if (!entry || now - entry.windowStart >= windowMs) {
     ensureMapCap(key);
     entry = { windowStart: now, count: 0 };
     rateLimitMap.set(key, entry);

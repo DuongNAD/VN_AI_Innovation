@@ -1,20 +1,15 @@
+import { Prisma } from '@prisma/client';
 import { handleRoute, AppError, jsonOk } from '@/lib/errors';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { requireSessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { readJsonBody } from '@/lib/http';
 import { getProvider } from '@/lib/data-provider';
-import { computeMigration } from '@/lib/form-migration';
+import { compareVersions, computeMigration } from '@/lib/form-migration';
+import { parseFieldDefs, parseMigrationHints } from '@/lib/schema-guards';
+import { sanitizeFormData } from '@/lib/rule-engine';
 
-function parseMigrateBody(bodyText: string): { confirm: boolean; resolutions: Record<string, string> } {
-  let raw: any = {};
-  if (bodyText.trim() !== '') {
-    try {
-      raw = JSON.parse(bodyText);
-    } catch (err) {
-      throw new AppError(400, 'INVALID_FORM_DATA', 'Cấu trúc JSON không hợp lệ.');
-    }
-  }
-
+function parseMigrateBody(raw: unknown): { confirm: boolean; resolutions: Record<string, string> } {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
     throw new AppError(400, 'INVALID_FORM_DATA', 'Dữ liệu yêu cầu không hợp lệ.');
   }
@@ -80,6 +75,40 @@ function parseMigrateBody(bodyText: string): { confirm: boolean; resolutions: Re
   return { confirm, resolutions: sanitizedResolutions };
 }
 
+function requireDraft(status: string): void {
+  if (status !== 'DRAFT') {
+    throw new AppError(
+      409,
+      'APPLICATION_NOT_DRAFT',
+      'Chỉ có thể cập nhật biểu mẫu cho hồ sơ ở trạng thái nháp.'
+    );
+  }
+}
+
+function parseFormSchema(schemaJson: unknown) {
+  const schema =
+    schemaJson && typeof schemaJson === 'object' && !Array.isArray(schemaJson)
+      ? (schemaJson as Record<string, unknown>)
+      : {};
+
+  return {
+    fields: parseFieldDefs(schema.fields),
+    migrationHints: parseMigrationHints(schema.migrationHints ?? []),
+  };
+}
+
+function noNewerVersion(): never {
+  throw new AppError(409, 'NO_NEWER_VERSION', 'Không có phiên bản biểu mẫu mới hơn.');
+}
+
+function concurrentUpdate(): never {
+  throw new AppError(
+    409,
+    'CONCURRENT_UPDATE',
+    'Dữ liệu đã được thay đổi ở nơi khác. Vui lòng tải lại.'
+  );
+}
+
 export const POST = handleRoute(async (req: Request, { params }: { params: { id: string } }) => {
   enforceRateLimit('migrate', req);
 
@@ -101,6 +130,8 @@ export const POST = handleRoute(async (req: Request, { params }: { params: { id:
     throw new AppError(401, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ đăng ký.');
   }
 
+  requireDraft(application.status);
+
   const provider = getProvider();
   const pinned = await provider.getFormVersionById(application.formVersionId);
   if (!pinned) {
@@ -110,19 +141,16 @@ export const POST = handleRoute(async (req: Request, { params }: { params: { id:
   const formCode = pinned.formCode;
 
   const active = await provider.getActiveFormVersion(formCode);
-  if (!active || active.id === pinned.id) {
-    throw new AppError(409, 'NO_NEWER_VERSION', 'Không có phiên bản biểu mẫu mới hơn.');
+  if (
+    !active ||
+    active.id === pinned.id ||
+    compareVersions(active.version, pinned.version) <= 0
+  ) {
+    noNewerVersion();
   }
 
-  // Parse and validate request body
-  let bodyText = '';
-  try {
-    bodyText = await req.text();
-  } catch (err) {
-    throw new AppError(400, 'INVALID_FORM_DATA', 'Không thể đọc nội dung yêu cầu.');
-  }
-
-  const { confirm, resolutions } = parseMigrateBody(bodyText);
+  const rawBody = req.body === null ? {} : await readJsonBody(req);
+  const { confirm, resolutions } = parseMigrateBody(rawBody);
 
   const appData = (application.dataJson && typeof application.dataJson === 'object' && !Array.isArray(application.dataJson))
     ? (application.dataJson as Record<string, unknown>)
@@ -147,74 +175,154 @@ export const POST = handleRoute(async (req: Request, { params }: { params: { id:
     });
   }
 
-  const commitResult = await prisma.$transaction(async (tx) => {
-    const fresh = await tx.application.findUnique({
-      where: { id },
-      include: { session: true },
-    });
+  let commitResult: {
+    fromVersion: string;
+    toVersion: string;
+    migrated: string[];
+    applied: { from: string; to: string }[];
+    dropped: string[];
+    revision: number;
+  };
 
-    if (!fresh || !fresh.session) {
-      throw new AppError(404, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ đăng ký.');
-    }
+  try {
+    commitResult = await prisma.$transaction(
+      async (tx) => {
+        const fresh = await tx.application.findUnique({
+          where: { id },
+          include: {
+            session: true,
+            formVersion: {
+              include: { form: true },
+            },
+          },
+        });
 
-    // Re-assert session validity inside the commit transaction before the write
-    try {
-      requireSessionToken(req, fresh.session.accessTokenHash, fresh.session.expiresAt);
-    } catch (err) {
-      throw new AppError(401, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ đăng ký.');
-    }
+        if (!fresh || !fresh.session || !fresh.formVersion) {
+          throw new AppError(404, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ đăng ký.');
+        }
 
-    if (fresh.formVersionId !== pinned.id) {
-      throw new AppError(409, 'NO_NEWER_VERSION', 'Biểu mẫu đã được cập nhật phiên bản mới.');
-    }
+        try {
+          requireSessionToken(req, fresh.session.accessTokenHash, fresh.session.expiresAt);
+        } catch (err) {
+          throw new AppError(401, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ đăng ký.');
+        }
 
-    const freshData = (fresh.dataJson && typeof fresh.dataJson === 'object' && !Array.isArray(fresh.dataJson))
-      ? (fresh.dataJson as Record<string, unknown>)
-      : {};
+        requireDraft(fresh.status);
+        if (
+          fresh.formVersionId !== application.formVersionId ||
+          fresh.revision !== application.revision
+        ) {
+          concurrentUpdate();
+        }
 
-    const result = computeMigration(
-      pinned.fields,
-      active.fields,
-      active.migrationHints,
-      freshData,
-      resolutions
+        const now = new Date();
+        const activeVersions = await tx.formVersion.findMany({
+          where: {
+            formId: fresh.formVersion.formId,
+            status: 'ACTIVE',
+            effectiveFrom: { lte: now },
+            OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }],
+          },
+          take: 2,
+        });
+
+        if (activeVersions.length === 0) {
+          noNewerVersion();
+        }
+        if (activeVersions.length > 1) {
+          throw new AppError(
+            500,
+            'DATA_INTEGRITY',
+            'Dữ liệu phiên bản biểu mẫu không nhất quán.'
+          );
+        }
+
+        const target = activeVersions[0];
+        if (
+          target.id === fresh.formVersion.id ||
+          compareVersions(target.version, fresh.formVersion.version) <= 0
+        ) {
+          noNewerVersion();
+        }
+
+        const sourceSchema = parseFormSchema(fresh.formVersion.schemaJson);
+        const targetSchema = parseFormSchema(target.schemaJson);
+        const freshData =
+          fresh.dataJson &&
+          typeof fresh.dataJson === 'object' &&
+          !Array.isArray(fresh.dataJson)
+            ? (fresh.dataJson as Record<string, unknown>)
+            : {};
+
+        const result = computeMigration(
+          sourceSchema.fields,
+          targetSchema.fields,
+          targetSchema.migrationHints,
+          freshData,
+          resolutions
+        );
+
+        if (result.needsConfirmation.length > 0) {
+          throw new AppError(
+            400,
+            'MISSING_RESOLUTION',
+            'Cần xác nhận lựa chọn chuyển đổi dữ liệu.',
+            {
+              unresolved: result.needsConfirmation.map((item) => item.from),
+            }
+          );
+        }
+
+        const sanitized = sanitizeFormData(targetSchema.fields, result.migratedData);
+        if (!sanitized.ok) {
+          throw new AppError(
+            400,
+            'INVALID_FORM_DATA',
+            'Dữ liệu biểu mẫu sau chuyển đổi không hợp lệ.',
+            { issues: sanitized.issues }
+          );
+        }
+
+        const updateResult = await tx.application.updateMany({
+          where: {
+            id,
+            revision: fresh.revision,
+            formVersionId: fresh.formVersionId,
+            status: 'DRAFT',
+          },
+          data: {
+            formVersionId: target.id,
+            dataJson: sanitized.sanitized as Prisma.InputJsonValue,
+            revision: fresh.revision + 1,
+          },
+        });
+
+        if (updateResult.count === 0) {
+          concurrentUpdate();
+        }
+
+        return {
+          fromVersion: fresh.formVersion.version,
+          toVersion: target.version,
+          migrated: result.migrated,
+          applied: result.applied,
+          dropped: result.dropped,
+          revision: fresh.revision + 1,
+        };
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      }
     );
-
-    if (result.needsConfirmation.length > 0) {
-      throw new AppError(400, 'MISSING_RESOLUTION', 'Cần xác nhận lựa chọn chuyển đổi dữ liệu.', {
-        unresolved: result.needsConfirmation.map((item) => item.from),
-      });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2034'
+    ) {
+      concurrentUpdate();
     }
-
-    const updateResult = await tx.application.updateMany({
-      where: {
-        id,
-        revision: fresh.revision,
-      },
-      data: {
-        formVersionId: active.id,
-        dataJson: result.migratedData as any,
-        revision: fresh.revision + 1,
-      },
-    });
-
-    if (updateResult.count === 0) {
-      throw new AppError(
-        409,
-        'CONCURRENT_UPDATE',
-        'Dữ liệu đã được thay đổi ở nơi khác. Vui lòng tải lại.'
-      );
-    }
-
-    return {
-      fromVersion: pinned.version,
-      toVersion: active.version,
-      migrated: result.migrated,
-      applied: result.applied,
-      dropped: result.dropped,
-      revision: fresh.revision + 1,
-    };
-  });
+    throw error;
+  }
 
   return jsonOk({
     mode: 'committed',

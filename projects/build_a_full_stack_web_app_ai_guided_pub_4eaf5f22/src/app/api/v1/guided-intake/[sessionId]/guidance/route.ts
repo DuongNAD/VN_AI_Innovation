@@ -70,6 +70,7 @@ export const GET = handleRoute(async (req: Request, { params }: { params: { sess
       procedureVersion: procVersion,
       documents,
       answers,
+      questions,
     });
 
     // Check if there is an active FormVersion

@@ -2,6 +2,8 @@ import { handleRoute, jsonOk } from '@/lib/errors';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export const GET = handleRoute(async (req: Request) => {
   // Enforce admin auth (this checks token and rate limits admin-auth failures)
   requireAdmin(req);

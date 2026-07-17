@@ -2,13 +2,14 @@ import { handleRoute, AppError, jsonOk } from '@/lib/errors';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { readJsonBody, requireString, optionalString, aiMeta } from '@/lib/http';
 import { getProvider } from '@/lib/data-provider';
-import { requireSessionToken } from '@/lib/auth';
+import { requireLiveSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { sanitizeFormData, runRules } from '@/lib/rule-engine';
 import { getLlmProvider, mockLlm } from '@/lib/ai/llm';
 
 export const POST = handleRoute(async (req: Request, { params }: { params: { formCode: string } }) => {
   enforceRateLimit('validate', req);
+  const liveSession = await requireLiveSession(req, params.formCode);
 
   const body = await readJsonBody(req);
   const formVersion = requireString(body, 'formVersion');
@@ -28,37 +29,23 @@ export const POST = handleRoute(async (req: Request, { params }: { params: { for
     throw new AppError(404, 'FORM_VERSION_NOT_FOUND', 'Không tìm thấy phiên bản biểu mẫu.');
   }
 
-  const active = await provider.getActiveFormVersion(formCode);
-  if (!active || requested.id !== active.id) {
-    if (!applicationId) {
-      throw new AppError(403, 'VERSION_NOT_ACCESSIBLE', 'Phiên bản biểu mẫu này không khả dụng.');
-    }
-
+  if (applicationId) {
     const application = await prisma.application.findUnique({
       where: { id: applicationId },
       include: { session: true },
     });
 
-    if (!application || !application.session || application.formVersionId !== requested.id) {
+    if (
+      !application ||
+      !application.session ||
+      application.formVersionId !== requested.id ||
+      application.sessionId !== liveSession.id
+    ) {
       throw new AppError(403, 'VERSION_NOT_ACCESSIBLE', 'Phiên bản biểu mẫu này không khả dụng.');
     }
-
-    const expiresAt = application.session.expiresAt;
-    let isLive = false;
-    if (expiresAt !== null && expiresAt !== undefined) {
-      const timeMs = expiresAt instanceof Date ? expiresAt.getTime() : new Date(expiresAt as any).getTime();
-      if (Number.isFinite(timeMs) && timeMs > Date.now()) {
-        isLive = true;
-      }
-    }
-
-    try {
-      requireSessionToken(req, application.session.accessTokenHash);
-    } catch (err) {
-      throw new AppError(403, 'VERSION_NOT_ACCESSIBLE', 'Phiên bản biểu mẫu này không khả dụng.');
-    }
-
-    if (!isLive) {
+  } else {
+    const active = await provider.getActiveFormVersion(formCode);
+    if (!active || requested.id !== active.id) {
       throw new AppError(403, 'VERSION_NOT_ACCESSIBLE', 'Phiên bản biểu mẫu này không khả dụng.');
     }
   }
@@ -72,7 +59,15 @@ export const POST = handleRoute(async (req: Request, { params }: { params: { for
   const sanitized = sanitizeResult.sanitized;
 
   const rules = await provider.getValidationRules(requested.id);
-  const errors = runRules(requested.fields, rules, sanitized);
+  const applicableRules = applicationId
+    ? rules
+    : rules.filter(
+        (rule) =>
+          rule.type !== 'required' ||
+          typeof rule.fieldId !== 'string' ||
+          Object.prototype.hasOwnProperty.call(sanitized, rule.fieldId)
+      );
+  const errors = runRules(requested.fields, applicableRules, sanitized);
 
   let aiExplanation: string | undefined;
   const currentLlmProvider = getLlmProvider();

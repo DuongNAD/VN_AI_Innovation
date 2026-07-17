@@ -3,6 +3,8 @@ import { requireAdmin } from '@/lib/auth';
 import { getProvider } from '@/lib/data-provider';
 import { getUsageSummary } from '@/lib/ai/usage';
 
+export const dynamic = 'force-dynamic';
+
 export const GET = handleRoute(async (req: Request) => {
   requireAdmin(req);
 

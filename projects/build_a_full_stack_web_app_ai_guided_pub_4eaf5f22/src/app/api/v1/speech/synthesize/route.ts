@@ -1,8 +1,10 @@
 import { handleRoute, AppError } from '@/lib/errors';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { readJsonBody, requireString, optionalString } from '@/lib/http';
+import { requireLiveSession } from '@/lib/auth';
 import { LIMITS } from '@/lib/constants';
-import { TTS_VOICES, getTtsProvider, mockTts, makeTtsCacheKey } from '@/lib/ai/tts';
+import { TTS_VOICES, getTtsProvider, makeTtsCacheKey } from '@/lib/ai/tts';
+import { UpstreamError } from '@/lib/ai/upstream';
 import { cacheGet, cacheSet } from '@/lib/cache';
 import { logAiUsage } from '@/lib/ai/usage';
 
@@ -10,7 +12,12 @@ export const POST = handleRoute(async (req: Request) => {
   const startTime = Date.now();
 
   enforceRateLimit('synthesize', req);
+  await requireLiveSession(req);
 
+  const provider = getTtsProvider();
+  const configuredModel = provider.name === 'openai'
+    ? (process.env.TTS_MODEL?.trim() || 'tts-1')
+    : 'mock-tts';
   const body = await readJsonBody(req);
 
   let text: string;
@@ -40,7 +47,7 @@ export const POST = handleRoute(async (req: Request) => {
     throw new AppError(400, 'INVALID_INPUT', 'Ngôn ngữ không được hỗ trợ.', { field: 'language' });
   }
 
-  const key = makeTtsCacheKey(text, voice, speed, language);
+  const key = `${provider.name}:${configuredModel}:${makeTtsCacheKey(text, voice, speed, language)}`;
 
   const cached = cacheGet(key);
   if (cached) {
@@ -66,6 +73,8 @@ export const POST = handleRoute(async (req: Request) => {
             'Content-Type': parsed.mimeType,
             'X-Cache-Hit': 'true',
             'X-Model': parsed.model,
+            'Cache-Control': 'no-store, private',
+            'Pragma': 'no-cache',
           },
         });
       }
@@ -75,13 +84,18 @@ export const POST = handleRoute(async (req: Request) => {
   }
 
   let result: { audio: Buffer; mimeType: string; model: string };
-  let degraded = false;
 
   try {
-    result = await getTtsProvider().synthesize(text, voice, speed, language);
+    result = await provider.synthesize(text, voice, speed, language);
   } catch (err) {
-    degraded = true;
-    result = await mockTts.synthesize(text, voice, speed, language);
+    if (err instanceof UpstreamError) {
+      throw new AppError(
+        503,
+        'AI_SERVICE_UNAVAILABLE',
+        'Dịch vụ AI tạm thời không khả dụng. Vui lòng thử lại sau.'
+      );
+    }
+    throw err;
   }
 
   const b64 = result.audio.toString('base64');
@@ -95,18 +109,14 @@ export const POST = handleRoute(async (req: Request) => {
     3600
   );
 
-  const headers: Record<string, string> = {
-    'Content-Type': result.mimeType,
-    'X-Cache-Hit': 'false',
-    'X-Model': result.model,
-  };
-
-  if (degraded) {
-    headers['X-Degraded'] = 'true';
-  }
-
   return new Response(result.audio as unknown as BodyInit, {
     status: 200,
-    headers,
+    headers: {
+      'Content-Type': result.mimeType,
+      'X-Cache-Hit': 'false',
+      'X-Model': result.model,
+      'Cache-Control': 'no-store, private',
+      'Pragma': 'no-cache',
+    },
   });
 });

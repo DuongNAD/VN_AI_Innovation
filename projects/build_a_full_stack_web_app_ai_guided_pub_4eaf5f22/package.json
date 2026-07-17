@@ -8,8 +8,10 @@
     "start": "next start",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "seed": "npm run db:seed",
     "test": "vitest run",
     "test:unit": "vitest run --exclude tests/integration/**",
+    "test:integration": "RUN_INTEGRATION=1 node --env-file=.env ./node_modules/vitest/vitest.mjs run tests/integration/flow.test.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

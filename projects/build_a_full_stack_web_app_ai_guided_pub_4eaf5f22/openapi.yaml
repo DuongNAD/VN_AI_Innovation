@@ -420,6 +420,10 @@ paths:
                   additionalProperties:
                     $ref: '#/components/schemas/FieldValue'
                   description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+                applicationId:
+                  allOf:
+                    - $ref: '#/components/schemas/OpaqueId'
+                  description: "When present, validates the complete application and enforces every required field. When omitted, validates only submitted fields plus explicitly empty required fields."
       responses:
         '200':
           description: Validation result
