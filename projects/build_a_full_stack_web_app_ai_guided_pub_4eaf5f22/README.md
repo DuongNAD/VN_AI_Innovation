@@ -40,6 +40,7 @@ Thực hiện theo kịch bản đường dẫn trải nghiệm mẫu dưới đ
 Chạy các lệnh sau để khởi động dự án trên môi trường cục bộ:
 
 ```bash
+cp .env.example .env   # tạo cấu hình cục bộ (DB, token demo) — chỉnh sửa nếu cần
 npm install
 docker compose up -d db
 npx prisma db push

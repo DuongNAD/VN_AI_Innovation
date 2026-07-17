@@ -89,10 +89,10 @@ paths:
                   $ref: '#/components/schemas/Code'
                 presetAnswers:
                   type: object
-                  maxProperties: 100
+                  maxProperties: 20
                   additionalProperties:
                     $ref: '#/components/schemas/FieldValue'
-                  description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+                  description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys are rejected with a ValidationError response (code INVALID_INPUT)."
                 intentMessage:
                   type: string
                   maxLength: 1000
@@ -104,7 +104,7 @@ paths:
               required: true
               schema:
                 type: string
-                enum: [no-store]
+                enum: ["no-store, private"]
               description: prevents any cache from retaining the session credential
             Pragma:
               required: true
@@ -419,7 +419,7 @@ paths:
                   maxProperties: 300
                   additionalProperties:
                     $ref: '#/components/schemas/FieldValue'
-                  description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+                  description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys are rejected with a ValidationError response (code INVALID_INPUT)."
                 applicationId:
                   allOf:
                     - $ref: '#/components/schemas/OpaqueId'
@@ -524,7 +524,7 @@ paths:
                     maxProperties: 300
                     additionalProperties:
                       $ref: '#/components/schemas/FieldValue'
-                    description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+                    description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys are rejected with a ValidationError response (code INVALID_INPUT)."
                   revision:
                     type: integer
         '401':
@@ -584,7 +584,7 @@ paths:
                     maxProperties: 300
                     additionalProperties:
                       $ref: '#/components/schemas/FieldValue'
-                    description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+                    description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys are rejected with a ValidationError response (code INVALID_INPUT)."
                   revision:
                     type: integer
                   fields:
@@ -651,7 +651,7 @@ paths:
                   maxProperties: 300
                   additionalProperties:
                     $ref: '#/components/schemas/FieldValue'
-                  description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+                  description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys are rejected with a ValidationError response (code INVALID_INPUT)."
                 revision:
                   type: integer
       responses:
@@ -683,7 +683,7 @@ paths:
                     maxProperties: 300
                     additionalProperties:
                       $ref: '#/components/schemas/FieldValue'
-                    description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+                    description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys are rejected with a ValidationError response (code INVALID_INPUT)."
                   revision:
                     type: integer
         '400':
@@ -729,7 +729,7 @@ paths:
                   maxProperties: 100
                   additionalProperties:
                     $ref: '#/components/schemas/Code'
-                  description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+                  description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys are rejected with a ValidationError response (code INVALID_INPUT)."
       responses:
         '200':
           description: Successful migration response (preview or committed)
@@ -1019,21 +1019,21 @@ components:
       minLength: 1
       maxLength: 64
       pattern: '^[A-Za-z][A-Za-z0-9_-]{0,63}$'
-      description: "Code identifier. Non-conforming values are rejected with 400 VALIDATION_ERROR."
+      description: "Code identifier. Non-conforming values are rejected with a 400 ValidationError response (code INVALID_INPUT)."
 
     OpaqueId:
       type: string
       minLength: 1
       maxLength: 64
       pattern: '^[A-Za-z0-9_-]{1,64}$'
-      description: "Opaque database identifier. Non-conforming values are rejected with 400 VALIDATION_ERROR."
+      description: "Opaque database identifier. Non-conforming values are rejected with a 400 ValidationError response (code INVALID_INPUT)."
 
     VersionTag:
       type: string
       minLength: 1
       maxLength: 32
       pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$'
-      description: "Version tag identifier. Non-conforming values are rejected with 400 VALIDATION_ERROR."
+      description: "Version tag identifier. Non-conforming values are rejected with a 400 ValidationError response (code INVALID_INPUT)."
 
     FieldValue:
       description: "Caps nesting depth structurally. Holds dynamic, validation-engine compliant value types."
@@ -1261,7 +1261,7 @@ components:
           maxProperties: 100
           additionalProperties:
             $ref: '#/components/schemas/FieldValue'
-          description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys yield VALIDATION_ERROR."
+          description: "keys MUST match the authoritative question/form schema and are validated server-side before persistence or downstream use; keys __proto__, constructor, and prototype are rejected; unknown keys are rejected with a ValidationError response (code INVALID_INPUT)."
         message:
           type: string
         suggestion:
@@ -1555,7 +1555,7 @@ components:
 
   responses:
     ValidationError:
-      description: "Validation error. The error code returned in the envelope is VALIDATION_ERROR."
+      description: "Validation error. The error code returned in the envelope is one of INVALID_INPUT (schema/type/limit violations, including unknown or dangerous keys), INVALID_JSON (unparsable request body), or UNKNOWN_QUESTION (answer for a question code that does not exist)."
       content:
         application/json:
           schema:

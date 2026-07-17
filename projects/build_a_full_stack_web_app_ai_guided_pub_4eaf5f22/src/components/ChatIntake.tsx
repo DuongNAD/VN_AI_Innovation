@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSessionId, getToken, setSession, clearSession } from '@/lib/session';
+import { randomUUID } from '@/lib/uuid';
 
 type Phase = 'search' | 'intake' | 'done';
 
@@ -73,17 +74,6 @@ const PROVINCES = [
 ] as const;
 
 const DISCLAIMER = 'Thông tin do trợ lý cung cấp chỉ mang tính tham khảo, vui lòng đối chiếu với cơ quan có thẩm quyền trước khi nộp hồ sơ.';
-
-const randomUUID = () => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-};
 
 function safeHttpsUrl(raw: unknown): string | null {
   if (typeof raw !== 'string') {
@@ -630,6 +620,7 @@ export default function ChatIntake({
           const res = await api<{ text: string }>('/api/v1/speech/transcribe', {
             method: 'POST',
             form: formData,
+            token: getToken() || undefined,
           });
 
           setBusy(false);
@@ -670,7 +661,8 @@ export default function ChatIntake({
     }
 
     if (recognitionRef.current) {
-      recognitionRef.current.abort();
+      // stop() (not abort()) so the pending recognition result is still delivered
+      recognitionRef.current.stop();
       recognitionRef.current = null;
     }
 

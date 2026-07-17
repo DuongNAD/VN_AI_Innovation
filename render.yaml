@@ -7,6 +7,8 @@ services:
     name: psp-assistant
     runtime: docker
     plan: free
+    # Blueprint lives at the repo root; the app (and its Dockerfile) live here.
+    rootDir: projects/build_a_full_stack_web_app_ai_guided_pub_4eaf5f22
     healthCheckPath: /
     envVars:
       - key: DATABASE_URL

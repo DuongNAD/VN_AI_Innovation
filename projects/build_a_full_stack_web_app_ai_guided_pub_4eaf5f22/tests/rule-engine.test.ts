@@ -162,3 +162,45 @@ describe('rule-engine · runRules', () => {
     expect(codes(runRules(fields, rules, { x: 'hi' }))).toEqual(['DATA_INTEGRITY']);
   });
 });
+
+describe('rule-engine · date comparisons in conditions', () => {
+  it('greater_than / less_than compare ISO dates chronologically', () => {
+    const fields: FieldDef[] = [
+      field('birth_date', 'date'),
+      field('note', 'text', { required: true }),
+    ];
+    const rules: RuleDef[] = [
+      rule('r_minor', 'conditional_required', {}, {
+        fieldId: 'note',
+        params: { when: { field: 'birth_date', operator: 'greater_than', value: '2008-07-18' } },
+      }),
+    ];
+
+    // Born after the threshold → condition true → required note missing
+    expect(
+      codes(runRules(fields, rules, { birth_date: '2010-01-01', note: '' }))
+    ).toEqual(['MISSING_REQUIRED']);
+    // Born before the threshold → condition false → no error
+    expect(runRules(fields, rules, { birth_date: '2000-01-01', note: '' })).toHaveLength(0);
+  });
+
+  it('less_than works symmetrically for ISO dates', () => {
+    const fields: FieldDef[] = [
+      field('expiry_date', 'date'),
+      field('renewal_note', 'text', { required: true }),
+    ];
+    const rules: RuleDef[] = [
+      rule('r_exp', 'conditional_required', {}, {
+        fieldId: 'renewal_note',
+        params: { when: { field: 'expiry_date', operator: 'less_than', value: '2026-01-01' } },
+      }),
+    ];
+
+    expect(
+      codes(runRules(fields, rules, { expiry_date: '2025-06-30', renewal_note: '' }))
+    ).toEqual(['MISSING_REQUIRED']);
+    expect(
+      runRules(fields, rules, { expiry_date: '2026-06-30', renewal_note: '' })
+    ).toHaveLength(0);
+  });
+});

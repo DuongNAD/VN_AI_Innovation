@@ -63,6 +63,8 @@ model DocumentRequirement {
   conditionJson  Json?
   reasonText     String?
   submissionType String    @default("SUBMIT")
+
+  @@index([procedureId])
 }
 
 model Form {
@@ -102,6 +104,8 @@ model ValidationRule {
   suggestion    String
   severity      String      @default("error")
   orderNumber   Int
+
+  @@index([formVersionId])
 }
 
 model Session {
@@ -115,6 +119,8 @@ model Session {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   applications    Application[]
+
+  @@index([expiresAt])
 }
 
 model Application {
@@ -128,6 +134,9 @@ model Application {
   revision      Int         @default(0)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  @@index([sessionId])
+  @@index([formVersionId])
 }
 
 model ChangeRequest {
@@ -141,6 +150,9 @@ model ChangeRequest {
   reviewedBy       String?
   reviewedAt       DateTime?
   createdAt        DateTime    @default(now())
+
+  @@index([oldVersionId])
+  @@index([status])
 }
 
 model AiUsageLog {
@@ -154,6 +166,8 @@ model AiUsageLog {
   cacheHit         Boolean  @default(false)
   degraded         Boolean  @default(false)
   createdAt        DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 model IdempotencyRecord {
@@ -164,4 +178,5 @@ model IdempotencyRecord {
   createdAt    DateTime @default(now())
 
   @@id([principalId, key])
+  @@index([createdAt])
 }

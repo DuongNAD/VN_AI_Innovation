@@ -123,11 +123,13 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
     throw new AppError(404, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ đăng ký.');
   }
 
-  // Full session validation using the extended requireSessionToken helper
+  // Full session validation using the extended requireSessionToken helper.
+  // 404 (not 401) so this endpoint cannot be used to distinguish "exists but
+  // not yours" from "does not exist" — matching the sibling GET/PUT handlers.
   try {
     requireSessionToken(req, application.session.accessTokenHash, application.session.expiresAt);
   } catch (err) {
-    throw new AppError(401, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ đăng ký.');
+    throw new AppError(404, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ đăng ký.');
   }
 
   requireDraft(application.status);
@@ -204,7 +206,7 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
         try {
           requireSessionToken(req, fresh.session.accessTokenHash, fresh.session.expiresAt);
         } catch (err) {
-          throw new AppError(401, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ đăng ký.');
+          throw new AppError(404, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ đăng ký.');
         }
 
         requireDraft(fresh.status);

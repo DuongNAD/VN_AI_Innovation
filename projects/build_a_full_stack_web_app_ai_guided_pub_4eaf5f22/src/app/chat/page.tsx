@@ -1,14 +1,15 @@
 import Link from 'next/link';
 import ChatIntake from '@/components/ChatIntake';
 
-export default function ChatPage({
+export default async function ChatPage({
   searchParams,
 }: {
-  searchParams: { q?: string; procedure?: string; embed?: string };
+  searchParams: Promise<{ q?: string; procedure?: string; embed?: string }>;
 }) {
-  const q = searchParams.q;
-  const procedure = searchParams.procedure;
-  const embed = searchParams.embed === '1';
+  const resolvedSearchParams = await searchParams;
+  const q = resolvedSearchParams.q;
+  const procedure = resolvedSearchParams.procedure;
+  const embed = resolvedSearchParams.embed === '1';
 
   return (
     <div className="flex flex-col min-h-screen">

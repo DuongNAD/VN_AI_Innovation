@@ -125,18 +125,22 @@ export function getOpenAiBaseUrl(): string {
 
 export function getAdminToken(): string {
   const token = process.env.ADMIN_TOKEN;
-  if (token === undefined) {
+  if (token === undefined || token === '') {
     throw new Error('CONFIG_INVALID: ADMIN_TOKEN is required');
   }
-  if (token === 'demo-admin-token') {
-    throw new Error('CONFIG_INVALID: ADMIN_TOKEN must not be a placeholder value');
-  }
-  if (token.length < 24 || !/^[\x21-\x7E]+$/.test(token)) {
-    throw new Error('CONFIG_INVALID: ADMIN_TOKEN must be at least 24 printable non-whitespace ASCII characters');
-  }
-  const distinctChars = new Set(token).size;
-  if (distinctChars < 8) {
-    throw new Error('CONFIG_INVALID: ADMIN_TOKEN must contain at least 8 distinct characters');
+  // Strength requirements are enforced in production only, as documented in
+  // README/.env.example — local demos may run with the shipped example value.
+  if (isProd()) {
+    if (token === 'demo-admin-token') {
+      throw new Error('CONFIG_INVALID: ADMIN_TOKEN must not be a placeholder value');
+    }
+    if (token.length < 24 || !/^[\x21-\x7E]+$/.test(token)) {
+      throw new Error('CONFIG_INVALID: ADMIN_TOKEN must be at least 24 printable non-whitespace ASCII characters');
+    }
+    const distinctChars = new Set(token).size;
+    if (distinctChars < 8) {
+      throw new Error('CONFIG_INVALID: ADMIN_TOKEN must contain at least 8 distinct characters');
+    }
   }
   return token;
 }

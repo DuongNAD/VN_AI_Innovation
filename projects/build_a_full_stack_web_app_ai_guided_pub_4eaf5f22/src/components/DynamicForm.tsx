@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PROVINCES } from '@/lib/constants';
 import { evaluateCondition, runRules, type ValidationErrorItem } from '@/lib/rule-engine';
@@ -10,12 +10,15 @@ const INPUT_CLASS =
   'w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-lg focus:border-blue-500';
 
 /**
- * Keeps form state in lockstep with visibleWhen conditions: every visible field
- * has a key ('' default, so required rules fire on empty instead of absent) and
- * hidden fields lose their keys. Iterated to a fixpoint because hiding one field
- * can flip another field's condition; the pass cap guarantees termination.
+ * Seeds every visible field with a key ('' default, so required rules fire on
+ * empty instead of absent). Values of fields that later become hidden are kept:
+ * re-showing the field restores what the user typed, and the rule engine — not
+ * the UI — decides whether the combination is contradictory (e.g. "chưa từng
+ * kết hôn" while "số lần kết hôn" still holds a value). Iterated to a fixpoint
+ * because seeding one field can flip another field's condition; the pass cap
+ * guarantees termination.
  */
-function syncVisibility(fields: FieldDef[], data: Record<string, unknown>): Record<string, unknown> {
+export function syncVisibility(fields: FieldDef[], data: Record<string, unknown>): Record<string, unknown> {
   const next: Record<string, unknown> = {};
   for (const f of fields) {
     if (Object.prototype.hasOwnProperty.call(data, f.id)) {
@@ -30,9 +33,6 @@ function syncVisibility(fields: FieldDef[], data: Record<string, unknown>): Reco
       if (visible && !hasKey) {
         next[f.id] = '';
         changed = true;
-      } else if (!visible && hasKey) {
-        delete next[f.id];
-        changed = true;
       }
     }
     if (!changed) {
@@ -40,6 +40,10 @@ function syncVisibility(fields: FieldDef[], data: Record<string, unknown>): Reco
     }
   }
   return next;
+}
+
+export function visibleFieldsFor(fields: FieldDef[], data: Record<string, unknown>): FieldDef[] {
+  return fields.filter((f) => !f.visibleWhen || evaluateCondition(f.visibleWhen, data));
 }
 
 function asInputString(value: unknown): string {
@@ -61,6 +65,7 @@ type DynamicFormProps = {
   initialData?: Record<string, unknown>;
   submitLabel: string;
   onSubmit(data: Record<string, unknown>, clientErrors: ValidationErrorItem[]): void;
+  onDirtyChange?(dirty: boolean): void;
 };
 
 export default function DynamicForm({
@@ -69,6 +74,7 @@ export default function DynamicForm({
   initialData,
   submitLabel,
   onSubmit,
+  onDirtyChange,
 }: DynamicFormProps) {
   const [formData, setFormData] = useState<Record<string, unknown>>(() =>
     syncVisibility(fields, initialData ?? {})
@@ -77,11 +83,10 @@ export default function DynamicForm({
 
   const setField = (id: string, value: unknown) => {
     setFormData((prev) => syncVisibility(fields, { ...prev, [id]: value }));
+    onDirtyChange?.(true);
   };
 
-  const visibleFields = fields.filter((f) =>
-    Object.prototype.hasOwnProperty.call(formData, f.id)
-  );
+  const visibleFields = visibleFieldsFor(fields, formData);
   const visibleIds = new Set(visibleFields.map((f) => f.id));
 
   const errorsFor = (id: string): ValidationErrorItem[] =>
@@ -329,6 +334,7 @@ type ApplicationFormRunnerProps = {
   updateAvailable: boolean;
   newVersion?: string;
   token: string;
+  onVersionChange?(version: string): void;
 };
 
 export function ApplicationFormRunner({
@@ -341,8 +347,12 @@ export function ApplicationFormRunner({
   updateAvailable: initialUpdateAvailable,
   newVersion: initialNewVersion,
   token,
+  onVersionChange,
 }: ApplicationFormRunnerProps) {
   const router = useRouter();
+  // Tracks unsaved edits inside DynamicForm; migration replaces the form with
+  // the server's last-saved data, so we warn before silently dropping edits.
+  const dirtyRef = useRef(false);
 
   const [fields, setFields] = useState<FieldDef[]>(initialFields);
   const [rules, setRules] = useState<RuleDef[] | undefined>(initialRules);
@@ -422,9 +432,13 @@ export function ApplicationFormRunner({
     setData(body.data && typeof body.data === 'object' ? body.data : {});
     setRevision(typeof body.revision === 'number' ? body.revision : 0);
     setFormVersion(typeof body.formVersion === 'string' ? body.formVersion : '');
+    if (typeof body.formVersion === 'string') {
+      onVersionChange?.(body.formVersion);
+    }
     setUpdateAvailable(!!body.updateAvailable);
     setNewVersion(typeof body.newVersion === 'string' ? body.newVersion : undefined);
     setFormKey((k) => k + 1);
+    dirtyRef.current = false;
     return body;
   };
 
@@ -453,6 +467,7 @@ export function ApplicationFormRunner({
         return;
       }
       setRevision(typeof body?.revision === 'number' ? body.revision : revision + 1);
+      dirtyRef.current = false;
       router.push('/result?applicationId=' + applicationId);
     } finally {
       setSaving(false);
@@ -514,6 +529,14 @@ export function ApplicationFormRunner({
 
   const confirmMigration = async () => {
     if (!preview || migrating) {
+      return;
+    }
+    if (
+      dirtyRef.current &&
+      !window.confirm(
+        'Bạn có thay đổi chưa lưu trên biểu mẫu. Việc cập nhật phiên bản sẽ dùng dữ liệu đã lưu gần nhất và bỏ qua các thay đổi chưa lưu. Tiếp tục?'
+      )
+    ) {
       return;
     }
     setNotice(null);
@@ -668,6 +691,9 @@ export function ApplicationFormRunner({
         initialData={data}
         submitLabel={saving ? 'Đang lưu...' : 'Lưu và kiểm tra hồ sơ'}
         onSubmit={handleSubmit}
+        onDirtyChange={(dirty) => {
+          dirtyRef.current = dirty;
+        }}
       />
     </div>
   );

@@ -151,7 +151,7 @@ export default function ApplicationFormPage() {
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="border-b border-slate-200 pb-6">
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight sm:text-4xl mb-3">
-            {data.procedure.name} Phiên bản {data.formVersion}
+            {data.procedure.name} — Phiên bản {data.formVersion}
           </h1>
           <SourceFooter
             sourceUrl={data.procedure.sourceUrl}
@@ -171,6 +171,9 @@ export default function ApplicationFormPage() {
             updateAvailable={data.updateAvailable}
             newVersion={data.newVersion}
             token={token}
+            onVersionChange={(version) =>
+              setData((prev) => (prev ? { ...prev, formVersion: version } : prev))
+            }
           />
         </div>
       </div>

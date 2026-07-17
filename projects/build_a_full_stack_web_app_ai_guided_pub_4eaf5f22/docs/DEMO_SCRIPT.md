@@ -10,7 +10,9 @@
 
 ```bash
 cd projects/build_a_full_stack_web_app_ai_guided_pub_4eaf5f22
+# lần đầu trên máy mới: cp .env.example .env
 docker compose up -d db
+npx prisma db push       # bắt buộc nếu volume DB mới tạo (nếu không seed sẽ lỗi P2021)
 npm run db:seed          # đưa DB về trạng thái demo: form 1.0 ACTIVE, 1 change-request PENDING
 npm run dev              # http://localhost:3000
 ```

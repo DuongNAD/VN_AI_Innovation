@@ -423,14 +423,16 @@ export default function AdminConsole(): React.ReactElement {
   const [approvalResults, setApprovalResults] = useState<Record<string, ApprovalResult>>({});
   const [approvingId, setApprovingId] = useState<string | null>(null);
 
-  const handleFetchData = async (activeToken = token) => {
+  const handleFetchData = async (activeToken = token, opts?: { silent?: boolean }) => {
     if (!activeToken.trim()) {
       setError('Vui lòng nhập mã quản trị');
       return;
     }
     setLoading(true);
     setError(null);
-    setSuccess(null);
+    if (!opts?.silent) {
+      setSuccess(null);
+    }
 
     try {
       const [overviewRes, crRes] = await Promise.all([
@@ -469,7 +471,9 @@ export default function AdminConsole(): React.ReactElement {
 
       setOverview(parsedOverview);
       setChangeRequests(parsedCRs);
-      setSuccess('Tải dữ liệu quản trị thành công.');
+      if (!opts?.silent) {
+        setSuccess('Tải dữ liệu quản trị thành công.');
+      }
     } catch (err: any) {
       setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
     } finally {
@@ -553,7 +557,7 @@ export default function AdminConsole(): React.ReactElement {
         setSuccess('Đã phê duyệt & kích hoạt thành công');
       }
 
-      await handleFetchData(token);
+      await handleFetchData(token, { silent: true });
     } catch (err: any) {
       setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
     } finally {
@@ -591,7 +595,13 @@ export default function AdminConsole(): React.ReactElement {
               Nhập mã quản trị để truy cập dữ liệu hệ thống, xem quan trắc AI và xét duyệt thay đổi.
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch">
+          <form
+            className="flex flex-col sm:flex-row gap-3 items-stretch"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleFetchData();
+            }}
+          >
             <input
               type="password"
               placeholder="Nhập X-Admin-Token"
@@ -601,7 +611,7 @@ export default function AdminConsole(): React.ReactElement {
               className="px-4 py-2 bg-slate-800 text-white border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 animate-none"
             />
             <button
-              onClick={() => handleFetchData()}
+              type="submit"
               disabled={loading}
               className="btn bg-amber-500 text-slate-950 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 font-semibold"
             >
@@ -614,9 +624,9 @@ export default function AdminConsole(): React.ReactElement {
                 'Tải dữ liệu'
               )}
             </button>
-          </div>
+          </form>
         </div>
-        
+
         <div className="mt-4 pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
           <span>
             💡 <strong>Lưu ý:</strong> Mã quản trị dùng chung để chạy thử, chỉ lưu trong bộ nhớ (memory-only) và sẽ mất khi tải lại trang. Hệ thống thực tế sẽ sử dụng session ở phía máy chủ.

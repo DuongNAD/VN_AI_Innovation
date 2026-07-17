@@ -4,6 +4,7 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import ChecklistView from '@/components/ChecklistView';
 import SpeechButton from '@/components/SpeechButton';
+import { randomUUID } from '@/lib/uuid';
 
 function buildChecklistSummary(guidance: any): string {
   if (!guidance || !guidance.procedure) return '';
@@ -67,6 +68,7 @@ function ChecklistContent() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!sessionId) {
@@ -126,7 +128,7 @@ function ChecklistContent() {
     }
 
     fetchGuidance();
-  }, [sessionState, sessionId, token]);
+  }, [sessionState, sessionId, token, retryKey]);
 
   const handleCreateApplication = async () => {
     if (submitting || !sessionId || !token) return;
@@ -141,7 +143,7 @@ function ChecklistContent() {
         },
         body: JSON.stringify({
           sessionId,
-          messageId: crypto.randomUUID(),
+          messageId: randomUUID(),
         }),
       });
 
@@ -224,7 +226,7 @@ function ChecklistContent() {
           </p>
           <div className="space-y-3">
             <button
-              onClick={() => router.refresh()}
+              onClick={() => setRetryKey((k) => k + 1)}
               className="btn w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md shadow-blue-200 transition-all duration-200"
             >
               Thử lại

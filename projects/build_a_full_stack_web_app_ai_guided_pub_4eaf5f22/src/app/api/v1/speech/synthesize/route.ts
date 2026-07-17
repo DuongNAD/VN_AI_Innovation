@@ -99,15 +99,19 @@ export const POST = handleRoute(async (req: Request) => {
   }
 
   const b64 = result.audio.toString('base64');
-  cacheSet(
-    key,
-    JSON.stringify({
-      b64,
-      mimeType: result.mimeType,
-      model: result.model,
-    }),
-    3600
-  );
+  // The in-process cache caps entries, not bytes; real TTS audio can reach
+  // ~13MB base64 per entry, so only cache small responses to bound memory.
+  if (b64.length <= 1_000_000) {
+    cacheSet(
+      key,
+      JSON.stringify({
+        b64,
+        mimeType: result.mimeType,
+        model: result.model,
+      }),
+      3600
+    );
+  }
 
   return new Response(result.audio as unknown as BodyInit, {
     status: 200,

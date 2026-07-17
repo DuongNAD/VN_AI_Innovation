@@ -1,9 +1,11 @@
 import { parseBuffer } from 'music-metadata';
 import { AppError } from '../errors';
 
-export async function inspectAudio(buf: Buffer): Promise<{ mimeType: string; durationSeconds: number }> {
+export async function inspectAudio(
+  buf: Buffer
+): Promise<{ mimeType: string; durationSeconds: number; durationIsEstimate: boolean }> {
   try {
-    const metadata = await parseBuffer(buf);
+    const metadata = await parseBuffer(buf, undefined, { duration: true });
     const container = (metadata.format?.container || '').toLowerCase();
 
     let mimeType = '';
@@ -30,13 +32,18 @@ export async function inspectAudio(buf: Buffer): Promise<{ mimeType: string; dur
     }
 
     const duration = metadata.format?.duration;
-    if (duration === undefined || typeof duration !== 'number' || !Number.isFinite(duration) || duration <= 0) {
-      throw new AppError(400, 'AUDIO_UNREADABLE', 'Không thể đọc độ dài của tệp âm thanh.');
+    if (typeof duration === 'number' && Number.isFinite(duration) && duration > 0) {
+      return { mimeType, durationSeconds: duration, durationIsEstimate: false };
     }
 
+    // Streamed MediaRecorder WebM has no SegmentInfo Duration element, so the
+    // parser cannot report a duration for exactly the uploads our own voice
+    // fallback produces. The route already enforces a byte cap; estimate the
+    // length from size (~16 kB/s Opus) instead of rejecting the recording.
     return {
       mimeType,
-      durationSeconds: duration,
+      durationSeconds: Math.max(1, Math.ceil(buf.length / 16000)),
+      durationIsEstimate: true,
     };
   } catch (err) {
     if (err instanceof AppError) {

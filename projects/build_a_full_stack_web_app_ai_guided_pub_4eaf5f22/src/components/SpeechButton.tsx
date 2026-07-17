@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { getToken } from '@/lib/session';
 
 interface SpeechButtonProps {
   text: string;
@@ -68,10 +69,12 @@ export default function SpeechButton({ text, label = 'Nghe nội dung' }: Speech
       };
 
       try {
+        const token = getToken();
         const res = await fetch('/api/v1/speech/synthesize', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...(token ? { 'X-Session-Token': token } : {}),
           },
           body: JSON.stringify({ text: text.slice(0, 500) }),
         });

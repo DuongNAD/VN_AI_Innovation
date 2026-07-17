@@ -60,9 +60,14 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
     : {};
   const { answers } = pruneAnswers(questions, sessionAnswers);
 
+  // The cached payload embeds formAvailable, so the key must change when the
+  // active form version changes (e.g. right after an admin approval).
+  const activeForm = await provider.getActiveFormVersion(procedure.code);
+  const formAvailable = activeForm !== null;
+
   // Generate cache key
   const answersHash = sha256hex(canonicalJson(answers));
-  const key = `guidance:${procedure.code}:${procVersion.version}:${answersHash}:vi`;
+  const key = `guidance:${procedure.code}:${procVersion.version}:${activeForm?.version ?? 'none'}:${answersHash}:vi`;
 
   // Get guidance from cache or compute it
   const { value, cacheHit } = await cachedJson(key, 300, async () => {
@@ -73,10 +78,6 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
       answers,
       questions,
     });
-
-    // Check if there is an active FormVersion
-    const activeForm = await provider.getActiveFormVersion(procedure.code);
-    const formAvailable = activeForm !== null;
 
     // Build checklist mapping documents with submission types
     const docMap = new Map(documents.map((d) => [d.code, d]));
