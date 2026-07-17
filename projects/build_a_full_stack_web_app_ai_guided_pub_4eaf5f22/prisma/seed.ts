@@ -589,6 +589,8 @@ export async function main() {
       update: {
         oldVersionId: mActiveFormV1.id,
         status: 'PENDING',
+        reviewedBy: null,
+        reviewedAt: null,
         sourceUrl: 'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-hanh-chinh.html?ma_thu_tuc=1.000894',
         diffJson: {
           summary: 'Cập nhật biểu mẫu theo quy định mới về cư trú',

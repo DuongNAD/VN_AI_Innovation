@@ -304,6 +304,9 @@ function parseChangeRequests(body: unknown): ChangeRequest[] | null {
     let addedValid = true;
     const parsedAdded: DiffItem[] = [];
     for (const item of d.added) {
+      // The API serializes diff arrays as plain field-id strings; richer
+      // {id, label} objects are also accepted.
+      if (isBoundedString(item, 500)) { parsedAdded.push({ id: item, label: item }); continue; }
       if (!item || typeof item !== 'object') { addedValid = false; break; }
       const i = item as Record<string, unknown>;
       if (!isBoundedString(i.id, 500) || !isBoundedString(i.label, 500)) { addedValid = false; break; }
@@ -317,6 +320,7 @@ function parseChangeRequests(body: unknown): ChangeRequest[] | null {
     let removedValid = true;
     const parsedRemoved: DiffItem[] = [];
     for (const item of d.removed) {
+      if (isBoundedString(item, 500)) { parsedRemoved.push({ id: item, label: item }); continue; }
       if (!item || typeof item !== 'object') { removedValid = false; break; }
       const i = item as Record<string, unknown>;
       if (!isBoundedString(i.id, 500) || !isBoundedString(i.label, 500)) { removedValid = false; break; }
@@ -330,6 +334,7 @@ function parseChangeRequests(body: unknown): ChangeRequest[] | null {
     let changedValid = true;
     const parsedChanged: DiffItem[] = [];
     for (const item of d.changed) {
+      if (isBoundedString(item, 500)) { parsedChanged.push({ id: item, label: item }); continue; }
       if (!item || typeof item !== 'object') { changedValid = false; break; }
       const i = item as Record<string, unknown>;
       if (!isBoundedString(i.id, 500) || !isBoundedString(i.label, 500)) { changedValid = false; break; }
