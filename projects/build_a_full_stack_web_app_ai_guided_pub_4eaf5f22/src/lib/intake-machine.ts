@@ -152,17 +152,20 @@ function assertConditionDef(
 }
 
 function parseSteps(value: unknown): { order: number; title: string; description: string; example: string }[] {
-  if (typeof value !== 'string') {
-    throw new AppError(500, 'DATA_INTEGRITY', 'Dữ liệu các bước không phải là chuỗi.', { field: 'steps', reason: 'not_string' });
-  }
-  if (value.length > STEPS_JSON_MAX_CHARS) {
-    throw new AppError(500, 'DATA_INTEGRITY', 'Dữ liệu các bước quá dài.', { field: 'steps', reason: 'too_long' });
-  }
+  // Prisma Json columns (and the data-provider) deliver steps as an already-
+  // parsed array; a raw JSON string is also accepted for robustness.
   let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch (err) {
-    throw new AppError(500, 'DATA_INTEGRITY', 'Không thể phân tích dữ liệu các bước.', { field: 'steps', reason: 'unparseable' });
+  if (typeof value === 'string') {
+    if (value.length > STEPS_JSON_MAX_CHARS) {
+      throw new AppError(500, 'DATA_INTEGRITY', 'Dữ liệu các bước quá dài.', { field: 'steps', reason: 'too_long' });
+    }
+    try {
+      parsed = JSON.parse(value);
+    } catch (err) {
+      throw new AppError(500, 'DATA_INTEGRITY', 'Không thể phân tích dữ liệu các bước.', { field: 'steps', reason: 'unparseable' });
+    }
+  } else {
+    parsed = value;
   }
   if (!Array.isArray(parsed)) {
     throw new AppError(500, 'DATA_INTEGRITY', 'Dữ liệu các bước phải là danh sách.', { field: 'steps', reason: 'not_array' });

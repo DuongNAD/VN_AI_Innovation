@@ -36,6 +36,34 @@ interface Flow {
   total: number;
 }
 
+// The intake API returns questions in their stored shape ({code, questionText,
+// fieldType, options}); normalize once at the boundary so the rest of the
+// component can rely on the local Question shape.
+function toQuestion(raw: any): Question | null {
+  if (!raw) return null;
+  return {
+    questionCode: raw.questionCode ?? raw.code ?? '',
+    label: raw.label ?? raw.questionText ?? '',
+    fieldType: raw.fieldType,
+    options: raw.options ?? undefined,
+  };
+}
+
+function toFlow(data: any): Flow {
+  if (data.flow) {
+    return {
+      next: toQuestion(data.flow.next),
+      answered: data.flow.answered || 0,
+      total: data.flow.total || 0,
+    };
+  }
+  return {
+    next: toQuestion(data.question),
+    answered: data.progress?.answered || 0,
+    total: data.progress?.total || 0,
+  };
+}
+
 const PROVINCES = [
   'Hà Nội', 'TP. Hồ Chí Minh', 'Hải Phòng', 'Đà Nẵng', 'Cần Thơ', 'Huế', 'Lai Châu', 'Điện Biên',
   'Sơn La', 'Lạng Sơn', 'Cao Bằng', 'Tuyên Quang', 'Lào Cai', 'Thái Nguyên', 'Phú Thọ', 'Bắc Ninh',
@@ -397,16 +425,7 @@ export default function ChatIntake({
       const newSessionId = data.sessionId;
       const token = data.accessToken;
 
-      let startFlow: Flow;
-      if (data.flow) {
-        startFlow = data.flow;
-      } else {
-        startFlow = {
-          next: data.question !== undefined ? data.question : null,
-          answered: data.progress?.answered || 0,
-          total: data.progress?.total || 0,
-        };
-      }
+      const startFlow: Flow = toFlow(data);
 
       setSession(newSessionId, token);
       setSessionId(newSessionId);
@@ -459,16 +478,7 @@ export default function ChatIntake({
         setEcoBadge(true);
       }
 
-      let newFlow: Flow;
-      if (data.flow) {
-        newFlow = data.flow;
-      } else {
-        newFlow = {
-          next: data.question !== undefined ? data.question : null,
-          answered: data.progress?.answered || 0,
-          total: data.progress?.total || 0,
-        };
-      }
+      const newFlow: Flow = toFlow(data);
 
       const currentQuestion = editingCode
         ? questionSchemaMap[editingCode]
