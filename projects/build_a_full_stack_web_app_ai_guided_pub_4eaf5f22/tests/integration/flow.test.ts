@@ -112,7 +112,7 @@ describe.skipIf(!RUN)('integration · citizen flow (needs seeded DB)', () => {
         new Request(`http://localhost/api/v1/guided-intake/${session.id}/guidance`, {
           headers: { 'X-Session-Token': token },
         }),
-        { params: { sessionId: session.id } }
+        { params: Promise.resolve({ sessionId: session.id }) }
       );
       expect(response.status).toBe(200);
       expect(response.headers.get('cache-control')).toBe('no-store, private');
@@ -156,7 +156,7 @@ describe.skipIf(!RUN)('integration · citizen flow (needs seeded DB)', () => {
             },
           }),
         }),
-        { params: { formCode: 'MARRIAGE_REGISTRATION' } }
+        { params: Promise.resolve({ formCode: 'MARRIAGE_REGISTRATION' }) }
       );
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -190,7 +190,7 @@ describe.skipIf(!RUN)('integration · citizen flow (needs seeded DB)', () => {
             data: {},
           }),
         }),
-        { params: { formCode: 'MARRIAGE_REGISTRATION' } }
+        { params: Promise.resolve({ formCode: 'MARRIAGE_REGISTRATION' }) }
       );
       expect(fullResponse.status).toBe(200);
       const fullBody = await fullResponse.json();
@@ -237,7 +237,7 @@ describe.skipIf(!RUN)('integration · citizen flow (needs seeded DB)', () => {
           },
           body: '{}',
         }),
-        { params: { id: application.id } }
+        { params: Promise.resolve({ id: application.id }) }
       );
       expect(response.status).toBe(409);
       const body = await response.json();
@@ -278,7 +278,7 @@ describe('integration · harness', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ formVersion: '1.0', data: {} }),
       }),
-      { params: { formCode: 'MARRIAGE_REGISTRATION' } }
+      { params: Promise.resolve({ formCode: 'MARRIAGE_REGISTRATION' }) }
     );
     expect(validationResponse.status).toBe(401);
   });

@@ -109,10 +109,10 @@ function concurrentUpdate(): never {
   );
 }
 
-export const POST = handleRoute(async (req: Request, { params }: { params: { id: string } }) => {
+export const POST = handleRoute(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   enforceRateLimit('migrate', req);
 
-  const { id } = params;
+  const { id } = await params;
 
   const application = await prisma.application.findUnique({
     where: { id },

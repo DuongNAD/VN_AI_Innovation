@@ -412,7 +412,7 @@ const getErrorFromResponse = async (res: Response): Promise<{ status: number; co
   return { status: res.status, code };
 };
 
-export default function AdminConsole(): JSX.Element {
+export default function AdminConsole(): React.ReactElement {
   const [token, setToken] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);

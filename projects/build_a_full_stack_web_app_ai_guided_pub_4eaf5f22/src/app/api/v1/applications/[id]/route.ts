@@ -36,10 +36,11 @@ async function getValidatedApplicationAndSession(id: string, req: Request) {
   return { application, session: application.session, pinned };
 }
 
-export const GET = handleRoute(async (req: Request, { params }: { params: { id: string } }) => {
+export const GET = handleRoute(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   enforceRateLimit('applications-id', req);
 
-  const { application, pinned } = await getValidatedApplicationAndSession(params.id, req);
+  const { id } = await params;
+  const { application, pinned } = await getValidatedApplicationAndSession(id, req);
   const formCode = pinned.formCode;
 
   const provider = getProvider();
@@ -77,10 +78,11 @@ export const GET = handleRoute(async (req: Request, { params }: { params: { id: 
   return jsonOk(responseBody);
 });
 
-export const PUT = handleRoute(async (req: Request, { params }: { params: { id: string } }) => {
+export const PUT = handleRoute(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   enforceRateLimit('applications-id', req);
 
-  const { application, pinned } = await getValidatedApplicationAndSession(params.id, req);
+  const { id } = await params;
+  const { application, pinned } = await getValidatedApplicationAndSession(id, req);
   const formCode = pinned.formCode;
 
   // FIX 1a status gate

@@ -52,6 +52,10 @@ từ chối chạy lệnh này để tránh ghi đè dữ liệu vận hành. Ch
 `ALLOW_DEMO_SEED=1` trong một môi trường production dùng thử, có chủ đích và có thể
 xóa bỏ hoàn toàn.
 
+Container production sử dụng `npm run db:bootstrap`: dữ liệu demo chỉ được nạp khi
+cơ sở dữ liệu chưa có thủ tục nào. Khi đã có dữ liệu, bước bootstrap sẽ tự động bỏ
+qua và không ghi đè cấu hình đang vận hành.
+
 ---
 
 ## Cấu hình môi trường (Environment Variables)

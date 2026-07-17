@@ -246,8 +246,10 @@ async function upsertFormAndVersions(
   return form;
 }
 
-export async function main() {
-  assertSeedAllowed();
+export async function main(options: { allowProductionBootstrap?: boolean } = {}) {
+  if (!options.allowProductionBootstrap) {
+    assertSeedAllowed();
+  }
 
   try {
     // 1. Seed MARRIAGE_REGISTRATION
@@ -634,8 +636,12 @@ export async function main() {
     console.log('Database seeded successfully.');
   } catch (error) {
     console.error('Seeding integrity error occurred:', error);
-    process.exit(1);
+    throw error;
   }
+}
+
+export async function disconnectSeedDatabase(): Promise<void> {
+  await prisma.$disconnect();
 }
 
 const isDirectRun = process.argv[1] && (
@@ -648,9 +654,9 @@ if (isDirectRun) {
   main()
     .catch((e) => {
       console.error(e);
-      process.exit(1);
+      process.exitCode = 1;
     })
     .finally(async () => {
-      await prisma.$disconnect();
+      await disconnectSeedDatabase();
     });
 }
