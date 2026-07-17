@@ -2,10 +2,10 @@ import { handleRoute, AppError, jsonOk } from '@/lib/errors';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { getProvider } from '@/lib/data-provider';
 
-export const GET = handleRoute(async (req: Request, { params }: { params: { formCode: string } }) => {
+export const GET = handleRoute(async (req: Request, { params }: { params: Promise<{ formCode: string }> }) => {
   enforceRateLimit('forms-active', req);
 
-  const { formCode } = params;
+  const { formCode } = await params;
   const provider = getProvider();
   const v = await provider.getActiveFormVersion(formCode);
 

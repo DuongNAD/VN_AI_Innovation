@@ -7,9 +7,10 @@ import { prisma } from '@/lib/db';
 import { sanitizeFormData, runRules } from '@/lib/rule-engine';
 import { getLlmProvider, mockLlm } from '@/lib/ai/llm';
 
-export const POST = handleRoute(async (req: Request, { params }: { params: { formCode: string } }) => {
+export const POST = handleRoute(async (req: Request, { params }: { params: Promise<{ formCode: string }> }) => {
   enforceRateLimit('validate', req);
 
+  const { formCode } = await params;
   const body = await readJsonBody(req);
   const formVersion = requireString(body, 'formVersion');
 
@@ -20,7 +21,6 @@ export const POST = handleRoute(async (req: Request, { params }: { params: { for
   const data = rawData as Record<string, unknown>;
 
   const applicationId = optionalString(body, 'applicationId');
-  const { formCode } = params;
 
   const provider = getProvider();
   const requested = await provider.getFormVersion(formCode, formVersion);

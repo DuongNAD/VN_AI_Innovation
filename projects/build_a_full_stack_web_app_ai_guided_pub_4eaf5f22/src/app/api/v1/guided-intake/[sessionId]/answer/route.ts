@@ -7,8 +7,8 @@ import { getProvider } from '@/lib/data-provider';
 import { validateAnswer, pruneAnswers, computeQuestionFlow } from '@/lib/intake-machine';
 import { prisma } from '@/lib/db';
 
-export const POST = handleRoute(async (req: Request, { params }: { params: { sessionId: string } }) => {
-  const sessionId = params.sessionId;
+export const POST = handleRoute(async (req: Request, { params }: { params: Promise<{ sessionId: string }> }) => {
+  const { sessionId } = await params;
   enforceRateLimit('intake-answer', req);
 
   // Load session by ID

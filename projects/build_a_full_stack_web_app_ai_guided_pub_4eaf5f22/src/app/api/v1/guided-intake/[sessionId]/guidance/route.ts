@@ -7,12 +7,14 @@ import { cachedJson } from '@/lib/cache';
 import { canonicalJson } from '@/lib/idempotency';
 import { prisma } from '@/lib/db';
 
-export const GET = handleRoute(async (req: Request, { params }: { params: { sessionId: string } }) => {
+export const GET = handleRoute(async (req: Request, { params }: { params: Promise<{ sessionId: string }> }) => {
   enforceRateLimit('guidance', req);
+
+  const { sessionId } = await params;
 
   // Load session (404/expired ordering per conventions)
   const session = await prisma.session.findUnique({
-    where: { id: params.sessionId },
+    where: { id: sessionId },
   });
 
   if (!session) {

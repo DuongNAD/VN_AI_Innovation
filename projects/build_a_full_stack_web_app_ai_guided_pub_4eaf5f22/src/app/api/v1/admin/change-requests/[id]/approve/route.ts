@@ -3,10 +3,10 @@ import { prisma } from '@/lib/db';
 import { AppError, handleRoute, jsonOk } from '@/lib/errors';
 import { activateVersion } from '@/lib/form-migration';
 
-export const POST = handleRoute(async (req: Request, { params }: { params: { id: string } }) => {
+export const POST = handleRoute(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   requireAdmin(req);
 
-  const id = params.id;
+  const { id } = await params;
   const now = new Date();
 
   const responseBody = await prisma.$transaction(async (tx) => {

@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@prisma/client": "^5",
-    "music-metadata": "^10",
-    "next": "^14",
+    "music-metadata": "^11.14.0",
+    "next": "^16.2.10",
     "react": "^18",
     "react-dom": "^18",
     "safe-regex2": "^4",
@@ -33,6 +33,6 @@
     "prisma": "^5",
     "tailwindcss": "^3",
     "typescript": "^5",
-    "vitest": "^1"
+    "vitest": "^4.1.10"
   }
 }
