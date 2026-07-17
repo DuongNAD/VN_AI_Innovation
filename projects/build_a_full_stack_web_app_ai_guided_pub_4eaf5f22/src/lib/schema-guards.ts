@@ -478,6 +478,9 @@ export function parseRuleDefs(raw: unknown, fields: FieldDef[]): RuleDef[] {
       fail(`rule_params_not_object:${idStr}`);
     }
     const paramsObj = params as Record<string, unknown>;
+    // Params are validated in their canonical stored shape below, then
+    // normalized to the exact shape the rule engine consumes at runtime.
+    let engineParams: Record<string, unknown> = paramsObj;
 
     switch (typeStr) {
       case 'required':
@@ -503,11 +506,20 @@ export function parseRuleDefs(raw: unknown, fields: FieldDef[]): RuleDef[] {
       }
 
       case 'date_after': {
-        const pKeys = Object.keys(paramsObj);
-        if (pKeys.length !== 1 || pKeys[0] !== 'afterFieldId') {
+        // Two accepted dialects — authoring {afterFieldId} and the stored
+        // engine dialect {startField, endField}; both normalize to the latter.
+        const keySig = Object.keys(paramsObj).sort().join(',');
+        let afterFieldId: unknown;
+        if (keySig === 'afterFieldId') {
+          afterFieldId = paramsObj.afterFieldId;
+        } else if (keySig === 'endField,startField') {
+          if (paramsObj.endField !== fieldIdStr) {
+            fail(`rule_date_after_endField_must_match_fieldId:${idStr}`);
+          }
+          afterFieldId = paramsObj.startField;
+        } else {
           fail(`rule_date_after_params_must_only_have_afterFieldId:${idStr}`);
         }
-        const afterFieldId = paramsObj.afterFieldId;
         if (typeof afterFieldId !== 'string') {
           fail(`rule_date_after_afterFieldId_not_string:${idStr}`);
         }
@@ -521,6 +533,7 @@ export function parseRuleDefs(raw: unknown, fields: FieldDef[]): RuleDef[] {
         if (afterFieldId === fieldIdStr) {
           fail(`rule_date_after_self_reference_forbidden:${idStr}`);
         }
+        engineParams = { startField: afterFieldId, endField: fieldIdStr };
         break;
       }
 
@@ -556,37 +569,84 @@ export function parseRuleDefs(raw: unknown, fields: FieldDef[]): RuleDef[] {
 
       case 'conditional_required': {
         const pKeys = Object.keys(paramsObj);
-        if (pKeys.length !== 1 || pKeys[0] !== 'condition') {
+        if (pKeys.length !== 1 || (pKeys[0] !== 'condition' && pKeys[0] !== 'when')) {
           fail(`rule_conditional_required_params_must_only_have_condition:${idStr}`);
         }
-        validateCondition(paramsObj.condition, fieldById, fieldIdStr);
+        const cond = pKeys[0] === 'condition' ? paramsObj.condition : paramsObj.when;
+        validateCondition(cond, fieldById, fieldIdStr);
+        engineParams = { when: cond };
         break;
       }
 
       case 'cross_field_conflict': {
-        const pKeys = Object.keys(paramsObj);
-        if (pKeys.length !== 1 || pKeys[0] !== 'conditions') {
+        // Two accepted dialects: authoring {conditions:[equals, not_empty]}
+        // and the stored engine dialect {fields, ifField, ifValue, thenField,
+        // thenNotEmpty:false}. Both validate against the field catalog and
+        // normalize to the engine dialect.
+        const keySig = Object.keys(paramsObj).sort().join(',');
+        let condPair: { field: string; operator: string; value?: unknown }[];
+        if (keySig === 'conditions') {
+          const conditions = paramsObj.conditions;
+          if (!Array.isArray(conditions)) {
+            fail(`rule_cross_field_conflict_conditions_must_be_array:${idStr}`);
+          }
+          if (conditions.length < 2 || conditions.length > 5) {
+            fail(`rule_cross_field_conflict_conditions_length_out_of_bounds:${idStr}`);
+          }
+          for (const cond of conditions) {
+            validateCondition(cond, fieldById);
+          }
+          const conds = conditions as { field: string; operator: string; value?: unknown }[];
+          if (
+            conds.length !== 2 ||
+            conds[0].operator !== 'equals' ||
+            conds[1].operator !== 'not_empty'
+          ) {
+            fail(`rule_cross_field_conflict_unsupported_pattern:${idStr}`);
+          }
+          condPair = conds;
+        } else if (keySig === 'fields,ifField,ifValue,thenField,thenNotEmpty') {
+          if (paramsObj.thenNotEmpty !== false) {
+            fail(`rule_cross_field_conflict_thenNotEmpty_must_be_false:${idStr}`);
+          }
+          const fieldsArr = paramsObj.fields;
+          const ifField = paramsObj.ifField;
+          const thenField = paramsObj.thenField;
+          if (
+            !Array.isArray(fieldsArr) || fieldsArr.length !== 2 ||
+            typeof ifField !== 'string' || typeof thenField !== 'string' ||
+            fieldsArr[0] !== ifField || fieldsArr[1] !== thenField
+          ) {
+            fail(`rule_cross_field_conflict_fields_mismatch:${idStr}`);
+          }
+          condPair = [
+            { field: ifField, operator: 'equals', value: paramsObj.ifValue },
+            { field: thenField, operator: 'not_empty' },
+          ];
+          for (const cond of condPair) {
+            validateCondition(cond, fieldById);
+          }
+        } else {
           fail(`rule_cross_field_conflict_params_must_only_have_conditions:${idStr}`);
         }
-        const conditions = paramsObj.conditions;
-        if (!Array.isArray(conditions)) {
-          fail(`rule_cross_field_conflict_conditions_must_be_array:${idStr}`);
-        }
-        if (conditions.length < 2 || conditions.length > 5) {
-          fail(`rule_cross_field_conflict_conditions_length_out_of_bounds:${idStr}`);
-        }
-        for (const cond of conditions) {
-          validateCondition(cond, fieldById);
-        }
+        engineParams = {
+          fields: [condPair[0].field, condPair[1].field],
+          ifField: condPair[0].field,
+          ifValue: condPair[0].value,
+          thenField: condPair[1].field,
+          thenNotEmpty: false,
+        };
         break;
       }
 
       case 'conditional_document': {
         const pKeys = Object.keys(paramsObj);
-        if (pKeys.length !== 1 || pKeys[0] !== 'condition') {
+        if (pKeys.length !== 1 || (pKeys[0] !== 'condition' && pKeys[0] !== 'when')) {
           fail(`rule_conditional_document_params_must_only_have_condition:${idStr}`);
         }
-        validateCondition(paramsObj.condition, fieldById);
+        const cond = pKeys[0] === 'condition' ? paramsObj.condition : paramsObj.when;
+        validateCondition(cond, fieldById);
+        engineParams = { when: cond };
         break;
       }
 
@@ -612,7 +672,7 @@ export function parseRuleDefs(raw: unknown, fields: FieldDef[]): RuleDef[] {
     const ruleDef: RuleDef = {
       id: idStr,
       type: typeStr,
-      params: paramsObj,
+      params: engineParams,
       message: message as string,
       suggestion: suggestion as string,
       severity: severityStr,
