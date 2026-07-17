@@ -60,41 +60,43 @@
     var css =
       '.pspw-launcher {\n' +
       '  position: fixed;\n' +
-      '  bottom: 20px;\n' +
-      '  width: 56px;\n' +
-      '  height: 56px;\n' +
+      '  bottom: 24px;\n' +
+      '  width: 60px;\n' +
+      '  height: 60px;\n' +
       '  border-radius: 50%;\n' +
-      '  background-color: #2563eb;\n' +
+      '  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);\n' +
       '  color: #ffffff;\n' +
       '  border: none;\n' +
       '  cursor: pointer;\n' +
-      '  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);\n' +
+      '  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);\n' +
       '  z-index: 999999;\n' +
       '  display: flex;\n' +
       '  align-items: center;\n' +
       '  justify-content: center;\n' +
-      '  transition: transform 0.2s ease, background-color 0.2s ease;\n' +
+      '  transition: transform 0.2s ease, box-shadow 0.2s ease;\n' +
       '  padding: 0;\n' +
+      '  font-size: 28px;\n' +
       '}\n' +
       '.pspw-launcher:hover {\n' +
-      '  background-color: #1d4ed8;\n' +
-      '  transform: scale(1.05);\n' +
+      '  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);\n' +
+      '  transform: scale(1.1);\n' +
+      '  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);\n' +
       '}\n' +
       '.pspw-launcher:active {\n' +
       '  transform: scale(0.95);\n' +
       '}\n' +
       '.pspw-panel {\n' +
       '  position: fixed;\n' +
-      '  width: 380px;\n' +
-      '  height: 640px;\n' +
-      '  max-width: calc(100vw - 40px);\n' +
-      '  max-height: calc(100vh - 40px);\n' +
-      '  bottom: 88px;\n' +
-      '  z-index: 999999;\n' +
-      '  border-radius: 12px;\n' +
+      '  width: 400px;\n' +
+      '  height: 650px;\n' +
+      '  max-width: calc(100vw - 32px);\n' +
+      '  max-height: calc(100vh - 120px);\n' +
+      '  bottom: 100px;\n' +
+      '  z-index: 999998;\n' +
+      '  border-radius: 16px;\n' +
       '  overflow: hidden;\n' +
-      '  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);\n' +
-      '  background-color: #ffffff;\n' +
+      '  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);\n' +
+      '  background-color: #0f172a;\n' +
       '  display: flex;\n' +
       '  flex-direction: column;\n' +
       '}\n' +
@@ -105,32 +107,34 @@
       '  display: flex;\n' +
       '  align-items: center;\n' +
       '  justify-content: space-between;\n' +
-      '  padding: 12px 16px;\n' +
-      '  background-color: #ffffff;\n' +
-      '  color: #1e293b;\n' +
-      '  border-bottom: 1px solid #e2e8f0;\n' +
+      '  padding: 16px 20px;\n' +
+      '  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);\n' +
+      '  color: #ffffff;\n' +
+      '  border-bottom: none;\n' +
       '}\n' +
       '.pspw-title {\n' +
       '  font-size: 16px;\n' +
       '  font-weight: 600;\n' +
       '  margin: 0;\n' +
       '  font-family: system-ui, -apple-system, sans-serif;\n' +
+      '  color: #ffffff;\n' +
       '}\n' +
       '.pspw-close {\n' +
-      '  background: transparent;\n' +
+      '  background: rgba(255, 255, 255, 0.2);\n' +
       '  border: none;\n' +
-      '  color: #64748b;\n' +
+      '  color: #ffffff;\n' +
       '  cursor: pointer;\n' +
       '  font-size: 24px;\n' +
       '  line-height: 1;\n' +
-      '  padding: 4px;\n' +
+      '  padding: 8px 12px;\n' +
+      '  border-radius: 8px;\n' +
       '  display: flex;\n' +
       '  align-items: center;\n' +
       '  justify-content: center;\n' +
-      '  transition: color 0.2s;\n' +
+      '  transition: background 0.2s;\n' +
       '}\n' +
       '.pspw-close:hover {\n' +
-      '  color: #0f172a;\n' +
+      '  background: rgba(255, 255, 255, 0.3);\n' +
       '}\n' +
       '.pspw-iframe {\n' +
       '  flex: 1;\n' +
@@ -139,10 +143,10 @@
       '  height: 100%;\n' +
       '}\n' +
       '.pspw-pos-right {\n' +
-      '  right: 20px;\n' +
+      '  right: 24px;\n' +
       '}\n' +
       '.pspw-pos-left {\n' +
-      '  left: 20px;\n' +
+      '  left: 24px;\n' +
       '}\n' +
       '@media (max-width: 480px) {\n' +
       '  .pspw-panel {\n' +
@@ -155,6 +159,11 @@
       '    max-width: none !important;\n' +
       '    max-height: none !important;\n' +
       '    border-radius: 0 !important;\n' +
+      '  }\n' +
+      '  .pspw-launcher {\n' +
+      '    bottom: 16px;\n' +
+      '    right: 16px;\n' +
+      '    left: auto;\n' +
       '  }\n' +
       '}';
 

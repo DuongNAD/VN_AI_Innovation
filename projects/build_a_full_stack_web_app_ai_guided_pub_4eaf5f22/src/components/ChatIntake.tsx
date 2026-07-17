@@ -865,7 +865,7 @@ export default function ChatIntake({
   const isInputEnabled = phase === 'search' || (activeQuestion?.fieldType === 'text' && (phase === 'intake' || editingCode !== null));
 
   return (
-    <div className={`flex flex-col h-full bg-slate-900 text-slate-100 font-sans ${embed ? 'w-full h-full' : 'max-w-4xl mx-auto w-full h-[85vh] rounded-2xl shadow-xl border border-slate-800'}`}>
+    <div className={`flex flex-col h-full text-slate-100 font-sans ${embed ? 'w-full h-full bg-slate-900' : 'max-w-4xl mx-auto w-full h-[85vh] rounded-2xl shadow-xl border border-slate-800 bg-slate-900'}`}>
       
       {/* Header */}
       {!embed && (

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import ChatWidget from '@/components/ChatWidget';
 
 export const metadata: Metadata = {
   title: 'Trợ lý Thủ tục Hành chính',
@@ -15,6 +16,7 @@ export default function RootLayout({
     <html lang="vi">
       <body className="bg-slate-50 text-slate-900 text-[17px] md:text-lg font-sans antialiased min-h-screen">
         {children}
+        <ChatWidget />
       </body>
     </html>
   );
