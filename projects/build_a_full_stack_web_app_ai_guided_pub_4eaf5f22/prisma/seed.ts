@@ -407,7 +407,7 @@ export async function main() {
       'Đăng ký khai sinh',
       'Hộ tịch',
       'UBND cấp xã',
-      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-hanh-chinh.html?ma_thu_tuc=1.000887',
+      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-hanh-chinh.html?ma_thu_tuc=1.001193',
       [
         {
           version: '1.0',
@@ -479,7 +479,7 @@ export async function main() {
       'Đăng ký tạm trú',
       'Cư trú',
       'Công an cấp xã',
-      'https://dichvucong.gov.vn/p/home/dvc-tra-cuu-thu-tuc-hanh-chinh.html',
+      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-nganh-doc.html?ma_thu_tuc=1.004194',
       [
         {
           version: '1.0',
@@ -517,7 +517,7 @@ export async function main() {
       'Cấp thẻ căn cước',
       'Căn cước',
       'Công an cấp huyện',
-      'https://dichvucong.gov.vn/p/home/dvc-tra-cuu-thu-tuc-hanh-chinh.html',
+      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-nganh-doc.html?ma_thu_tuc=2.000200',
       [
         {
           version: '1.0',
@@ -556,7 +556,7 @@ export async function main() {
       'Cấp hộ chiếu phổ thông trong nước',
       'Xuất nhập cảnh',
       'Phòng Quản lý xuất nhập cảnh Công an cấp tỉnh',
-      'https://dichvucong.gov.vn/p/home/dvc-tra-cuu-thu-tuc-hanh-chinh.html',
+      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-nganh-doc.html?ma_thu_tuc=1.001456',
       [
         {
           version: '1.0',
