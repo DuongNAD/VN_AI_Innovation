@@ -199,7 +199,11 @@ function parseOverview(body: unknown): OverviewResponse | null {
 
   const usage: UsageSummary = {};
   if (obj.usage && typeof obj.usage === 'object') {
-    const u = obj.usage as Record<string, unknown>;
+    const usageEnvelope = obj.usage as Record<string, unknown>;
+    if (!usageEnvelope.services || typeof usageEnvelope.services !== 'object') {
+      return null;
+    }
+    const u = usageEnvelope.services as Record<string, unknown>;
     for (const key of ['llm', 'stt', 'tts'] as const) {
       if (u[key] !== undefined && u[key] !== null) {
         if (typeof u[key] !== 'object') {

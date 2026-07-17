@@ -1,6 +1,7 @@
 import { DISCLAIMER, PROVINCES, LIMITS } from './constants';
 import { AppError } from './errors';
 import { evaluateCondition } from './rule-engine';
+import { safeHttpsUrl } from './schema-guards';
 
 export type ConditionDef = {
   field: string;
@@ -57,7 +58,6 @@ export type Guidance = {
   formAvailable: boolean;
 };
 
-const SOURCE_URL_MAX_LENGTH = 2048;
 const STEPS_JSON_MAX_CHARS = 100000;
 const STEPS_MAX_COUNT = 100;
 const STEP_TEXT_MAX_CHARS = 2000;
@@ -71,25 +71,16 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 }
 
 function assertHttpsSourceUrl(value: unknown): string {
-  if (typeof value !== 'string') {
-    throw new AppError(500, 'DATA_INTEGRITY', 'Đường dẫn nguồn không hợp lệ.', { field: 'sourceUrl', reason: 'not_string' });
+  const validated = safeHttpsUrl(value);
+  if (!validated) {
+    throw new AppError(
+      500,
+      'DATA_INTEGRITY',
+      'Đường dẫn nguồn không thuộc miền Dịch vụ công được phê duyệt.',
+      { field: 'sourceUrl', reason: 'unapproved_government_source' }
+    );
   }
-  if (value.length > SOURCE_URL_MAX_LENGTH) {
-    throw new AppError(500, 'DATA_INTEGRITY', 'Đường dẫn nguồn quá dài.', { field: 'sourceUrl', reason: 'too_long' });
-  }
-  let parsed: URL;
-  try {
-    parsed = new URL(value);
-  } catch (err) {
-    throw new AppError(500, 'DATA_INTEGRITY', 'Đường dẫn nguồn không thể phân tích.', { field: 'sourceUrl', reason: 'unparseable' });
-  }
-  if (parsed.protocol !== 'https:') {
-    throw new AppError(500, 'DATA_INTEGRITY', 'Đường dẫn nguồn phải sử dụng giao thức HTTPS.', { field: 'sourceUrl', reason: 'protocol' });
-  }
-  if (parsed.username !== '' || parsed.password !== '') {
-    throw new AppError(500, 'DATA_INTEGRITY', 'Đường dẫn nguồn không được chứa thông tin đăng nhập.', { field: 'sourceUrl', reason: 'userinfo' });
-  }
-  return value;
+  return validated;
 }
 
 function assertConditionDef(

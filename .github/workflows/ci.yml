@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "codex/**"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: psp
+          POSTGRES_PASSWORD: psp_ci_password
+          POSTGRES_DB: psp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U psp -d psp"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: projects/build_a_full_stack_web_app_ai_guided_pub_4eaf5f22
+
+    env:
+      DATABASE_URL: postgresql://psp:psp_ci_password@localhost:5432/psp
+      POSTGRES_PASSWORD: psp_ci_password
+      ADMIN_TOKEN: ci-admin-token-9F3k2Lm8Q7x4V6n1
+      AI_PROVIDER: mock
+      TRUST_PROXY: "0"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: projects/build_a_full_stack_web_app_ai_guided_pub_4eaf5f22/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare and seed PostgreSQL
+        run: |
+          npm run db:push
+          npm run seed
+
+      - name: Run unit and route tests
+        run: npm test -- --run
+
+      - name: Run PostgreSQL integration tests
+        run: npm run test:integration
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Build production application
+        run: npm run build
+
+      - name: Validate container configuration
+        run: docker compose config --quiet

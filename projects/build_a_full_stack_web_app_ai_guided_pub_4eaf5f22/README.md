@@ -47,6 +47,11 @@ npm run seed
 npm run dev
 ```
 
+Lệnh `npm run seed` chỉ dành cho dữ liệu demo. Khi `NODE_ENV=production`, hệ thống sẽ
+từ chối chạy lệnh này để tránh ghi đè dữ liệu vận hành. Chỉ đặt
+`ALLOW_DEMO_SEED=1` trong một môi trường production dùng thử, có chủ đích và có thể
+xóa bỏ hoàn toàn.
+
 ---
 
 ## Cấu hình môi trường (Environment Variables)
@@ -66,6 +71,7 @@ Mô tả các biến cấu hình trong tệp `.env.example`:
 | `RATE_LIMIT_PER_MINUTE` | `10` | Số lượng yêu cầu tối đa được phép mỗi phút trên mỗi địa chỉ IP. |
 | `TRUST_PROXY` | `0` | Cho phép tin tưởng các header từ proxy phía trước (`1` khi triển khai sau proxy đáng tin cậy như Render, `0` để tắt). |
 | `SESSION_TTL_HOURS` | `24` | Thời gian hết hạn của phiên làm việc (tính bằng giờ). |
+| `ALLOW_DEMO_SEED` | `0` | Chốt an toàn cho dữ liệu demo. Giữ `0` trên production; chỉ đặt `1` khi chủ động seed lại một môi trường production dùng thử và có thể xóa bỏ. |
 
 > [!WARNING]
 > **Lưu ý bảo mật:** Tệp `.env` được đưa vào `.gitignore` để tránh bị lộ lọt thông tin cấu hình nhạy cảm. Các giá trị ví dụ hoặc mặc định trong tài liệu không phải là thông tin đăng nhập thực tế và bắt buộc phải được thay thế bằng thông tin an toàn trước khi vận hành. Tuyệt đối không công bố các token bí mật trên tài liệu hướng dẫn, commit, ảnh chụp màn hình hay nhật ký hệ thống.

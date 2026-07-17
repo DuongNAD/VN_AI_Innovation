@@ -13,6 +13,8 @@ export const GET = handleRoute(async (req: Request) => {
 
   return jsonOk({
     procedures,
-    usage,
+    usage: {
+      services: usage,
+    },
   });
 });

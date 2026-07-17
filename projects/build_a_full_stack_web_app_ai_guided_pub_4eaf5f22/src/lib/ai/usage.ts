@@ -89,10 +89,21 @@ function calculateLogCost(log: {
 }
 
 /**
- * Aggregates all AI usage logs and returns a summary grouped by serviceType.
+ * Aggregates AI usage in PostgreSQL and returns a summary grouped by serviceType.
+ * The number of rows returned is bounded by distinct service/model/cache/degraded
+ * combinations rather than growing with the full event history.
  */
 export async function getUsageSummary(): Promise<UsageSummary> {
-  const logs = await prisma.aiUsageLog.findMany();
+  const groups = await prisma.aiUsageLog.groupBy({
+    by: ['serviceType', 'model', 'cacheHit', 'degraded'],
+    _count: { _all: true },
+    _sum: {
+      promptTokens: true,
+      completionTokens: true,
+      audioSeconds: true,
+      latencyMs: true,
+    },
+  });
 
   const summary: UsageSummary = {
     llm: {
@@ -130,21 +141,34 @@ export async function getUsageSummary(): Promise<UsageSummary> {
     tts: 0,
   };
 
-  for (const log of logs) {
-    const service = log.serviceType as 'llm' | 'stt' | 'tts';
-    if (summary[service]) {
+  for (const group of groups) {
+    const service = group.serviceType as 'llm' | 'stt' | 'tts';
+    if (service === 'llm' || service === 'stt' || service === 'tts') {
+      const calls = group._count._all;
       const s = summary[service];
-      s.calls++;
-      s.tokens += (log.promptTokens ?? 0) + (log.completionTokens ?? 0);
-      s.audioSeconds += log.audioSeconds ?? 0;
-      serviceLatencies[service] += log.latencyMs;
-      if (log.cacheHit) {
-        s.cacheHits++;
+      const promptTokens = group._sum.promptTokens ?? 0;
+      const completionTokens = group._sum.completionTokens ?? 0;
+      const audioSeconds = group._sum.audioSeconds ?? 0;
+      const latencyMs = group._sum.latencyMs ?? 0;
+
+      s.calls += calls;
+      s.tokens += promptTokens + completionTokens;
+      s.audioSeconds += audioSeconds;
+      serviceLatencies[service] += latencyMs;
+      if (group.cacheHit) {
+        s.cacheHits += calls;
       }
-      if (log.degraded) {
-        s.degradedCount++;
+      if (group.degraded) {
+        s.degradedCount += calls;
       }
-      s.estimatedCostUsd += calculateLogCost(log);
+      s.estimatedCostUsd += calculateLogCost({
+        serviceType: group.serviceType,
+        model: group.model,
+        promptTokens,
+        completionTokens,
+        audioSeconds,
+        cacheHit: group.cacheHit,
+      });
     }
   }
 

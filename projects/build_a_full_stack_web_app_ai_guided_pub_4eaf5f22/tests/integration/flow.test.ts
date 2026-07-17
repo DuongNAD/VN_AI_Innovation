@@ -20,6 +20,79 @@ describe.skipIf(!RUN)('integration · citizen flow (needs seeded DB)', () => {
     expect(active?.version).toBe('1.0');
   });
 
+  it('replays the same idempotent request and rejects messageId reuse with a new payload', async () => {
+    const { prisma } = await import('@/lib/db');
+    const { buildIdempotencyKey, withIdempotency } = await import('@/lib/idempotency');
+    const principalId = `integration-${crypto.randomUUID()}`;
+    const identity = {
+      operation: 'integration-test',
+      resourceId: 'resource-1',
+      sessionId: principalId,
+      messageId: 'message-1',
+    };
+    const firstDescriptor = buildIdempotencyKey({
+      ...identity,
+      body: { answer: 'A' },
+    });
+    let executions = 0;
+
+    try {
+      const first = await withIdempotency(principalId, firstDescriptor, async () => {
+        executions++;
+        return { status: 201, body: { result: 'created' } };
+      });
+      const replay = await withIdempotency(principalId, firstDescriptor, async () => {
+        executions++;
+        return { status: 201, body: { result: 'should-not-run' } };
+      });
+
+      expect(first.replayed).toBe(false);
+      expect(replay).toMatchObject({
+        status: 201,
+        body: { result: 'created' },
+        replayed: true,
+      });
+      expect(executions).toBe(1);
+
+      const changedDescriptor = buildIdempotencyKey({
+        ...identity,
+        body: { answer: 'B' },
+      });
+      await expect(
+        withIdempotency(principalId, changedDescriptor, async () => {
+          executions++;
+          return { status: 201, body: { result: 'must-not-run' } };
+        })
+      ).rejects.toMatchObject({
+        status: 409,
+        code: 'IDEMPOTENCY_KEY_REUSED',
+      });
+      expect(executions).toBe(1);
+    } finally {
+      await prisma.idempotencyRecord.deleteMany({ where: { principalId } });
+    }
+  });
+
+  it('returns the OpenAPI usage.services envelope from the admin overview', async () => {
+    const { GET } = await import('@/app/api/v1/admin/overview/route');
+    const response = await GET(
+      new Request('http://localhost/api/v1/admin/overview', {
+        headers: { 'X-Admin-Token': process.env.ADMIN_TOKEN ?? '' },
+      }),
+      undefined as never
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.usage).toHaveProperty('services');
+    expect(body.usage.services).toEqual(
+      expect.objectContaining({
+        llm: expect.any(Object),
+        stt: expect.any(Object),
+        tts: expect.any(Object),
+      })
+    );
+  });
+
   it('builds guidance for a new session before conditional questions are answered', async () => {
     const { prisma } = await import('@/lib/db');
     const { generateAccessToken, hashToken } = await import('@/lib/auth');

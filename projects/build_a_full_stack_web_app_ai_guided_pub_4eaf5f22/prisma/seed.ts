@@ -4,6 +4,16 @@ import { fileURLToPath } from 'url';
 
 const prisma = new PrismaClient();
 
+export function assertSeedAllowed(
+  env: Partial<Pick<NodeJS.ProcessEnv, 'NODE_ENV' | 'ALLOW_DEMO_SEED'>> = process.env
+): void {
+  if (env.NODE_ENV === 'production' && env.ALLOW_DEMO_SEED !== '1') {
+    throw new Error(
+      'DEMO_SEED_BLOCKED: refusing to reset demo workflow data in production; set ALLOW_DEMO_SEED=1 only for an intentional disposable environment'
+    );
+  }
+}
+
 async function upsertProcedure(
   code: string,
   name: string,
@@ -237,6 +247,8 @@ async function upsertFormAndVersions(
 }
 
 export async function main() {
+  assertSeedAllowed();
+
   try {
     // 1. Seed MARRIAGE_REGISTRATION
     const marriageSteps = [
