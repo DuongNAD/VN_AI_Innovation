@@ -349,9 +349,13 @@ export default function ChatIntake({
           attachment: {
             type: 'supported_procedures',
             procedures: [
+              { code: 'DIVORCE_RESOLUTION', name: 'Giải quyết ly hôn' },
               { code: 'MARRIAGE_REGISTRATION', name: 'Đăng ký kết hôn' },
               { code: 'BIRTH_REGISTRATION', name: 'Đăng ký khai sinh' },
-              { code: 'HOUSEHOLD_BUSINESS_REGISTRATION', name: 'Đăng ký hộ kinh doanh' },
+              { code: 'TEMP_RESIDENCE_REGISTRATION', name: 'Đăng ký tạm trú' },
+              { code: 'CITIZEN_ID_ISSUANCE', name: 'Cấp thẻ căn cước' },
+              { code: 'PASSPORT_ISSUANCE', name: 'Cấp hộ chiếu phổ thông trong nước' },
+              { code: 'HOUSEHOLD_BUSINESS_REGISTRATION', name: 'Đăng ký thành lập hộ kinh doanh' },
             ],
             originalMessage: message,
           },

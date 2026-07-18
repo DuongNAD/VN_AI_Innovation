@@ -648,10 +648,16 @@
 /* Print styles: PDF actions print only the selected guide or document on A4 */
 @page {
   size: A4;
-  margin: 16mm;
+  margin: 12mm;
 }
 
 @media print {
+  html,
+  body {
+    background: #fff !important;
+    overflow: visible !important;
+  }
+
   body * {
     visibility: hidden;
   }
@@ -666,6 +672,8 @@
     left: 0;
     top: 0;
     width: 100%;
+    max-width: none !important;
+    margin: 0 !important;
   }
 
   .print-area .document-sheet {
@@ -676,17 +684,56 @@
   }
 
   .print-area.card {
-    max-width: none;
-    margin: 0;
     border: none;
     border-radius: 0;
     box-shadow: none;
     padding: 0;
   }
 
+  .print-area.card > .space-y-4 > .space-y-3 > div,
+  .print-area.card > .space-y-6 > .relative > div {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .document-print,
+  .document-print .document-sheet,
+  .document-preview {
+    box-sizing: border-box;
+    letter-spacing: normal !important;
+    word-spacing: normal !important;
+    font-kerning: normal;
+    hyphens: none;
+  }
+
+  .document-print .document-sheet {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .document-preview table,
+  .document-preview tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .document-preview .text-justify {
+    text-align: left;
+  }
+
   .no-print {
     display: none !important;
   }
+}
+
+.document-preview {
+  font-family: "Times New Roman", "Noto Serif", "DejaVu Serif", serif;
+  letter-spacing: normal;
+  word-spacing: normal;
+  font-kerning: normal;
+  hyphens: none;
 }
 
 /* Citizen profile */

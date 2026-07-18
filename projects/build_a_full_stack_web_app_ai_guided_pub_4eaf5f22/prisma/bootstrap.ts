@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { disconnectSeedDatabase, main as seedDemoData } from './seed';
+import { disconnectSeedDatabase, main as seedDemoData, seedDivorceProcedure } from './seed';
 import { OFFICIAL_PROCEDURE_SOURCE_URLS } from '../src/lib/official-procedures';
 
 const prisma = new PrismaClient();
@@ -26,6 +26,9 @@ async function refreshOfficialSourceUrls(): Promise<number> {
 export async function bootstrapEmptyDatabase(): Promise<'seeded' | 'skipped'> {
   const procedureCount = await prisma.procedure.count();
   if (procedureCount > 0) {
+    // Additive catalog migrations must also run for databases created by an
+    // earlier release; the full demo seed intentionally remains empty-DB only.
+    await seedDivorceProcedure();
     const refreshedCount = await refreshOfficialSourceUrls();
     if (refreshedCount > 0) {
       console.log(`Refreshed ${refreshedCount} official procedure source URL(s).`);

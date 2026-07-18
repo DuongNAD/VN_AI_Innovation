@@ -94,6 +94,9 @@ describe('official source URL guard', () => {
     expect(safeHttpsUrl('https://api.dichvucong.gov.vn/v1')).toBe(
       'https://api.dichvucong.gov.vn/v1'
     );
+    expect(safeHttpsUrl('https://langson.toaan.gov.vn/huong-dan')).toBe(
+      'https://langson.toaan.gov.vn/huong-dan'
+    );
   });
 
   it('rejects lookalike and unrelated HTTPS domains', () => {

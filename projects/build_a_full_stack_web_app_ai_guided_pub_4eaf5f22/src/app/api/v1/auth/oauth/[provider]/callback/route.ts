@@ -92,23 +92,70 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
     if (!code) {
       throw new AppError(400, 'INVALID_INPUT', 'Thiếu mã ủy quyền OAuth.');
     }
-    // Production-style token exchange would go here when client secrets are set.
-    // Without secrets we refuse non-demo callbacks.
-    const secret =
-      provider === 'google'
-        ? process.env.GOOGLE_CLIENT_SECRET
-        : process.env.FACEBOOK_APP_SECRET;
-    if (!secret) {
-      throw new AppError(
-        501,
-        'OAUTH_NOT_CONFIGURED',
-        'OAuth thật chưa được cấu hình. Dùng chế độ demo hoặc thiết lập biến môi trường client secret.'
-      );
+
+    if (provider === 'google') {
+      const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+      if (!clientId || !clientSecret) {
+        throw new AppError(501, 'OAUTH_NOT_CONFIGURED', 'Google OAuth chưa được cấu hình Client ID và Secret.');
+      }
+
+      const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || url.host;
+      const proto = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
+      const origin = `${proto}://${host}`;
+      const callbackUrl = `${origin}/api/v1/auth/oauth/google/callback`;
+
+      // 1. Trao đổi Auth Code lấy Access Token
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code,
+          grant_type: 'authorization_code',
+          redirect_uri: callbackUrl,
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        console.error('Lỗi khi lấy Access Token Google:', await tokenResponse.text());
+        throw new AppError(400, 'OAUTH_ERROR', 'Không thể trao đổi mã token với Google.');
+      }
+
+      const tokenData = await tokenResponse.json();
+
+      // 2. Dùng Access Token để lấy thông tin Người dùng (User Info)
+      const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+
+      if (!userResponse.ok) {
+        console.error('Lỗi lấy User Info Google:', await userResponse.text());
+        throw new AppError(400, 'OAUTH_ERROR', 'Không thể lấy thông tin người dùng từ Google.');
+      }
+
+      const userInfo = await userResponse.json();
+
+      providerUserId = userInfo.id;
+      email = userInfo.email || null;
+      displayName = userInfo.name || 'Người dùng Google';
+      avatarUrl = userInfo.picture || null;
+
+    } else {
+      // Logic mock cũ giữ lại cho Facebook nếu sau này cần
+      const secret = process.env.FACEBOOK_APP_SECRET;
+      if (!secret) {
+        throw new AppError(
+          501,
+          'OAUTH_NOT_CONFIGURED',
+          'OAuth thật chưa được cấu hình. Dùng chế độ demo hoặc thiết lập biến môi trường client secret.'
+        );
+      }
+      providerUserId = `live-${provider}-${code.slice(0, 24)}`;
+      displayName = `Người dùng ${provider}`;
+      email = null;
     }
-    // Minimal stub: treat code as opaque identity for environments that inject a mock upstream
-    providerUserId = `live-${provider}-${code.slice(0, 24)}`;
-    displayName = `Người dùng ${provider}`;
-    email = null;
   }
 
   const user = await upsertOAuthUser({

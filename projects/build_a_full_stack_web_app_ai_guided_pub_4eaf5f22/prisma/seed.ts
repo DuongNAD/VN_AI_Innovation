@@ -456,12 +456,198 @@ async function seedImportedCatalog() {
   }
 }
 
+export async function seedDivorceProcedure(): Promise<void> {
+  const steps = [
+    {
+      order: 1,
+      title: 'Xác định hình thức ly hôn',
+      description: 'Xác định thuận tình ly hôn hay ly hôn theo yêu cầu của một bên để dùng đúng loại đơn.',
+      example: 'Hai vợ chồng cùng đồng ý ly hôn và đã thống nhất việc nuôi con.',
+    },
+    {
+      order: 2,
+      title: 'Chuẩn bị hồ sơ',
+      description: 'Chuẩn bị đơn và tài liệu, chứng cứ phù hợp với con chung, tài sản, nợ chung và yếu tố nước ngoài.',
+      example: 'Bạn sao hợp lệ giấy khai sinh của con và giấy tờ về tài sản đang yêu cầu chia.',
+    },
+    {
+      order: 3,
+      title: 'Nộp hồ sơ',
+      description: 'Nộp trực tiếp, qua dịch vụ bưu chính hoặc gửi trực tuyến nếu Tòa án có hỗ trợ.',
+      example: 'Bạn nộp đơn cùng tài liệu kèm theo tại Tòa án có thẩm quyền.',
+    },
+    {
+      order: 4,
+      title: 'Thực hiện yêu cầu của Tòa án',
+      description: 'Theo dõi thông báo sửa đổi, bổ sung hồ sơ và thông báo nộp tạm ứng án phí hoặc lệ phí.',
+      example: 'Bạn bổ sung tài liệu về nơi cư trú theo thông báo của Tòa án.',
+    },
+    {
+      order: 5,
+      title: 'Tham gia giải quyết vụ việc',
+      description: 'Tham gia hòa giải, phiên họp hoặc phiên tòa theo giấy triệu tập của Tòa án.',
+      example: 'Bạn có mặt đúng thời gian ghi trên giấy triệu tập.',
+    },
+  ];
+
+  const questions = [
+    {
+      code: 'divorce_type',
+      orderNumber: 1,
+      fieldType: 'radio',
+      optionsJson: [
+        { value: 'mutual', label: 'Thuận tình ly hôn' },
+        { value: 'unilateral', label: 'Ly hôn theo yêu cầu của một bên' },
+      ],
+      conditionJson: null,
+      questionText: 'Hai vợ chồng cùng yêu cầu ly hôn hay chỉ một bên yêu cầu?',
+    },
+    {
+      code: 'has_children',
+      orderNumber: 2,
+      fieldType: 'radio',
+      optionsJson: [{ value: true, label: 'Có' }, { value: false, label: 'Không' }],
+      conditionJson: null,
+      questionText: 'Hai vợ chồng có con chung không?',
+    },
+    {
+      code: 'has_property_or_debt_request',
+      orderNumber: 3,
+      fieldType: 'radio',
+      optionsJson: [{ value: true, label: 'Có' }, { value: false, label: 'Không' }],
+      conditionJson: null,
+      questionText: 'Bạn có yêu cầu Tòa án giải quyết tài sản chung hoặc nợ chung không?',
+    },
+    {
+      code: 'has_foreign_element',
+      orderNumber: 4,
+      fieldType: 'radio',
+      optionsJson: [{ value: true, label: 'Có' }, { value: false, label: 'Không' }],
+      conditionJson: null,
+      questionText: 'Vụ việc có người, tài sản ở nước ngoài hoặc cần ủy thác tư pháp không?',
+    },
+    {
+      code: 'province',
+      orderNumber: 5,
+      fieldType: 'province',
+      optionsJson: null,
+      conditionJson: null,
+      questionText: 'Tỉnh/thành phố nơi người còn lại cư trú hoặc làm việc?',
+    },
+  ];
+
+  const documents = [
+    {
+      code: 'MUTUAL_DIVORCE_REQUEST',
+      name: 'Đơn yêu cầu công nhận thuận tình ly hôn',
+      originals: 1,
+      copies: 0,
+      orderNumber: 1,
+      conditionJson: { field: 'divorce_type', operator: 'equals', value: 'mutual' },
+      reasonText: 'Áp dụng vì hai vợ chồng cùng yêu cầu ly hôn.',
+      submissionType: 'SUBMIT',
+    },
+    {
+      code: 'UNILATERAL_DIVORCE_PETITION',
+      name: 'Đơn khởi kiện ly hôn',
+      originals: 1,
+      copies: 0,
+      orderNumber: 2,
+      conditionJson: { field: 'divorce_type', operator: 'equals', value: 'unilateral' },
+      reasonText: 'Áp dụng vì ly hôn theo yêu cầu của một bên.',
+      submissionType: 'SUBMIT',
+    },
+    {
+      code: 'MARRIAGE_CERTIFICATE',
+      name: 'Giấy chứng nhận đăng ký kết hôn (bản chính hoặc bản sao hợp lệ)',
+      originals: 0,
+      copies: 1,
+      orderNumber: 3,
+      conditionJson: null,
+      reasonText: null,
+      submissionType: 'SUBMIT',
+    },
+    {
+      code: 'SPOUSES_ID_DOCUMENTS',
+      name: 'Căn cước hoặc giấy tờ tùy thân của hai vợ chồng (bản sao hợp lệ)',
+      originals: 0,
+      copies: 2,
+      orderNumber: 4,
+      conditionJson: null,
+      reasonText: null,
+      submissionType: 'SUBMIT',
+    },
+    {
+      code: 'RESIDENCE_EVIDENCE',
+      name: 'Tài liệu, chứng cứ về nơi cư trú hoặc nơi làm việc của vợ chồng',
+      originals: 0,
+      copies: 1,
+      orderNumber: 5,
+      conditionJson: null,
+      reasonText: 'Dùng để xác định Tòa án có thẩm quyền.',
+      submissionType: 'SUBMIT',
+    },
+    {
+      code: 'CHILD_BIRTH_CERTIFICATES',
+      name: 'Giấy khai sinh của con chung (bản sao hợp lệ)',
+      originals: 0,
+      copies: 1,
+      orderNumber: 6,
+      conditionJson: { field: 'has_children', operator: 'equals', value: true },
+      reasonText: 'Áp dụng vì hai vợ chồng có con chung.',
+      submissionType: 'SUBMIT',
+    },
+    {
+      code: 'PROPERTY_DEBT_EVIDENCE',
+      name: 'Tài liệu, chứng cứ về tài sản chung và nợ chung',
+      originals: 0,
+      copies: 1,
+      orderNumber: 7,
+      conditionJson: { field: 'has_property_or_debt_request', operator: 'equals', value: true },
+      reasonText: 'Áp dụng khi yêu cầu Tòa án giải quyết tài sản hoặc nợ chung.',
+      submissionType: 'SUBMIT',
+    },
+    {
+      code: 'FOREIGN_DOCUMENTS',
+      name: 'Giấy tờ do cơ quan nước ngoài cấp đã được hợp pháp hóa lãnh sự, nếu thuộc trường hợp phải hợp pháp hóa',
+      originals: 0,
+      copies: 1,
+      orderNumber: 8,
+      conditionJson: { field: 'has_foreign_element', operator: 'equals', value: true },
+      reasonText: 'Áp dụng vì vụ việc có yếu tố nước ngoài.',
+      submissionType: 'SUBMIT',
+    },
+  ];
+
+  await upsertProcedure(
+    'DIVORCE_RESOLUTION',
+    'Giải quyết ly hôn',
+    'Hôn nhân và gia đình',
+    'Tòa án có thẩm quyền',
+    'CITIZEN',
+    OFFICIAL_PROCEDURE_SOURCE_URLS.DIVORCE_RESOLUTION,
+    [{
+      version: '1.0',
+      status: 'ACTIVE',
+      effectiveFrom: new Date('2026-01-01T00:00:00+07:00'),
+      stepsJson: steps,
+      durationText: 'Phụ thuộc loại việc, nội dung tranh chấp và quá trình tố tụng theo thông báo của Tòa án',
+      feesText: 'Án phí hoặc lệ phí và tạm ứng thực hiện theo thông báo của Tòa án',
+      legalBasisText: 'Luật Hôn nhân và gia đình 2014; Bộ luật Tố tụng dân sự 2015; Nghị quyết 01/2017/NQ-HĐTP',
+    }],
+    questions,
+    documents,
+  );
+}
+
 export async function main(options: { allowProductionBootstrap?: boolean } = {}) {
   if (!options.allowProductionBootstrap) {
     assertSeedAllowed();
   }
 
   try {
+    await seedDivorceProcedure();
+
     // 1. Seed MARRIAGE_REGISTRATION
     const marriageSteps = [
       { order: 1, title: 'Chuẩn bị hồ sơ', description: 'Chuẩn bị các giấy tờ theo danh sách hướng dẫn.', example: 'Bạn chụp ảnh giấy xác nhận tình trạng độc thân và căn cước công dân.' },

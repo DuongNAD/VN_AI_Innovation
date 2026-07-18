@@ -796,7 +796,7 @@ export function safeHttpsUrl(url: unknown): string | null {
     return null;
   }
 
-  const approvedGovernmentHosts = ['dichvucong.gov.vn'] as const;
+  const approvedGovernmentHosts = ['dichvucong.gov.vn', 'toaan.gov.vn'] as const;
   const isApprovedGovernmentHost = approvedGovernmentHosts.some(
     (approved) => hostname === approved || hostname.endsWith(`.${approved}`)
   );

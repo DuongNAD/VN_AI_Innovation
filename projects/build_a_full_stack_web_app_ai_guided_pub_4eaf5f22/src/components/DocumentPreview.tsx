@@ -24,6 +24,14 @@ function isEmpty(value: unknown): boolean {
   return value === undefined || value === null || value === '';
 }
 
+function normalizeDocumentText(value: string): string {
+  return value
+    .normalize('NFC')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .trim();
+}
+
 /** Format a raw stored value for display using the field's option labels when available. */
 function fmtValue(field: FieldDef | undefined, value: unknown): string {
   if (isEmpty(value)) {
@@ -32,7 +40,7 @@ function fmtValue(field: FieldDef | undefined, value: unknown): string {
   if (field?.options && field.options.length > 0) {
     const match = field.options.find((o) => o.value === value || String(o.value) === String(value));
     if (match) {
-      return match.label;
+      return normalizeDocumentText(match.label);
     }
   }
   if (field?.type === 'date') {
@@ -44,7 +52,7 @@ function fmtValue(field: FieldDef | undefined, value: unknown): string {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value.toLocaleString('vi-VN');
   }
-  return String(value);
+  return normalizeDocumentText(String(value));
 }
 
 function todayLine(): string {
@@ -172,7 +180,7 @@ function MarriageDocument({ fields, data }: { fields: FieldDef[]; data: Record<s
         </tbody>
       </table>
 
-      <p className="text-justify leading-relaxed">
+      <p className="text-left leading-relaxed">
         Chúng tôi cam đoan những lời khai trên đây là đúng sự thật, việc kết hôn của chúng tôi là
         tự nguyện, không vi phạm quy định của Luật Hôn nhân và gia đình Việt Nam, và chịu hoàn toàn
         trách nhiệm trước pháp luật về nội dung đã khai.
@@ -214,7 +222,7 @@ function GenericDocument({ procedureName, fields, data }: {
           ))}
         </tbody>
       </table>
-      <p className="text-justify leading-relaxed">
+      <p className="text-left leading-relaxed">
         Tôi cam đoan những lời khai trên đây là đúng sự thật và chịu trách nhiệm trước pháp luật về
         nội dung đã khai.
       </p>
@@ -264,8 +272,8 @@ export default function DocumentPreview({
         </button>
       </div>
 
-      <div className="print-area">
-        <div className="document-sheet relative overflow-hidden bg-white border border-slate-300 rounded-lg shadow-sm px-6 py-8 sm:px-10 font-serif text-slate-900">
+      <div className="print-area document-print">
+        <div className="document-sheet document-preview relative overflow-hidden bg-white border border-slate-300 rounded-lg shadow-sm px-6 py-8 sm:px-10 font-serif text-slate-900 tracking-normal">
           <span
             aria-hidden="true"
             className="document-watermark pointer-events-none select-none absolute inset-0 flex items-center justify-center text-4xl sm:text-5xl font-bold uppercase tracking-widest text-slate-900/[0.06] rotate-[-24deg]"
