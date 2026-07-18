@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { AppError, handleRoute, jsonOk } from '@/lib/errors';
 import { optionalString, readJsonBody } from '@/lib/http';
+import { isDemoAccount } from '@/lib/demo-accounts';
 import { requireStaffAuth } from '@/lib/login-auth';
 import { hashPassword, isStrongEnoughPassword } from '@/lib/password';
 import { accountDto, isAppRole } from '../shared';
@@ -48,6 +49,16 @@ export const PATCH = handleRoute(
     }
 
     if (password !== undefined) {
+      // Shared judge/demo accounts: the submitted credentials must keep
+      // working, so even an admin cannot reset them — demo the reset flow on
+      // a freshly created account instead.
+      if (isDemoAccount(target.username)) {
+        throw new AppError(
+          403,
+          'DEMO_ACCOUNT_PASSWORD_LOCKED',
+          'Đây là tài khoản demo dùng chung cho ban giám khảo nên không thể đặt lại mật khẩu. Hãy tạo tài khoản mới để thử tính năng này.'
+        );
+      }
       if (!isStrongEnoughPassword(password)) {
         throw new AppError(400, 'INVALID_INPUT', 'Mật khẩu tối thiểu 8 ký tự, phải có chữ và số.', {
           field: 'password',
