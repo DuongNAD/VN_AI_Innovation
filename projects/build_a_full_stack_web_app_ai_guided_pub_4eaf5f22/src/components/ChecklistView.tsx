@@ -43,9 +43,16 @@ export interface GuidancePayload {
 interface ChecklistViewProps {
   guidance: GuidancePayload;
   onFillForm?: () => void;
+  isSubmitting?: boolean;
+  submitError?: string | null;
 }
 
-export default function ChecklistView({ guidance, onFillForm }: ChecklistViewProps) {
+export default function ChecklistView({
+  guidance,
+  onFillForm,
+  isSubmitting = false,
+  submitError = null,
+}: ChecklistViewProps) {
   if (!guidance) {
     return null;
   }
@@ -121,76 +128,75 @@ export default function ChecklistView({ guidance, onFillForm }: ChecklistViewPro
   };
 
   return (
-    <div className="print-area card mx-auto my-6 max-w-4xl space-y-8 border border-surface-border bg-surface p-6 shadow-sm sm:p-8">
-      <div className="no-print flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 pb-4 border-b border-surface-border">
-        <button
-          type="button"
-          onClick={handlePrintGuide}
-          className="btn bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          Lưu hướng dẫn PDF
-        </button>
-        {officialSourceUrl && (
-          <a
-            href={officialSourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-sm"
-          >
-            Mở Cổng DVC để nộp
-            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M14 3h7m0 0v7m0-7L10 14M5 5h5M5 5v14h14v-5"
-              />
-            </svg>
-          </a>
-        )}
-        <p className="text-xs text-slate-500 sm:basis-full sm:text-right">
-          Trong hộp thoại in, chọn “Lưu dưới dạng PDF”.
-        </p>
-      </div>
-
-      {/* Header Section */}
-      <div className="space-y-2 border-b border-surface-border pb-6">
-        <div className="flex items-center justify-between">
+    <div className="print-area card mx-auto max-w-4xl space-y-7 rounded-2xl border border-surface-border bg-surface p-5 shadow-sm sm:p-8">
+      {/* Procedure summary + compact utility actions */}
+      <div className="flex flex-col gap-5 border-b border-surface-border pb-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 space-y-2">
           <span className="inline-flex items-center rounded-full border border-surface-border bg-surface-muted px-2.5 py-0.5 text-xs font-semibold text-slate-700">
             Cơ quan thực hiện: {guidance.procedure.agency}
           </span>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            {guidance.procedure.name}
+          </h1>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-          {guidance.procedure.name}
-        </h1>
+
+        <div className="no-print flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <button
+            type="button"
+            onClick={handlePrintGuide}
+            title="Trong hộp thoại in, chọn “Lưu dưới dạng PDF”"
+            className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.8}
+                d="M12 10v6m0 0-3-3m3 3 3-3m2 8H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414A1 1 0 0 1 19 9.414V19a2 2 0 0 1-2 2Z"
+              />
+            </svg>
+            Lưu PDF
+          </button>
+
+          {officialSourceUrl && (
+            <a
+              href={officialSourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-800 transition-colors hover:border-brand-300 hover:bg-brand-100"
+            >
+              Mở Cổng DVC
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M14 3h7m0 0v7m0-7L10 14M5 5h5M5 5v14h14v-5"
+                />
+              </svg>
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Duration and Fees */}
-      <div className="grid grid-cols-1 gap-4 rounded-xl border border-surface-border bg-surface-muted p-4 sm:grid-cols-2">
-        <div className="flex items-center space-x-3 text-slate-700">
-          <svg className="w-5 h-5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="grid grid-cols-1 divide-y divide-slate-200 rounded-xl border border-surface-border bg-surface-muted px-4 sm:grid-cols-2 sm:divide-x sm:divide-y-0 sm:px-0">
+        <div className="flex items-center gap-3 py-4 text-slate-700 sm:px-5">
+          <svg className="h-5 w-5 flex-shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div>
-            <span className="text-xs text-slate-400 block font-medium uppercase tracking-wider">Thời hạn giải quyết</span>
-            <span className="font-semibold text-sm">{guidance.durationText}</span>
+            <span className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">Thời hạn giải quyết</span>
+            <span className="text-sm font-semibold">{guidance.durationText}</span>
           </div>
         </div>
-        <div className="flex items-center space-x-3 text-slate-700">
-          <svg className="w-5 h-5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="flex items-center gap-3 py-4 text-slate-700 sm:px-5">
+          <svg className="h-5 w-5 flex-shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div>
-            <span className="text-xs text-slate-400 block font-medium uppercase tracking-wider">Lệ phí</span>
-            <span className="font-semibold text-sm">{guidance.feesText}</span>
+            <span className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">Lệ phí</span>
+            <span className="text-sm font-semibold">{guidance.feesText}</span>
           </div>
         </div>
       </div>
@@ -202,7 +208,7 @@ export default function ChecklistView({ guidance, onFillForm }: ChecklistViewPro
           {guidance.checklist.map((item, idx) => (
             <div
               key={item.code || idx}
-              className="flex flex-col justify-between gap-4 rounded-lg border border-surface-border bg-surface p-4 shadow-sm transition-shadow hover:shadow md:flex-row md:items-start"
+              className="flex flex-col justify-between gap-4 rounded-xl border border-surface-border bg-surface p-4 transition-colors hover:border-slate-300 md:flex-row md:items-start"
             >
               <div className="space-y-1.5">
                 <p className="font-bold text-slate-800">{item.name}</p>
@@ -248,21 +254,40 @@ export default function ChecklistView({ guidance, onFillForm }: ChecklistViewPro
       </div>
 
       {/* Action / Form availability notification */}
-      <div className="no-print pt-4 border-t border-slate-100">
+      <div className="no-print border-t border-slate-100 pt-6">
         {guidance.formAvailable ? (
           onFillForm && (
-            <div className="flex justify-end">
+            <div className="rounded-2xl border border-brand-100 bg-brand-50/70 p-5 sm:flex sm:items-center sm:justify-between sm:gap-6">
+              <div>
+                <h3 className="font-bold text-slate-900">Tiếp tục điền hồ sơ trực tuyến</h3>
+                <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                  Câu trả lời trước đó sẽ được dùng để điền sẵn những thông tin phù hợp.
+                </p>
+              </div>
               <button
-                onClick={() => onFillForm?.()}
-                className="btn bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                type="button"
+                onClick={onFillForm}
+                disabled={isSubmitting}
+                className="btn-primary mt-4 min-w-44 gap-2 px-6 sm:mt-0"
               >
-                Điền biểu mẫu
+                {isSubmitting && (
+                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4Z" />
+                  </svg>
+                )}
+                {isSubmitting ? 'Đang mở biểu mẫu…' : 'Điền biểu mẫu'}
               </button>
             </div>
           )
         ) : (
-          <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4 text-sm font-medium">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
             Thủ tục này hiện hỗ trợ tra cứu và hướng dẫn; biểu mẫu điện tử sẽ được bổ sung.
+          </div>
+        )}
+        {submitError && (
+          <div role="alert" className="mt-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {submitError}
           </div>
         )}
       </div>

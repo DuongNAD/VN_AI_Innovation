@@ -23,4 +23,21 @@ describe('mock classifier · business intents', () => {
   ])('maps divorce intent "%s" to %s', (message, expected) => {
     expect(classifyByKeywords(message)?.procedureCode).toBe(expected);
   });
+
+  it('calculates a bounded, non-hardcoded match score', () => {
+    const exact = classifyByKeywords('đăng ký kết hôn');
+    const conversational = classifyByKeywords('Tôi muốn đăng ký kết hôn');
+    const shortKeyword = classifyByKeywords('Tôi cần làm CCCD mới');
+
+    expect(exact?.confidence).toBe(0.98);
+    expect(conversational?.confidence).toBeGreaterThan(0.8);
+    expect(conversational?.confidence).toBeLessThan(exact!.confidence);
+    expect(shortKeyword?.confidence).toBeGreaterThanOrEqual(0.6);
+    expect(shortKeyword?.confidence).toBeLessThan(conversational!.confidence);
+    expect(
+      [exact, conversational, shortKeyword].every(
+        (result) => result && result.confidence >= 0 && result.confidence <= 1
+      )
+    ).toBe(true);
+  });
 });

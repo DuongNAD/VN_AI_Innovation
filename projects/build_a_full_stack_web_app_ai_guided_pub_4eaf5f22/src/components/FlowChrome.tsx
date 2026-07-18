@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { ProgressIndicator } from '@/components/ProgressIndicator';
 
 export const FLOW_STEPS = [
@@ -16,6 +17,10 @@ interface FlowChromeProps {
   current: FlowStepKey;
   /** Tiêu đề ngắn của bước hiện tại (tuỳ chọn) */
   title?: string;
+  /** Nếu có: hiện nút quay lại ở đầu dải, trỏ tới đường dẫn này */
+  backHref?: string;
+  /** Nhãn nút quay lại (mặc định "Quay lại") */
+  backLabel?: string;
   className?: string;
 }
 
@@ -26,7 +31,13 @@ interface FlowChromeProps {
  * Desktop: tiêu đề + stepper một hàng. Mobile: tiêu đề + chip "Bước x/5"
  * cùng vạch tiến độ mảnh sát mép dưới.
  */
-export default function FlowChrome({ current, title, className = '' }: FlowChromeProps) {
+export default function FlowChrome({
+  current,
+  title,
+  backHref,
+  backLabel = 'Quay lại',
+  className = '',
+}: FlowChromeProps) {
   const idx = FLOW_STEPS.findIndex((s) => s.key === current);
   const safeIdx = idx < 0 ? 0 : idx;
   const stepNo = safeIdx + 1;
@@ -44,7 +55,30 @@ export default function FlowChrome({ current, title, className = '' }: FlowChrom
     <div
       className={`no-print sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 shadow-[0_1px_2px_rgba(15,23,42,0.04)] backdrop-blur-xl supports-[backdrop-filter]:bg-white/80 ${className}`}
     >
-      <div className="relative flex h-14 w-full items-center gap-4 px-4 sm:px-6">
+      <div className="relative flex h-14 w-full items-center gap-2.5 px-4 sm:px-6 sm:gap-3">
+        {backHref ? (
+          <Link
+            href={backHref}
+            aria-label={backLabel}
+            className="-ml-1 inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full pl-1.5 pr-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:pr-3"
+          >
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="size-5 shrink-0">
+              <path
+                d="M12.5 5 7.5 10l5 5"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span className="hidden sm:inline">{backLabel}</span>
+          </Link>
+        ) : null}
+
+        {backHref && title ? (
+          <span className="hidden h-6 w-px shrink-0 bg-slate-200 sm:block" aria-hidden="true" />
+        ) : null}
+
         {title ? (
           <p
             className="min-w-0 flex-1 truncate text-[15px] font-semibold tracking-tight text-slate-900 md:flex-none md:max-w-[14rem] xl:max-w-xs"

@@ -7,6 +7,7 @@ import { randomUUID } from '@/lib/uuid';
 import { WavRecorder } from '@/lib/wav-recorder';
 import SpeechButton from '@/components/SpeechButton';
 import BrandLogo from '@/components/BrandLogo';
+import { confidenceLevel, confidencePercent } from '@/lib/confidence';
 
 type Phase = 'search' | 'intake' | 'done';
 
@@ -194,6 +195,8 @@ export default function ChatIntake({
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [showEditList, setShowEditList] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  // Thẻ "AI giải thích" mở sẵn; người dùng thu gọn thì giữ nguyên cho các câu sau
+  const [helpOpen, setHelpOpen] = useState(true);
 
   // Active question schema tracking map
   const [questionSchemaMap, setQuestionSchemaMap] = useState<Record<string, Question>>({});
@@ -212,10 +215,14 @@ export default function ChatIntake({
   const bottomRef = useRef<HTMLDivElement>(null);
   const initialRef = useRef(false);
 
-  // Auto scroll effect
+  // Auto scroll effect — gọi đồng bộ trong effect (DOM đã cập nhật ở thời điểm
+  // này) để thẻ AI giải thích mới gắn vào luồng cũng nằm trọn trong tầm nhìn.
+  // Cuộn instant, không smooth/rAF: một số môi trường nuốt smooth hoặc trì hoãn
+  // frame khiến luồng kẹt giữa chừng.
+  const activeQuestionCode = editingCode ?? flow?.next?.questionCode ?? null;
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length]);
+    bottomRef.current?.scrollIntoView({ block: 'end' });
+  }, [messages.length, isTyping, editingCode, activeQuestionCode, helpOpen]);
 
   // Save encountered questions to schema map
   useEffect(() => {
@@ -529,7 +536,7 @@ export default function ChatIntake({
     setBusy(false);
 
     if (res.ok) {
-      router.push(`/user/form/${res.data.applicationId}`);
+      router.push(`/user/form/${res.data.applicationId}`, { scroll: true });
     } else {
       appendBotMessage(res.message);
     }
@@ -711,6 +718,34 @@ export default function ChatIntake({
     ? questionSchemaMap[editingCode]
     : flow?.next;
 
+  // Cờ bố cục cho dock điều khiển gọn phía trên ô nhập
+  const showChoiceControls =
+    !!activeQuestion &&
+    (phase === 'intake' || editingCode !== null) &&
+    activeQuestion.fieldType !== 'text';
+  const showDoneCtas = phase === 'done' && !!sessionId && !editingCode;
+  const canEditAnswers = answeredList.length > 0 && !editingCode && phase !== 'search';
+  const showDock = showChoiceControls || showDoneCtas || editingCode !== null || canEditAnswers;
+
+  // Chip "Sửa câu trả lời" — nằm chung hàng với các lựa chọn thay vì chiếm một khối riêng
+  const editTrigger = canEditAnswers ? (
+    <button
+      type="button"
+      onClick={() => setShowEditList((v) => !v)}
+      aria-expanded={showEditList}
+      className="ms-auto inline-flex min-h-touch shrink-0 items-center gap-1.5 rounded-full border border-dashed border-slate-300 bg-white/70 px-3.5 text-xs font-semibold text-slate-600 transition-colors hover:border-brand-500 hover:bg-white hover:text-brand-700"
+    >
+      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+        />
+      </svg>
+      Sửa câu trả lời
+    </button>
+  ) : null;
+
   // Prefill province select if needed
   useEffect(() => {
     if (activeQuestion?.fieldType === 'province') {
@@ -719,26 +754,28 @@ export default function ChatIntake({
     }
   }, [activeQuestion, editingCode, answeredList, knownProvince]);
 
-  // RENDER OPTION BUTTONS (Radio / Select)
+  // RENDER OPTION BUTTONS (Radio / Select) — dạng pill gọn, ghim ngay trên ô nhập
   const renderOptions = (q: Question) => {
     const options = q.options || [];
     return (
-      <div className="mx-auto my-4 grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="flex flex-wrap items-stretch gap-2">
         {options.map((opt) => (
           <button
             key={String(opt.value)}
             type="button"
             disabled={busy}
             onClick={() => submitAnswer(q.questionCode, opt.value, opt.label)}
-            className="min-h-[48px] w-full rounded-xl border border-surface-border bg-surface p-4 text-left font-semibold text-slate-900 shadow-sm motion-safe:transition-all motion-safe:duration-200 motion-safe:active:scale-[0.99] hover:border-brand-400 hover:bg-brand-50 hover:shadow-md focus:ring-2 focus:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-touch flex-1 basis-[calc(50%-0.5rem)] rounded-full border-2 border-brand-200 bg-white px-4 py-2 text-center text-[15px] font-bold text-brand-800 shadow-sm motion-safe:transition-all motion-safe:duration-150 hover:border-brand-500 hover:bg-brand-50 focus:outline-none focus:ring-2 focus:ring-brand-600 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:basis-auto sm:min-w-[8.5rem] sm:px-6"
           >
             {opt.label}
           </button>
         ))}
+        {editTrigger}
       </div>
     );
   };
 
+  // Thẻ "AI giải thích" — nằm trong luồng chat ngay dưới câu hỏi, thu gọn được
   const renderQuestionHelp = (q: Question) => {
     if (!q.helpText) {
       return null;
@@ -749,50 +786,70 @@ export default function ChatIntake({
       ...(q.examples ?? []),
     ].join('. ');
     return (
-      <div className="mx-auto mb-4 w-full max-w-2xl rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm">
-        <div className="flex items-start gap-3">
-          <span
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 text-xs font-black text-white shadow-md"
-            aria-hidden="true"
+      <div className="ml-6 max-w-[88%] sm:ml-10 md:max-w-xl">
+        <div className="overflow-hidden rounded-2xl rounded-tl-sm border border-indigo-100 bg-gradient-to-br from-indigo-50/80 to-white shadow-sm ring-1 ring-indigo-900/5">
+          <button
+            type="button"
+            onClick={() => setHelpOpen((v) => !v)}
+            aria-expanded={helpOpen}
+            className="flex min-h-touch w-full items-center gap-2 px-3 py-1.5 text-left transition-colors hover:bg-indigo-50/70"
           >
-            AI
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-extrabold text-indigo-950">AI giải thích câu hỏi dễ hiểu</p>
-              <SpeechButton text={speechText} label="Nghe giải thích" compact />
-            </div>
-            <p className="mt-1 text-sm font-medium leading-relaxed text-slate-700">
-              {q.helpText}
-            </p>
-            {q.examples && q.examples.length > 0 && (
-              <ul className="mt-2 space-y-1 text-sm text-indigo-900">
-                {q.examples.map((example, index) => (
-                  <li key={index} className="flex gap-2">
-                    <span className="font-black text-indigo-500" aria-hidden="true">•</span>
-                    <span>{example}</span>
-                  </li>
-                ))}
-              </ul>
+            <span
+              className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-600 text-[9px] font-black text-white shadow-sm"
+              aria-hidden="true"
+            >
+              AI
+            </span>
+            <span className="shrink-0 text-[13px] font-extrabold text-indigo-950">AI giải thích</span>
+            {!helpOpen && (
+              <span className="min-w-0 flex-1 truncate text-xs text-slate-500">{q.helpText}</span>
             )}
-            <p className="mt-2 text-xs text-slate-500">
-              AI chỉ diễn giải câu hỏi chính thức, không thay đổi điều kiện của thủ tục.
-            </p>
-          </div>
+            <svg
+              className={`ml-auto h-4 w-4 shrink-0 text-indigo-400 motion-safe:transition-transform ${helpOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+          {helpOpen && (
+            <div className="px-3 pb-2.5 pl-11">
+              <p className="text-sm leading-relaxed text-slate-700">{q.helpText}</p>
+              {q.examples && q.examples.length > 0 && (
+                <ul className="mt-1.5 space-y-1 text-[13px] leading-snug text-indigo-900">
+                  {q.examples.map((example, index) => (
+                    <li key={index} className="flex gap-1.5">
+                      <span className="font-black text-indigo-400" aria-hidden="true">•</span>
+                      <span>{example}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-indigo-100/80 pt-1.5">
+                <p className="text-[11px] text-slate-400">
+                  AI chỉ diễn giải câu hỏi, không thay đổi điều kiện của thủ tục.
+                </p>
+                <SpeechButton text={speechText} label="Nghe" compact />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
   };
 
-  // RENDER PROVINCE SELECT
+  // RENDER PROVINCE SELECT — hàng gọn trong dock
   const renderProvinceSelect = (q: Question) => {
     return (
-      <div className="mx-auto my-4 flex w-full max-w-xl flex-col items-center gap-3 sm:flex-row">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <select
           value={provinceSelectVal}
           onChange={(e) => setProvinceSelectVal(e.target.value)}
           disabled={busy}
-          className="min-h-[48px] w-full flex-1 rounded-xl border border-surface-border bg-surface px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600"
+          className="min-h-touch w-full flex-1 rounded-xl border border-surface-border bg-surface px-3 py-2 text-[15px] text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600"
           aria-label="Chọn tỉnh thành"
         >
           <option value="">-- Chọn Tỉnh/Thành phố --</option>
@@ -809,7 +866,7 @@ export default function ChatIntake({
             setKnownProvince(provinceSelectVal);
             submitAnswer(q.questionCode, provinceSelectVal, provinceSelectVal);
           }}
-          className="btn min-h-[48px] w-full rounded-xl bg-accent-500 px-6 py-3 font-bold text-slate-950 transition-all hover:bg-accent-400 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 sm:w-auto"
+          className="btn min-h-touch shrink-0 rounded-xl bg-accent-500 px-5 py-2 text-[15px] font-bold text-slate-950 transition-all hover:bg-accent-400 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
         >
           Xác nhận
         </button>
@@ -820,12 +877,17 @@ export default function ChatIntake({
   // RENDER PROCEDURE CARD IN THREAD
   const renderProcedureCard = (attachment: any) => {
     const validatedLink = safeHttpsUrl(attachment.procedure?.sourceUrl);
+    const score = confidencePercent(attachment.procedure?.confidence);
+    const level = confidenceLevel(attachment.procedure?.confidence);
     return (
       <div className="mt-3 space-y-3 rounded-xl border border-brand-200 bg-brand-50 p-4">
         <h4 className="text-base font-bold text-brand-900">{attachment.procedure?.name}</h4>
-        <div className="flex items-center justify-between text-sm text-slate-700">
+        <div
+          className="flex items-center justify-between gap-4 text-sm text-slate-700"
+          title="Điểm khớp giữa nội dung bạn nhập và thủ tục được gợi ý; không phải độ chính xác pháp lý."
+        >
           <span>
-            Độ tin cậy {attachment.procedure ? Math.round(attachment.procedure.confidence * 100) : 0}%
+            Mức độ khớp: <strong className="text-brand-800">{level} · {score}%</strong>
           </span>
           {validatedLink ? (
             <a
@@ -880,10 +942,10 @@ export default function ChatIntake({
 
   return (
     <div
-      className={`flex h-full min-h-0 flex-col font-sans text-slate-900 ${
+      className={`flex min-h-0 flex-1 flex-col font-sans text-slate-900 ${
         embed
-          ? 'h-full w-full bg-surface-muted'
-          : 'mx-auto h-full min-h-[min(100dvh,720px)] w-full max-w-4xl rounded-3xl border-2 border-brand-200/80 bg-white/90 shadow-shell-lg ring-1 ring-brand-100 backdrop-blur-sm sm:min-h-[min(85dvh,800px)]'
+          ? 'w-full bg-surface-muted'
+          : 'mx-auto w-full max-w-4xl rounded-3xl border-2 border-brand-200/80 bg-white/90 shadow-shell-lg ring-1 ring-brand-100 backdrop-blur-sm'
       }`}
     >
       {ecoBadge && (
@@ -894,14 +956,14 @@ export default function ChatIntake({
 
       {/* Message scroll thread — live region cho trình đọc màn hình */}
       <div
-        className="flex-1 space-y-5 overflow-y-auto bg-gradient-to-b from-brand-50/80 to-slate-100 p-4 md:p-6 [background-image:radial-gradient(circle_at_1px_1px,rgb(148_163_184/0.22)_1px,transparent_0)] [background-size:18px_18px]"
+        className="flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-brand-50/80 to-slate-100 p-3.5 sm:p-4 md:p-5 [background-image:radial-gradient(circle_at_1px_1px,rgb(148_163_184/0.22)_1px,transparent_0)] [background-size:18px_18px]"
         role="log"
         aria-live="polite"
         aria-relevant="additions"
         aria-label="Hội thoại với trợ lý"
       >
         {showBrandedWelcome && (
-          <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-5 py-4 text-center">
+          <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-4 py-2 text-center">
             <BrandLogo size="lg" href={null} />
             {/* Minh họa chào mừng gọn (inline SVG) */}
             <svg
@@ -971,21 +1033,53 @@ export default function ChatIntake({
             return null;
           }
           const isBot = message.role === 'bot';
+          // Tách tiền tố "Câu x/y:" thành chip tiến độ — chỉ đổi cách hiển thị,
+          // nội dung đọc (TTS) vẫn dùng nguyên văn message.text
+          const questionMatch = isBot
+            ? message.text.match(/^Câu (\d+)\/(\d+): ([\s\S]+)$/)
+            : null;
+          const qIndex = questionMatch ? parseInt(questionMatch[1], 10) : 0;
+          const qTotal = questionMatch ? parseInt(questionMatch[2], 10) : 0;
           return (
             <div key={message.id} className={`flex items-start gap-2 ${isBot ? '' : 'justify-end'}`}>
               {isBot ? (
-                <div className="w-full max-w-[85%] rounded-2xl rounded-tl-sm border border-white bg-gradient-to-b from-white to-slate-50 p-4 text-slate-900 shadow-shell ring-1 ring-slate-900/5 motion-safe:transition-all motion-safe:duration-200 md:w-auto">
-                  <div className="flex items-start justify-between gap-4">
-                    <p className="whitespace-pre-wrap text-body-lg leading-[1.7] tracking-snugish text-slate-800">
-                      {message.text}
-                    </p>
+                <div className="max-w-[88%] rounded-2xl rounded-tl-sm border border-white bg-gradient-to-b from-white to-slate-50 px-4 py-3 text-slate-900 shadow-shell ring-1 ring-slate-900/5 md:max-w-[75%]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      {questionMatch ? (
+                        <>
+                          <div className="mb-1 flex items-center gap-2">
+                            <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[11px] font-black uppercase tracking-wide text-brand-800">
+                              Câu {qIndex}/{qTotal}
+                            </span>
+                            {qTotal > 0 && qTotal <= 8 && (
+                              <span className="flex items-center gap-1" aria-hidden="true">
+                                {Array.from({ length: qTotal }).map((_, i) => (
+                                  <span
+                                    key={i}
+                                    className={`h-1 w-3.5 rounded-full ${i < qIndex ? 'bg-brand-500' : 'bg-slate-200'}`}
+                                  />
+                                ))}
+                              </span>
+                            )}
+                          </div>
+                          <p className="whitespace-pre-wrap text-body-lg font-semibold leading-relaxed tracking-snugish text-slate-900">
+                            {questionMatch[3]}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="whitespace-pre-wrap text-body leading-relaxed tracking-snugish text-slate-800">
+                          {message.text}
+                        </p>
+                      )}
+                    </div>
                     <SpeechButton text={message.text} label="Nghe" compact />
                   </div>
                   {message.attachment?.type === 'procedure_card' && renderProcedureCard(message.attachment)}
                   {message.attachment?.type === 'supported_procedures' && renderSupportedProcedures(message.attachment)}
                 </div>
               ) : (
-                <div className="ml-auto max-w-[85%] rounded-2xl rounded-tr-sm bg-gradient-to-br from-brand-500 via-brand-600 to-brand-800 p-4 text-lg font-medium tracking-snugish text-white shadow-glow ring-1 ring-white/25 motion-safe:transition-transform motion-safe:duration-200 motion-safe:active:scale-[0.99]">
+                <div className="ml-auto max-w-[85%] rounded-2xl rounded-tr-sm bg-gradient-to-br from-brand-500 via-brand-600 to-brand-800 px-4 py-2.5 text-base font-semibold tracking-snugish text-white shadow-glow ring-1 ring-white/25">
                   <p className="whitespace-pre-wrap leading-relaxed">{message.text}</p>
                 </div>
               )}
@@ -993,16 +1087,22 @@ export default function ChatIntake({
           );
         })}
 
+        {/* Giải thích AI cho câu hỏi đang hoạt động — trong luồng, ngay dưới bong bóng câu hỏi */}
+        {activeQuestion &&
+          !isTyping &&
+          (phase === 'intake' || editingCode !== null) &&
+          renderQuestionHelp(activeQuestion)}
+
         {isTyping && (
           <div className="flex items-start gap-2" aria-live="polite">
-            <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-white bg-white p-4 shadow-shell">
+            <div className="rounded-2xl rounded-tl-sm border border-white bg-white px-4 py-2.5 shadow-shell">
               <div className="flex items-center gap-2">
                 <div className="flex gap-1.5" aria-hidden="true">
-                  <span className="h-2.5 w-2.5 rounded-full bg-brand-500 motion-safe:animate-pulse" style={{ animationDelay: '0ms' }} />
-                  <span className="h-2.5 w-2.5 rounded-full bg-brand-500 motion-safe:animate-pulse" style={{ animationDelay: '150ms' }} />
-                  <span className="h-2.5 w-2.5 rounded-full bg-brand-500 motion-safe:animate-pulse" style={{ animationDelay: '300ms' }} />
+                  <span className="h-2 w-2 rounded-full bg-brand-500 motion-safe:animate-pulse" style={{ animationDelay: '0ms' }} />
+                  <span className="h-2 w-2 rounded-full bg-brand-500 motion-safe:animate-pulse" style={{ animationDelay: '150ms' }} />
+                  <span className="h-2 w-2 rounded-full bg-brand-500 motion-safe:animate-pulse" style={{ animationDelay: '300ms' }} />
                 </div>
-                <span className="text-sm font-medium text-slate-600">Đang suy nghĩ...</span>
+                <span className="text-[13px] font-medium text-slate-600">Đang suy nghĩ...</span>
               </div>
             </div>
           </div>
@@ -1011,162 +1111,171 @@ export default function ChatIntake({
         <div ref={bottomRef} />
       </div>
 
-      {answeredList.length > 0 && (
-        <div className="shrink-0 bg-surface px-4">
-          <div className="my-2 flex justify-center">
-            <button
-              type="button"
-              onClick={() => setShowEditList(!showEditList)}
-              className="min-h-touch rounded-full border border-surface-border bg-surface-muted px-4 py-2 text-sm font-semibold text-slate-800 transition-all duration-200 hover:bg-brand-50 hover:text-brand-800"
-              aria-expanded={showEditList}
-            >
-              {showEditList ? 'Ẩn danh sách câu trả lời' : 'Sửa câu trả lời'}
-            </button>
-          </div>
-          {showEditList && (
-            <div className="mx-auto my-2 w-full max-w-2xl space-y-2 rounded-2xl border border-surface-border bg-surface p-4 shadow-sm">
-              <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-600">
-                Chọn câu hỏi cần sửa:
-              </h4>
-              {answeredList.map((item) => (
-                <button
-                  key={item.questionCode}
-                  type="button"
-                  onClick={() => {
-                    setEditingCode(item.questionCode);
-                    setShowEditList(false);
-                  }}
-                  className="flex w-full items-center justify-between rounded-xl border border-transparent p-3 text-left transition-all hover:border-brand-200 hover:bg-brand-50"
-                >
-                  <span className="text-sm font-medium text-slate-800">{item.label}</span>
-                  <span className="font-mono text-sm font-semibold text-brand-700">{item.displayValue}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* Dock điều khiển gọn: sửa đáp án + lựa chọn trả lời + CTA hoàn tất — một khối duy nhất */}
+      {showDock && (
+        <div className="shrink-0 border-t border-surface-border bg-white/85 px-3 py-2.5 backdrop-blur-glass sm:px-4">
+          <div className="mx-auto w-full max-w-2xl space-y-2">
+            {canEditAnswers && showEditList && (
+              <div className="max-h-48 overflow-y-auto rounded-xl border border-surface-border bg-white shadow-sm">
+                <p className="border-b border-slate-100 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Chọn câu trả lời cần sửa
+                </p>
+                <div className="divide-y divide-slate-100">
+                  {answeredList.map((item) => (
+                    <button
+                      key={item.questionCode}
+                      type="button"
+                      title={item.label}
+                      onClick={() => {
+                        setEditingCode(item.questionCode);
+                        setShowEditList(false);
+                      }}
+                      className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-brand-50"
+                    >
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-700">
+                        {item.label}
+                      </span>
+                      <span className="shrink-0 rounded-full border border-brand-100 bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-700">
+                        {item.displayValue}
+                      </span>
+                      <svg className="h-3.5 w-3.5 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+                        />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-      {editingCode && activeQuestion && (
-        <div className="shrink-0 border-t border-surface-border bg-surface p-4">
-          <div className="mx-auto w-full max-w-2xl rounded-2xl border border-surface-border bg-surface-muted p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between border-b border-surface-border pb-2">
-              <span className="text-sm font-bold text-brand-800">Chỉnh sửa: {activeQuestion.label}</span>
-              <button
-                type="button"
-                onClick={() => setEditingCode(null)}
-                className="min-h-touch text-sm font-medium text-slate-600 underline hover:text-slate-900"
-              >
-                Hủy bỏ
-              </button>
-            </div>
-            {renderQuestionHelp(activeQuestion)}
-            {activeQuestion.fieldType === 'radio' && renderOptions(activeQuestion)}
-            {activeQuestion.fieldType === 'select' && renderOptions(activeQuestion)}
-            {activeQuestion.fieldType === 'province' && renderProvinceSelect(activeQuestion)}
-            {activeQuestion.fieldType === 'text' && (
-              <p className="text-sm italic text-slate-600">
-                Vui lòng sử dụng ô nhập tin nhắn bên dưới để sửa câu trả lời.
+            {editingCode && activeQuestion && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-accent-200 bg-accent-50 px-3 py-1.5">
+                <p className="min-w-0 truncate text-[13px] font-bold text-accent-900">
+                  Đang sửa: <span className="font-medium text-slate-800">{activeQuestion.label}</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setEditingCode(null)}
+                  className="min-h-touch shrink-0 text-xs font-semibold text-slate-600 underline hover:text-slate-900"
+                >
+                  Hủy
+                </button>
+              </div>
+            )}
+
+            {editingCode && activeQuestion?.fieldType === 'text' && (
+              <p className="text-xs italic text-slate-500">
+                Nhập câu trả lời mới vào ô bên dưới rồi bấm gửi.
               </p>
+            )}
+
+            {showChoiceControls && activeQuestion && (
+              activeQuestion.fieldType === 'province'
+                ? renderProvinceSelect(activeQuestion)
+                : renderOptions(activeQuestion)
+            )}
+
+            {canEditAnswers &&
+              !showDoneCtas &&
+              (!showChoiceControls || activeQuestion?.fieldType === 'province') && (
+                <div className="flex justify-end">{editTrigger}</div>
+              )}
+
+            {showDoneCtas && (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={() => router.push(`/user/checklist?sessionId=${sessionId}`)}
+                  disabled={busy}
+                  className="btn min-h-touch flex-1 rounded-xl border border-surface-border bg-surface-muted px-5 py-2.5 text-center text-[15px] font-bold text-slate-800 transition-colors hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Xem danh sách giấy tờ
+                </button>
+                {formAvailable && (
+                  <button
+                    type="button"
+                    onClick={handleCreateApplication}
+                    disabled={busy}
+                    className="btn min-h-touch flex-1 rounded-xl bg-accent-500 px-5 py-2.5 text-center text-[15px] font-bold text-slate-950 transition-colors hover:bg-accent-400 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                  >
+                    Điền biểu mẫu ngay
+                  </button>
+                )}
+                {editTrigger}
+              </div>
             )}
           </div>
         </div>
       )}
 
-      {phase === 'intake' && activeQuestion && !editingCode && (
-        <div className="shrink-0 border-t border-surface-border bg-surface p-4">
-          {renderQuestionHelp(activeQuestion)}
-          {activeQuestion.fieldType === 'radio' && renderOptions(activeQuestion)}
-          {activeQuestion.fieldType === 'select' && renderOptions(activeQuestion)}
-          {activeQuestion.fieldType === 'province' && renderProvinceSelect(activeQuestion)}
-        </div>
-      )}
-
-      {phase === 'done' && sessionId && (
-        <div className="mx-auto my-2 flex w-full max-w-2xl shrink-0 flex-col gap-4 border-t border-surface-border bg-surface p-4 sm:flex-row">
-          <button
-            type="button"
-            onClick={() => router.push(`/user/checklist?sessionId=${sessionId}`)}
-            disabled={busy}
-            className="btn min-h-[48px] flex-1 rounded-xl border border-surface-border bg-surface-muted px-6 py-3 text-center font-bold text-slate-800 transition-all duration-200 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Xem danh sách giấy tờ
-          </button>
-          {formAvailable && (
-            <button
-              type="button"
-              onClick={handleCreateApplication}
-              disabled={busy}
-              className="btn min-h-[48px] flex-1 rounded-xl bg-accent-500 px-6 py-3 text-center font-bold text-slate-950 transition-all duration-200 hover:bg-accent-400 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
-            >
-              Điền biểu mẫu ngay
-            </button>
-          )}
-        </div>
-      )}
-
       <div className="shrink-0">
-        <form onSubmit={handleSend} className="border-t border-white/60 bg-white/80 p-3 backdrop-blur-glass sm:p-4">
-          <div className="mx-auto flex max-w-4xl items-center gap-2 rounded-full border-2 border-brand-100 bg-white px-2 py-1.5 shadow-shell focus-within:border-brand-400 focus-within:shadow-glow motion-safe:transition-shadow motion-safe:duration-300">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={
-                phase === 'intake' && activeQuestion?.fieldType === 'text'
-                  ? 'Nhập câu trả lời...'
-                  : 'Nhập câu hỏi tại đây...'
-              }
-              className="min-h-[48px] flex-1 rounded-full border-0 bg-transparent px-4 text-body-lg tracking-snugish text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:text-slate-500"
-              disabled={busy || !isInputEnabled}
-              aria-disabled={busy || !isInputEnabled}
-              aria-label="Nội dung tin nhắn"
-            />
-            <button
-              type="button"
-              onClick={startVoice}
-              className={`relative flex min-h-[48px] min-w-[48px] items-center justify-center rounded-full motion-safe:transition-all ${
-                recording
-                  ? 'bg-rose-600 text-white motion-safe:animate-pulse'
-                  : 'border border-surface-border bg-slate-50 text-slate-700 hover:bg-brand-50 hover:text-brand-800'
-              }`}
-              disabled={busy}
-              aria-pressed={recording}
-              aria-label={recording ? 'Dừng ghi âm' : 'Bắt đầu ghi âm bằng giọng nói'}
-            >
-              {recording ? (
-                <>
-                  <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="6" y="6" width="12" height="12" rx="1.5" />
+        {/* Ẩn ô nhập khi đã thu thập đủ (done) — chỉ còn CTA; hiện lại nếu đang sửa đáp án */}
+        {!(phase === 'done' && !editingCode) && (
+          <form onSubmit={handleSend} className="border-t border-white/60 bg-white/80 px-3 py-2.5 backdrop-blur-glass sm:px-4">
+            <div className="mx-auto flex max-w-4xl items-center gap-1.5 rounded-full border-2 border-brand-100 bg-white px-1.5 py-1 shadow-shell focus-within:border-brand-500 focus-within:shadow-glow motion-safe:transition-shadow motion-safe:duration-300">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={
+                  phase === 'intake' && activeQuestion?.fieldType === 'text'
+                    ? 'Nhập câu trả lời...'
+                    : 'Nhập câu hỏi tại đây...'
+                }
+                className="min-h-touch flex-1 rounded-full border-0 bg-transparent px-3.5 text-body tracking-snugish text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:text-slate-500"
+                disabled={busy || !isInputEnabled}
+                aria-disabled={busy || !isInputEnabled}
+                aria-label="Nội dung tin nhắn"
+              />
+              <button
+                type="button"
+                onClick={startVoice}
+                className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full motion-safe:transition-all ${
+                  recording
+                    ? 'bg-rose-600 text-white motion-safe:animate-pulse'
+                    : 'border border-surface-border bg-slate-50 text-slate-700 hover:bg-brand-50 hover:text-brand-800'
+                }`}
+                disabled={busy}
+                aria-pressed={recording}
+                aria-label={recording ? 'Dừng ghi âm' : 'Bắt đầu ghi âm bằng giọng nói'}
+              >
+                {recording ? (
+                  <>
+                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="6" y="6" width="12" height="12" rx="1.5" />
+                    </svg>
+                    {recordingDuration > 0 && (
+                      <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-rose-700 px-2 py-1 font-mono text-xs text-white">
+                        {Math.floor(recordingDuration / 60)}:
+                        {String(recordingDuration % 60).padStart(2, '0')}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
                   </svg>
-                  {recordingDuration > 0 && (
-                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-rose-700 px-2 py-1 font-mono text-xs text-white">
-                      {Math.floor(recordingDuration / 60)}:
-                      {String(recordingDuration % 60).padStart(2, '0')}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                )}
+              </button>
+              <button
+                type="submit"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-600 font-bold text-white shadow-md motion-safe:transition-all motion-safe:duration-200 hover:bg-brand-700 hover:shadow-glow active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none disabled:active:scale-100"
+                disabled={busy || !input.trim()}
+                aria-label="Gửi tin nhắn"
+              >
+                <svg className="h-5 w-5 rotate-90 transform" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                 </svg>
-              )}
-            </button>
-            <button
-              type="submit"
-              className="flex min-h-[48px] min-w-[48px] items-center justify-center rounded-full bg-brand-600 font-bold text-white shadow-md motion-safe:transition-all motion-safe:duration-200 hover:bg-brand-700 hover:shadow-glow active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none disabled:active:scale-100"
-              disabled={busy || !input.trim()}
-              aria-label="Gửi tin nhắn"
-            >
-              <svg className="h-5 w-5 rotate-90 transform" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-              </svg>
-            </button>
-          </div>
-        </form>
+              </button>
+            </div>
+          </form>
+        )}
 
         <div className="border-t border-surface-border bg-brand-50/50">
-          <p className="mx-auto max-w-2xl px-4 py-3 text-center text-xs leading-relaxed text-slate-600 sm:text-sm">
+          <p className="mx-auto max-w-3xl px-4 py-1.5 text-center text-[11px] leading-snug text-slate-500 sm:text-xs">
             {DISCLAIMER}
           </p>
         </div>

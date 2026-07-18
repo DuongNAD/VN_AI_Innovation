@@ -157,6 +157,8 @@ function ResultPageContent() {
       <FlowChrome
         current={lifecycleActive ? 'approval' : 'result'}
         title={lifecycleActive ? 'Trạng thái hồ sơ' : 'Kết quả kiểm tra'}
+        backHref={`/user/form/${applicationId}`}
+        backLabel="Biểu mẫu"
       />
       <main
         id="main-content"
@@ -217,6 +219,8 @@ function ResultPageContent() {
 
         {validationResult.valid && Array.isArray(appData.fields) && appData.fields.length > 0 && (
           <DocumentPreview
+            applicationId={applicationId!}
+            token={sessionToken}
             procedureName={appData.procedure?.name || 'thủ tục hành chính'}
             formCode={appData.formCode}
             formVersion={validationResult.formVersion || appData.formVersion}

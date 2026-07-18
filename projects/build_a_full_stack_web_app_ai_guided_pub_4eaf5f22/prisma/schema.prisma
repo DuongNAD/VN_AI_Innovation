@@ -141,10 +141,29 @@ model Application {
   reviewNote    String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  attachments   ApplicationAttachment[]
 
   @@index([sessionId])
   @@index([formVersionId])
   @@index([status])
+}
+
+/// Private files uploaded for file fields in an application.
+/// Files are streamed only after owner-session or staff authorization.
+model ApplicationAttachment {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fieldId       String
+  fileName      String
+  mimeType      String
+  byteSize      Int
+  content       Bytes
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([applicationId, fieldId])
+  @@index([applicationId])
 }
 
 model ChangeRequest {

@@ -92,10 +92,14 @@ const QUESTION_PRESENTATIONS: Record<string, QuestionRewrite> = {
     ],
   },
   'MARRIAGE_REGISTRATION:previously_married': {
-    questionText: 'Trước đây bạn đã từng được cấp Giấy chứng nhận kết hôn chưa?',
+    questionText: 'Trước đây bạn đã từng đăng ký kết hôn chưa?',
     helpText:
-      'Chọn “Có” kể cả khi cuộc hôn nhân trước đã chấm dứt do ly hôn hoặc người vợ/chồng trước đã mất.',
-    examples: [],
+      'Chọn “Có” nếu bạn đã từng đăng ký kết hôn, kể cả khi đã ly hôn hoặc vợ/chồng trước của bạn đã mất. Nếu chưa từng đăng ký kết hôn, hãy chọn “Không”.',
+    examples: [
+      'Chọn “Không”: bạn chưa từng đăng ký kết hôn.',
+      'Chọn “Có”: bạn đã ly hôn.',
+      'Chọn “Có”: vợ/chồng trước của bạn đã mất.',
+    ],
   },
   'MARRIAGE_REGISTRATION:province': {
     questionText: 'Bạn muốn làm thủ tục đăng ký kết hôn tại tỉnh hoặc thành phố nào?',
@@ -121,29 +125,51 @@ function foldString(input: string): string {
 
 export function classifyByKeywords(message: string): { procedureCode: string; confidence: number } | null {
   if (typeof message !== 'string') return null;
-  const folded = foldString(message);
-  if (!folded.trim()) return null;
+  const folded = foldString(message)
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!folded) return null;
 
-  let bestMatch: { procedureCode: string; keyword: string } | null = null;
+  const paddedMessage = ` ${folded} `;
+  const matches: { procedureCode: string; keyword: string }[] = [];
 
   for (const [code, keywords] of Object.entries(KEYWORD_TABLE)) {
     for (const kw of keywords) {
-      if (folded.includes(kw)) {
-        if (!bestMatch || kw.length > bestMatch.keyword.length) {
-          bestMatch = { procedureCode: code, keyword: kw };
-        }
+      if (paddedMessage.includes(` ${kw} `)) {
+        matches.push({ procedureCode: code, keyword: kw });
       }
     }
   }
 
-  if (bestMatch) {
-    return {
-      procedureCode: bestMatch.procedureCode,
-      confidence: 0.95,
-    };
+  if (matches.length === 0) return null;
+
+  const bestMatch = matches.reduce((best, current) =>
+    current.keyword.length > best.keyword.length ? current : best
+  );
+  const keywordWords = bestMatch.keyword.split(' ').length;
+  const messageWords = folded.split(' ').length;
+  const supportingMatches = matches.filter(
+    (match) => match.procedureCode === bestMatch.procedureCode
+  ).length;
+
+  // This is a deterministic match score, not a fixed probability. Exact and
+  // specific phrases score higher; short/ambiguous keywords score lower.
+  let confidence: number;
+  if (folded === bestMatch.keyword) {
+    confidence = 0.98;
+  } else {
+    const specificity = Math.min(keywordWords / 3, 1);
+    const coverage = Math.min(keywordWords / messageWords, 1);
+    const supportBonus = Math.min(Math.max(supportingMatches - 1, 0), 2) * 0.02;
+    confidence = 0.68 + specificity * 0.14 + coverage * 0.1 + supportBonus;
+    confidence = Math.min(confidence, 0.94);
   }
 
-  return null;
+  return {
+    procedureCode: bestMatch.procedureCode,
+    confidence: Math.round(confidence * 100) / 100,
+  };
 }
 
 function sanitizeCatalog(input: any): { code: string; name: string }[] {
@@ -208,14 +234,19 @@ function sanitizeFormCode(input: any): string {
   return 'UNKNOWN';
 }
 
+export function normalizeGeneratedVietnameseText(value: string): string {
+  return value
+    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\b(?:đã\s+)?(?:g[oó]a|goá)\s+bụa\b/giu, 'có vợ hoặc chồng đã mất')
+    .trim();
+}
+
 function cleanQuestionText(value: unknown, maxLength: number): string | null {
   if (typeof value !== 'string') {
     return null;
   }
-  const cleaned = value
-    .replace(/[\u0000-\u001F\u007F]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const cleaned = normalizeGeneratedVietnameseText(value);
   return cleaned && cleaned.length <= maxLength ? cleaned : null;
 }
 
@@ -299,7 +330,7 @@ export const mockLlm: LlmProvider = {
 
     const hit = classifyByKeywords(truncatedMessage);
     if (hit && sanitizedCatalog.some(e => e.code === hit.procedureCode)) {
-      return { procedureCode: hit.procedureCode, confidence: 0.95 };
+      return hit;
     }
     return { procedureCode: null, confidence: 0 };
   },
@@ -356,7 +387,8 @@ Hãy chọn mã thủ tục (procedureCode) PHÙ HỢP NHẤT từ danh mục đ
 
 Yêu cầu bắt buộc:
 1. CHỈ chọn procedureCode từ danh mục được cung cấp hoặc trả về null. Không tự ý tạo hay sửa đổi mã thủ tục.
-2. Trả về kết quả dưới định dạng JSON có cấu trúc chính xác như sau:
+2. Chấm confidence theo mức độ khớp thực tế: 0.95-1.0 chỉ khi người dùng nói trực tiếp, gần như chính xác tên thủ tục; 0.80-0.94 khi ý định rõ ràng và duy nhất; 0.60-0.79 khi còn một phần mơ hồ; dưới 0.60 hoặc null khi không đủ thông tin.
+3. Trả về kết quả dưới định dạng JSON có cấu trúc chính xác như sau:
 {
   "procedureCode": string | null,
   "confidence": number
@@ -368,7 +400,9 @@ Hãy giải thích các lỗi được cung cấp một cách đơn giản, dễ
 Yêu cầu bắt buộc:
 1. CHỈ giải thích các mã lỗi được cung cấp.
 2. Không đưa ra bất kỳ lời khuyên pháp lý nào.
-3. Trả về kết quả dưới định dạng JSON có cấu trúc chính xác như sau:
+3. Dùng từ phổ thông, hiện đại; tránh từ cổ, từ địa phương và từ dễ gây hiểu nhầm.
+4. Kiểm tra chính tả và dấu câu tiếng Việt trước khi trả kết quả.
+5. Trả về kết quả dưới định dạng JSON có cấu trúc chính xác như sau:
 {
   "explanation": string
 }`;
@@ -382,7 +416,9 @@ Yêu cầu bắt buộc:
 3. questionText là một câu hỏi ngắn, trực tiếp.
 4. helpText giải thích cách hiểu bằng ngôn ngữ đời thường.
 5. examples có tối đa 3 ví dụ ngắn; có thể là mảng rỗng.
-6. Chỉ trả về JSON:
+6. Dùng từ phổ thông, hiện đại; tránh từ cổ, từ địa phương hoặc từ dễ gây hiểu nhầm. Không dùng “góa bụa”; hãy viết rõ “vợ/chồng đã mất”.
+7. Kiểm tra chính tả và dấu câu tiếng Việt trước khi trả kết quả.
+8. Chỉ trả về JSON:
 {
   "questionText": string,
   "helpText": string,
@@ -472,6 +508,10 @@ export const openaiLlm: LlmProvider = {
 
   async rewriteQuestion(input) {
     const sanitized = sanitizeQuestionInput(input);
+    const curated = QUESTION_PRESENTATIONS[`${sanitized.procedureCode}:${sanitized.questionCode}`];
+    if (curated) {
+      return curated;
+    }
     const startTime = Date.now();
     const response = await fetchUpstreamJson('/chat/completions', {
       method: 'POST',
@@ -562,12 +602,12 @@ export const openaiLlm: LlmProvider = {
       throw new UpstreamError('Response content is not a non-null object');
     }
 
-    const explanation = parsed.explanation;
-    if (typeof explanation !== 'string' || explanation.trim() === '' || explanation.length > 2000) {
+    const rawExplanation = parsed.explanation;
+    if (typeof rawExplanation !== 'string' || rawExplanation.trim() === '' || rawExplanation.length > 2000) {
       throw new UpstreamError('Invalid explanation field in OpenAI response');
     }
 
-    return explanation.trim();
+    return normalizeGeneratedVietnameseText(rawExplanation);
   },
 };
 

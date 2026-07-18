@@ -210,7 +210,7 @@ export default function ArchitecturePage() {
 
                 {/* Connection description */}
                 <div className="text-center p-3 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-500 leading-relaxed shadow-sm w-full">
-                  ⚡ <span className="font-semibold">Mối liên kết liên làn:</span> ORM Prisma đọc/ghi trực tiếp vào DB PostgreSQL. Các cấu hình thủ tục pháp lý được đối chiếu tĩnh thay vì sinh ra bởi LLM.
+                  ⚡ <span className="font-semibold">Kết nối giữa các lớp:</span> ORM Prisma đọc/ghi trực tiếp vào DB PostgreSQL. Các cấu hình thủ tục pháp lý được đối chiếu tĩnh thay vì sinh ra bởi LLM.
                 </div>
               </div>
             </div>

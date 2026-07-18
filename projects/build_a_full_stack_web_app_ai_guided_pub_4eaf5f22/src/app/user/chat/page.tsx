@@ -24,7 +24,8 @@ export default async function ChatPage({
   const authUser = embed ? null : await getAuthUserFromCookies();
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
+    // Khóa đúng chiều cao viewport: chỉ luồng hội thoại cuộn, dock trả lời + ô nhập luôn hiện
+    <div className="flex h-dvh flex-col bg-slate-50">
       {!embed && (
         <>
           <UserBar
@@ -41,7 +42,12 @@ export default async function ChatPage({
                 : null
             }
           />
-          <FlowChrome current="chat" title="Trò chuyện với trợ lý AI" />
+          <FlowChrome
+            current="chat"
+            title="Trò chuyện với trợ lý AI"
+            backHref="/user"
+            backLabel="Trang chủ"
+          />
         </>
       )}
       <main
