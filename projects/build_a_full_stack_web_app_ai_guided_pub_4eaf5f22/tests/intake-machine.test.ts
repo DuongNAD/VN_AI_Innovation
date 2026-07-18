@@ -117,26 +117,33 @@ describe('Intake Machine - Basic flow, pruning, and validation', () => {
   });
 
   it('should validateAnswer correctly: coercing boolean radio/select, validating limits/provinces', () => {
+    const expectInvalidAnswer = (run: () => unknown) => {
+      let thrown: unknown;
+      try {
+        run();
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown).toBeInstanceOf(AppError);
+      expect(thrown).toMatchObject({
+        status: 400,
+        code: 'INVALID_ANSWER',
+        message: 'Câu trả lời không hợp lệ.',
+      });
+    };
+
     expect(validateAnswer(mockQuestions[0], 'true')).toBe(true);
     expect(validateAnswer(mockQuestions[0], 'false')).toBe(false);
     expect(validateAnswer(mockQuestions[0], true)).toBe(true);
 
-    expect(() => validateAnswer(mockQuestions[0], 'maybe')).toThrowError(
-      new AppError(400, 'INVALID_ANSWER', 'Câu trả lời không hợp lệ.')
-    );
+    expectInvalidAnswer(() => validateAnswer(mockQuestions[0], 'maybe'));
 
     expect(validateAnswer(mockQuestions[2], 'Hà Nội')).toBe('Hà Nội');
-    expect(() => validateAnswer(mockQuestions[2], 'Nowhere')).toThrowError(
-      new AppError(400, 'INVALID_ANSWER', 'Câu trả lời không hợp lệ.')
-    );
+    expectInvalidAnswer(() => validateAnswer(mockQuestions[2], 'Nowhere'));
 
     expect(validateAnswer(mockQuestions[3], '  Canada  ')).toBe('Canada');
-    expect(() => validateAnswer(mockQuestions[3], '')).toThrowError(
-      new AppError(400, 'INVALID_ANSWER', 'Câu trả lời không hợp lệ.')
-    );
-    expect(() => validateAnswer(mockQuestions[3], 'a'.repeat(501))).toThrowError(
-      new AppError(400, 'INVALID_ANSWER', 'Câu trả lời không hợp lệ.')
-    );
+    expectInvalidAnswer(() => validateAnswer(mockQuestions[3], ''));
+    expectInvalidAnswer(() => validateAnswer(mockQuestions[3], 'a'.repeat(501)));
   });
 });
 

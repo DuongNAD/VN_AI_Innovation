@@ -13,6 +13,8 @@ model Procedure {
   name                String
   sector              String
   agency              String
+  // Target audience of the procedure: CITIZEN (công dân) or BUSINESS (doanh nghiệp)
+  audience            String                @default("CITIZEN")
   sourceUrl           String
   lastCheckedAt       DateTime
   versions            ProcedureVersion[]
@@ -63,6 +65,8 @@ model DocumentRequirement {
   conditionJson  Json?
   reasonText     String?
   submissionType String    @default("SUBMIT")
+
+  @@index([procedureId])
 }
 
 model Form {
@@ -102,6 +106,8 @@ model ValidationRule {
   suggestion    String
   severity      String      @default("error")
   orderNumber   Int
+
+  @@index([formVersionId])
 }
 
 model Session {
@@ -115,6 +121,8 @@ model Session {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   applications    Application[]
+
+  @@index([expiresAt])
 }
 
 model Application {
@@ -123,11 +131,20 @@ model Application {
   session       Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   formVersionId String
   formVersion   FormVersion @relation(fields: [formVersionId], references: [id], onDelete: Cascade)
+  // DRAFT -> SUBMITTED -> APPROVED | RETURNED (RETURNED can be edited and re-submitted)
   status        String      @default("DRAFT")
   dataJson      Json
   revision      Int         @default(0)
+  submittedAt   DateTime?
+  reviewedAt    DateTime?
+  reviewedBy    String?
+  reviewNote    String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  @@index([sessionId])
+  @@index([formVersionId])
+  @@index([status])
 }
 
 model ChangeRequest {
@@ -141,6 +158,9 @@ model ChangeRequest {
   reviewedBy       String?
   reviewedAt       DateTime?
   createdAt        DateTime    @default(now())
+
+  @@index([oldVersionId])
+  @@index([status])
 }
 
 model AiUsageLog {
@@ -154,6 +174,8 @@ model AiUsageLog {
   cacheHit         Boolean  @default(false)
   degraded         Boolean  @default(false)
   createdAt        DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 model IdempotencyRecord {
@@ -164,4 +186,31 @@ model IdempotencyRecord {
   createdAt    DateTime @default(now())
 
   @@id([principalId, key])
+  @@index([createdAt])
+}
+
+// Durable cache for synthesized TTS audio. TTS is billed per character and the
+// same guidance/question text is read aloud repeatedly, so persisting audio here
+// lets every serverless instance (and every restart) reuse it instead of re-paying
+// the upstream. `key` is the app-level cache key (provider:model:hash of
+// text+voice+speed+language); audio bytes are stored inline since clips are small.
+model TtsCache {
+  key            String   @id
+  mimeType       String
+  model          String
+  audio          Bytes
+  byteSize       Int
+  createdAt      DateTime @default(now())
+  lastAccessedAt DateTime @default(now())
+
+  @@index([lastAccessedAt])
+}
+
+// Runtime-editable application settings as a small key/value store, so an admin
+// can change behaviour (e.g. the TTS delivery mode) without a redeploy. Values
+// are short strings; readers fall back to a safe default when a key is absent.
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

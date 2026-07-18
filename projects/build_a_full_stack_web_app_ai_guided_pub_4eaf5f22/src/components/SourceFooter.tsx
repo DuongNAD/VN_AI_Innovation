@@ -1,4 +1,5 @@
 import { DISCLAIMER } from '@/lib/constants';
+import { safeHttpsUrl } from '@/lib/schema-guards';
 
 export default function SourceFooter({
   sourceUrl,
@@ -13,17 +14,7 @@ export default function SourceFooter({
   showDisclaimer?: boolean;
   eco?: boolean;
 }) {
-  let isHttps = false;
-  if (sourceUrl) {
-    try {
-      const url = new URL(sourceUrl);
-      if (url.protocol === 'https:') {
-        isHttps = true;
-      }
-    } catch (_) {
-      // Ignored
-    }
-  }
+  const verifiedSourceUrl = safeHttpsUrl(sourceUrl);
 
   let formattedDate: string | null = null;
   if (lastCheckedAt) {
@@ -57,9 +48,9 @@ export default function SourceFooter({
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           {sourceUrl && (
             <span className="inline-flex items-center">
-              {isHttps ? (
+              {verifiedSourceUrl ? (
                 <a
-                  href={sourceUrl}
+                  href={verifiedSourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-amber-600 hover:text-amber-700 underline font-medium"

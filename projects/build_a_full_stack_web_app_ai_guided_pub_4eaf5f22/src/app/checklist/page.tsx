@@ -4,55 +4,9 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import ChecklistView from '@/components/ChecklistView';
 import SpeechButton from '@/components/SpeechButton';
-
-function buildChecklistSummary(guidance: any): string {
-  if (!guidance || !guidance.procedure) return '';
-  const procName = guidance.procedure.name;
-  const agency = guidance.procedure.agency;
-  let text = `Hướng dẫn chuẩn bị hồ sơ cho thủ tục: ${procName}. Cơ quan giải quyết: ${agency}. `;
-
-  if (guidance.checklist && guidance.checklist.length > 0) {
-    text += 'Danh sách các giấy tờ cần thiết bao gồm: ';
-    guidance.checklist.forEach((doc: any, index: number) => {
-      text += `Giấy tờ thứ ${index + 1}: ${doc.name}. `;
-      const subTypeMap: Record<string, string> = {
-        SUBMIT: 'Yêu cầu nộp bản giấy hoặc bản điện tử.',
-        PRESENT: 'Yêu cầu xuất trình để đối chiếu và không cần nộp bản cứng.',
-        SYSTEM_LOOKUP: 'Cơ quan tự tra cứu thông qua cơ sở dữ liệu quốc gia về dân cư, công dân không cần nộp giấy tờ này.',
-      };
-      text += subTypeMap[doc.submissionType] || '';
-      if (doc.originals > 0 || doc.copies > 0) {
-        const parts = [];
-        if (doc.originals > 0) parts.push(`${doc.originals} bản chính`);
-        if (doc.copies > 0) parts.push(`${doc.copies} bản sao`);
-        text += ` Cần chuẩn bị ${parts.join(' và ')}.`;
-      }
-      if (doc.reason) {
-        text += ` Áp dụng vì lý do: ${doc.reason}.`;
-      }
-      text += ' ';
-    });
-  }
-
-  if (guidance.steps && guidance.steps.length > 0) {
-    text += 'Quy trình thực hiện bao gồm các bước sau: ';
-    guidance.steps.forEach((step: any, index: number) => {
-      text += `Bước ${index + 1}: ${step.title}. Hướng dẫn chi tiết: ${step.description}. `;
-      if (step.example) {
-        text += `Ví dụ cụ thể: ${step.example}. `;
-      }
-    });
-  }
-
-  if (guidance.durationText) {
-    text += `Thời gian giải quyết dự kiến: ${guidance.durationText}. `;
-  }
-  if (guidance.feesText) {
-    text += `Lệ phí: ${guidance.feesText}. `;
-  }
-
-  return text.trim();
-}
+import FlowProgress from '@/components/FlowProgress';
+import { randomUUID } from '@/lib/uuid';
+import { buildChecklistSummary } from '@/lib/checklist-summary';
 
 function ChecklistContent() {
   const searchParams = useSearchParams();
@@ -67,6 +21,7 @@ function ChecklistContent() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!sessionId) {
@@ -126,7 +81,7 @@ function ChecklistContent() {
     }
 
     fetchGuidance();
-  }, [sessionState, sessionId, token]);
+  }, [sessionState, sessionId, token, retryKey]);
 
   const handleCreateApplication = async () => {
     if (submitting || !sessionId || !token) return;
@@ -141,7 +96,7 @@ function ChecklistContent() {
         },
         body: JSON.stringify({
           sessionId,
-          messageId: crypto.randomUUID(),
+          messageId: randomUUID(),
         }),
       });
 
@@ -224,7 +179,7 @@ function ChecklistContent() {
           </p>
           <div className="space-y-3">
             <button
-              onClick={() => router.refresh()}
+              onClick={() => setRetryKey((k) => k + 1)}
               className="btn w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md shadow-blue-200 transition-all duration-200"
             >
               Thử lại
@@ -246,6 +201,8 @@ function ChecklistContent() {
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-6">
+        <FlowProgress current="checklist" />
+
         {/* Top Header Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>

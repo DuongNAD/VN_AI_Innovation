@@ -1,6 +1,8 @@
 import crypto from 'crypto';
+import type { Session } from '@prisma/client';
 import { AppError } from './errors';
 import { getAdminToken } from './config';
+import { prisma } from './db';
 import { rateLimitCheck, rateLimitConsume } from './rate-limit';
 
 /**
@@ -55,6 +57,47 @@ export function requireSessionToken(req: Request, storedHash: string, expiresAt?
 }
 
 /**
+ * Authenticates a live session using only the X-Session-Token header.
+ */
+export async function requireLiveSession(
+  req: Request,
+  expectedProcedureCode?: string
+): Promise<Session> {
+  const token = req.headers.get('x-session-token');
+  if (!token || token.trim() === '' || token.length > 200) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Phiên truy cập không hợp lệ hoặc đã hết hạn.');
+  }
+
+  const accessTokenHash = hashToken(token);
+  const session = await prisma.session.findUnique({
+    where: { accessTokenHash },
+  });
+
+  if (
+    !session ||
+    !verifyToken(token, session.accessTokenHash) ||
+    !(session.expiresAt instanceof Date) ||
+    !Number.isFinite(session.expiresAt.getTime()) ||
+    session.expiresAt.getTime() < Date.now()
+  ) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Phiên truy cập không hợp lệ hoặc đã hết hạn.');
+  }
+
+  if (
+    expectedProcedureCode !== undefined &&
+    session.procedureCode !== expectedProcedureCode
+  ) {
+    throw new AppError(
+      403,
+      'OWNERSHIP_MISMATCH',
+      'Phiên truy cập không thuộc thủ tục được yêu cầu.'
+    );
+  }
+
+  return session;
+}
+
+/**
  * Validates the X-Admin-Token header. Enforces rate limits on failures.
  * Throws a 401 Unauthorized AppError on failure, or 429 when rate-limited.
  */
@@ -68,7 +111,7 @@ export function requireAdmin(req: Request): void {
   const adminTokenHash = crypto.createHash('sha256').update(getAdminToken()).digest();
 
   if (!crypto.timingSafeEqual(presentedHash, adminTokenHash)) {
-    rateLimitConsume('admin-auth', req);
+    rateLimitConsume('admin-auth', req, 900000);
     throw new AppError(401, 'UNAUTHORIZED', 'Sai mã quản trị.');
   }
 }

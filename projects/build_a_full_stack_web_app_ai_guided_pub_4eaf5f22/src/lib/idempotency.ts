@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { prisma, PrismaTx } from './db';
+import { AppError } from './errors';
 
 export class CanonicalJsonError extends Error {
   constructor(message: string) {
@@ -110,24 +111,33 @@ function sha256hex(input: string): string {
   return createHash('sha256').update(input).digest('hex');
 }
 
+export type IdempotencyDescriptor = {
+  storageKey: string;
+  requestHash: string;
+};
+
 export function buildIdempotencyKey(parts: {
   operation: string;
   resourceId: string;
   sessionId?: string;
   messageId?: string;
   body?: unknown;
-}): string | null {
+}): IdempotencyDescriptor | null {
   if (!parts.messageId) {
     return null;
   }
-  const arrayToHash = [
+
+  const identity = [
     parts.operation,
     parts.resourceId,
     parts.sessionId ?? '',
     parts.messageId,
-    parts.body ?? null,
   ];
-  return sha256hex(canonicalJson(arrayToHash));
+
+  return {
+    storageKey: sha256hex(canonicalJson(identity)),
+    requestHash: sha256hex(canonicalJson(parts.body ?? null)),
+  };
 }
 
 class IdempotencyConflict extends Error {
@@ -143,31 +153,101 @@ class IdempotencyConflict extends Error {
   }
 }
 
+const IDEMPOTENCY_ENVELOPE_VERSION = 1;
+const IDEMPOTENCY_RETENTION_MS = 24 * 60 * 60 * 1000;
+const IDEMPOTENCY_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
+let nextCleanupAt = 0;
+
+function packStoredResponse(requestHash: string, response: unknown): Record<string, unknown> {
+  return {
+    __idempotency: {
+      version: IDEMPOTENCY_ENVELOPE_VERSION,
+      requestHash,
+    },
+    response,
+  };
+}
+
+function unpackStoredResponse(
+  stored: unknown,
+  expectedRequestHash: string
+): unknown {
+  if (!isPlainObject(stored)) {
+    throw new Error('Broken invariant: invalid idempotency response envelope');
+  }
+
+  const envelope = stored as Record<string, unknown>;
+  if (!isPlainObject(envelope.__idempotency)) {
+    throw new Error('Broken invariant: missing idempotency response metadata');
+  }
+
+  const metadata = envelope.__idempotency as Record<string, unknown>;
+  if (
+    metadata.version !== IDEMPOTENCY_ENVELOPE_VERSION ||
+    typeof metadata.requestHash !== 'string'
+  ) {
+    throw new Error('Broken invariant: invalid idempotency response metadata');
+  }
+
+  if (metadata.requestHash !== expectedRequestHash) {
+    throw new AppError(
+      409,
+      'IDEMPOTENCY_KEY_REUSED',
+      'Mã yêu cầu đã được sử dụng với nội dung khác.'
+    );
+  }
+
+  return envelope.response;
+}
+
+async function maybeCleanupExpiredRecords(): Promise<void> {
+  const now = Date.now();
+  if (now < nextCleanupAt) {
+    return;
+  }
+  nextCleanupAt = now + IDEMPOTENCY_CLEANUP_INTERVAL_MS;
+
+  try {
+    await prisma.idempotencyRecord.deleteMany({
+      where: {
+        createdAt: {
+          lt: new Date(now - IDEMPOTENCY_RETENTION_MS),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Failed to clean expired idempotency records:', error);
+  }
+}
+
 /**
  * Executes a database operation with exactly-once idempotency guarantees.
  * 
  * IMPORTANT: Callers MUST authenticate and authorize the principal before invoking this function.
- * Because lookups are scoped to the authenticated (principalId, key) pair, and the request's
+ * Because lookups are scoped to the authenticated principal and operation identity, and the request's
  * principal is authorized before checking the database, returning the cached response
  * requires no further access control or revalidation checks.
  * 
  * @param principalId The server-derived authenticated principal (e.g. session user ID).
- * @param key The idempotency key, or null to bypass idempotency check.
+ * @param descriptor Stable operation identity plus a separate request hash, or null to bypass.
  * @param exec The function performing database operations through the provided transaction client.
  */
 export async function withIdempotency(
   principalId: string,
-  key: string | null,
+  descriptor: IdempotencyDescriptor | null,
   exec: (tx: PrismaTx) => Promise<{ status: number; body: unknown }>
 ): Promise<{ status: number; body: unknown; replayed: boolean }> {
   if (typeof principalId !== 'string' || principalId.trim() === '') {
     throw new TypeError('principalId must be a non-empty string');
   }
 
-  if (key === null) {
+  if (descriptor === null) {
     const r = await prisma.$transaction(exec);
     return { ...r, replayed: false };
   }
+
+  await maybeCleanupExpiredRecords();
+  const { storageKey, requestHash } = descriptor;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -175,7 +255,7 @@ export async function withIdempotency(
         await tx.idempotencyRecord.create({
           data: {
             principalId,
-            key,
+            key: storageKey,
             httpStatus: 0,
             responseJson: {},
           },
@@ -197,7 +277,7 @@ export async function withIdempotency(
             }
           }
           if (isTargetMatch) {
-            throw new IdempotencyConflict(principalId, key);
+            throw new IdempotencyConflict(principalId, storageKey);
           }
         }
         throw error;
@@ -209,12 +289,12 @@ export async function withIdempotency(
         where: {
           principalId_key: {
             principalId,
-            key,
+            key: storageKey,
           },
         },
         data: {
           httpStatus: r.status,
-          responseJson: r.body as any,
+          responseJson: packStoredResponse(requestHash, r.body) as any,
         },
       });
 
@@ -239,7 +319,7 @@ export async function withIdempotency(
 
       return {
         status: record.httpStatus,
-        body: record.responseJson,
+        body: unpackStoredResponse(record.responseJson, requestHash),
         replayed: true,
       };
     }

@@ -71,10 +71,17 @@ function calculateLogCost(log: {
       const completionCost = (log.completionTokens ?? 0) * 0.00000060; // $0.60 / 1M tokens
       return promptCost + completionCost;
     }
+    if (modelLower.includes('deepseek-v4-flash')) {
+      // FPT AI Marketplace listed rates: $0.14 / $0.28 per 1M tokens
+      const promptCost = (log.promptTokens ?? 0) * 0.00000014;
+      const completionCost = (log.completionTokens ?? 0) * 0.00000028;
+      return promptCost + completionCost;
+    }
   } else if (log.serviceType === 'stt') {
     if (modelLower.includes('whisper-1')) {
       return (log.audioSeconds ?? 0) * 0.0001; // $0.006 / 60 seconds
     }
+    // FPT.AI-whisper-* rates are not published per second; left unmodeled (0).
   } else if (log.serviceType === 'tts') {
     if (modelLower.includes('tts-1-hd')) {
       const estimatedChars = (log.audioSeconds ?? 0) / 0.05;
@@ -82,6 +89,10 @@ function calculateLogCost(log: {
     } else if (modelLower.includes('tts-1')) {
       const estimatedChars = (log.audioSeconds ?? 0) / 0.05;
       return estimatedChars * 0.000015; // $15 / 1M characters
+    } else if (modelLower.includes('vits')) {
+      // FPT.AI-VITs marketplace rate $16.5 / 1M input tokens, approximated as characters.
+      const estimatedChars = (log.audioSeconds ?? 0) / 0.05;
+      return estimatedChars * 0.0000165;
     }
   }
 
@@ -89,10 +100,21 @@ function calculateLogCost(log: {
 }
 
 /**
- * Aggregates all AI usage logs and returns a summary grouped by serviceType.
+ * Aggregates AI usage in PostgreSQL and returns a summary grouped by serviceType.
+ * The number of rows returned is bounded by distinct service/model/cache/degraded
+ * combinations rather than growing with the full event history.
  */
 export async function getUsageSummary(): Promise<UsageSummary> {
-  const logs = await prisma.aiUsageLog.findMany();
+  const groups = await prisma.aiUsageLog.groupBy({
+    by: ['serviceType', 'model', 'cacheHit', 'degraded'],
+    _count: { _all: true },
+    _sum: {
+      promptTokens: true,
+      completionTokens: true,
+      audioSeconds: true,
+      latencyMs: true,
+    },
+  });
 
   const summary: UsageSummary = {
     llm: {
@@ -130,21 +152,34 @@ export async function getUsageSummary(): Promise<UsageSummary> {
     tts: 0,
   };
 
-  for (const log of logs) {
-    const service = log.serviceType as 'llm' | 'stt' | 'tts';
-    if (summary[service]) {
+  for (const group of groups) {
+    const service = group.serviceType as 'llm' | 'stt' | 'tts';
+    if (service === 'llm' || service === 'stt' || service === 'tts') {
+      const calls = group._count._all;
       const s = summary[service];
-      s.calls++;
-      s.tokens += (log.promptTokens ?? 0) + (log.completionTokens ?? 0);
-      s.audioSeconds += log.audioSeconds ?? 0;
-      serviceLatencies[service] += log.latencyMs;
-      if (log.cacheHit) {
-        s.cacheHits++;
+      const promptTokens = group._sum.promptTokens ?? 0;
+      const completionTokens = group._sum.completionTokens ?? 0;
+      const audioSeconds = group._sum.audioSeconds ?? 0;
+      const latencyMs = group._sum.latencyMs ?? 0;
+
+      s.calls += calls;
+      s.tokens += promptTokens + completionTokens;
+      s.audioSeconds += audioSeconds;
+      serviceLatencies[service] += latencyMs;
+      if (group.cacheHit) {
+        s.cacheHits += calls;
       }
-      if (log.degraded) {
-        s.degradedCount++;
+      if (group.degraded) {
+        s.degradedCount += calls;
       }
-      s.estimatedCostUsd += calculateLogCost(log);
+      s.estimatedCostUsd += calculateLogCost({
+        serviceType: group.serviceType,
+        model: group.model,
+        promptTokens,
+        completionTokens,
+        audioSeconds,
+        cacheHit: group.cacheHit,
+      });
     }
   }
 

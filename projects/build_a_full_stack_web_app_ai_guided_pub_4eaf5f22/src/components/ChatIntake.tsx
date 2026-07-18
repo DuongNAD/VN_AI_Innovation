@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSessionId, getToken, setSession, clearSession } from '@/lib/session';
+import { randomUUID } from '@/lib/uuid';
+import { WavRecorder } from '@/lib/wav-recorder';
 
 type Phase = 'search' | 'intake' | 'done';
 
@@ -73,17 +75,6 @@ const PROVINCES = [
 ] as const;
 
 const DISCLAIMER = 'Thông tin do trợ lý cung cấp chỉ mang tính tham khảo, vui lòng đối chiếu với cơ quan có thẩm quyền trước khi nộp hồ sơ.';
-
-const randomUUID = () => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-};
 
 function safeHttpsUrl(raw: unknown): string | null {
   if (typeof raw !== 'string') {
@@ -246,7 +237,6 @@ export default function ChatIntake({
   // Refs for Voice Recording
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<any>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -624,34 +614,29 @@ export default function ChatIntake({
         appendBotMessage('Không sử dụng được micro trên thiết bị này. Bạn có thể gõ nội dung vào ô bên dưới.');
         setRecording(false);
       }
-    } else if (typeof navigator !== 'undefined' && navigator.mediaDevices && (window as any).MediaRecorder) {
+    } else if (typeof navigator !== 'undefined' && navigator.mediaDevices && WavRecorder.isSupported()) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaStreamRef.current = stream;
 
-        const mediaRecorder = new (window as any).MediaRecorder(stream);
+        // WAV (not MediaRecorder webm/ogg): the FPT.AI whisper upstream
+        // rejects opus containers, so we capture PCM and ship 16 kHz WAV.
+        const mediaRecorder = new WavRecorder(stream);
         mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
 
-        mediaRecorder.ondataavailable = (event: any) => {
-          if (event.data.size > 0) {
-            audioChunksRef.current.push(event.data);
-          }
-        };
-
-        mediaRecorder.onstop = async () => {
+        mediaRecorder.onstop = async (audioBlob: Blob) => {
           stream.getTracks().forEach((track) => track.stop());
 
-          const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
           if (audioBlob.size === 0) return;
 
           setBusy(true);
           const formData = new FormData();
-          formData.append('audio', audioBlob, 'voice.webm');
+          formData.append('audio', audioBlob, 'voice.wav');
 
           const res = await api<{ text: string }>('/api/v1/speech/transcribe', {
             method: 'POST',
             form: formData,
+            token: getToken() || undefined,
           });
 
           setBusy(false);
@@ -705,7 +690,8 @@ export default function ChatIntake({
     }
 
     if (recognitionRef.current) {
-      recognitionRef.current.abort();
+      // stop() (not abort()) so the pending recognition result is still delivered
+      recognitionRef.current.stop();
       recognitionRef.current = null;
     }
 

@@ -94,12 +94,27 @@ export function evaluateCondition(cond: ConditionDef, data: Record<string, unkno
     }
     return false;
   }
+  // schema-guards allows greater_than/less_than on date fields; ISO dates
+  // never coerce to numbers, so compare them lexicographically (ISO order is
+  // chronological) before falling back to the numeric path.
+  const bothIsoDates =
+    typeof rawVal === 'string' &&
+    typeof rawCondVal === 'string' &&
+    isValidIsoDate(rawVal) &&
+    isValidIsoDate(rawCondVal);
+
   if (operator === 'greater_than') {
+    if (bothIsoDates) {
+      return (rawVal as string) > (rawCondVal as string);
+    }
     if (typeof coercedVal !== 'number' || !Number.isFinite(coercedVal)) return false;
     if (typeof coercedCondVal !== 'number' || !Number.isFinite(coercedCondVal)) return false;
     return coercedVal > coercedCondVal;
   }
   if (operator === 'less_than') {
+    if (bothIsoDates) {
+      return (rawVal as string) < (rawCondVal as string);
+    }
     if (typeof coercedVal !== 'number' || !Number.isFinite(coercedVal)) return false;
     if (typeof coercedCondVal !== 'number' || !Number.isFinite(coercedCondVal)) return false;
     return coercedVal < coercedCondVal;

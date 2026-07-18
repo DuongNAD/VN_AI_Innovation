@@ -12,16 +12,29 @@ export class AppError extends Error {
   }
 }
 
+function jsonHeaders(overrides?: Record<string, string>): Headers {
+  const headers = new Headers({
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-store, private',
+    'Pragma': 'no-cache',
+  });
+
+  if (overrides) {
+    for (const [name, value] of Object.entries(overrides)) {
+      headers.set(name, value);
+    }
+  }
+
+  return headers;
+}
+
 export function jsonOk(
   body: unknown,
   init?: { status?: number; headers?: Record<string, string> }
 ): Response {
   return new Response(JSON.stringify(body), {
     status: init?.status ?? 200,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers || {}),
-    },
+    headers: jsonHeaders(init?.headers),
   });
 }
 
@@ -40,9 +53,7 @@ export function handleRoute<C>(
             details: err.details,
           },
         };
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        };
+        const headers = jsonHeaders();
 
         if (
           err.details &&
@@ -52,7 +63,7 @@ export function handleRoute<C>(
         ) {
           const retryAfter = (err.details as any).retryAfterSeconds;
           if (typeof retryAfter === 'number') {
-            headers['Retry-After'] = String(retryAfter);
+            headers.set('Retry-After', String(retryAfter));
           }
         }
 
@@ -71,9 +82,7 @@ export function handleRoute<C>(
       };
       return new Response(JSON.stringify(errorBody), {
         status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: jsonHeaders(),
       });
     }
   };

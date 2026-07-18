@@ -2,14 +2,21 @@
   "name": "ai-public-service-assistant",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:bootstrap": "tsx prisma/bootstrap.ts",
+    "pregen:tts": "tsx prisma/pregen-tts.ts",
+    "seed": "npm run db:seed",
     "test": "vitest run",
     "test:unit": "vitest run --exclude tests/integration/**",
+    "test:integration": "RUN_INTEGRATION=1 node --env-file=.env ./node_modules/vitest/vitest.mjs run tests/integration/flow.test.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {
@@ -18,21 +25,24 @@
   "dependencies": {
     "@prisma/client": "^5",
     "music-metadata": "^11.14.0",
-    "next": "^16.2.10",
-    "react": "^18",
-    "react-dom": "^18",
+    "next": "16.2.10",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "safe-regex2": "^4",
     "tsx": "^4"
   },
   "devDependencies": {
     "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10",
-    "postcss": "^8",
+    "postcss": "8.5.19",
     "prisma": "^5",
     "tailwindcss": "^3",
     "typescript": "^5",
     "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "postcss": "8.5.19"
   }
 }

@@ -62,9 +62,9 @@ Hệ thống tích hợp các dịch vụ trí tuệ nhân tạo để tối ưu
 
 | Model | Vai trò | Ràng buộc |
 | :--- | :--- | :--- |
-| **gpt-4o-mini** | Intent fallback + Error explanation | Phân loại ý định khi từ khóa không khớp và giải thích mã lỗi nghiệp vụ bằng Plain Vietnamese. Sử dụng đầu ra ràng buộc định dạng JSON (`response_format: { type: "json_object" }`). |
-| **whisper-1** | STT | Chuyển đổi giọng nói tiếng Việt từ micro thành văn bản phục vụ phân loại ý định. |
-| **tts-1** | TTS | Chuyển đổi văn bản hướng dẫn thành giọng nói. Bản đồ giọng nói: `vi-female` -> `nova` / `vi-male` -> `onyx`. |
+| **DeepSeek-V4-Flash** (FPT AI Marketplace) | Intent fallback + Error explanation | Phân loại ý định khi từ khóa không khớp và giải thích mã lỗi nghiệp vụ bằng Plain Vietnamese. Sử dụng đầu ra ràng buộc định dạng JSON (`response_format: { type: "json_object" }`) và tắt chế độ reasoning qua `LLM_DISABLE_THINKING=1` để kết quả nằm trong `message.content`. |
+| **FPT.AI-whisper-large-v3-turbo** | STT | Whisper tinh chỉnh trên hơn 50.000 giờ giọng nói tiếng Việt; chuyển giọng nói từ micro thành văn bản phục vụ phân loại ý định. |
+| **FPT.AI-VITs** | TTS | Chuyển văn bản hướng dẫn thành giọng nói tiếng Việt (9 giọng Bắc/Nam). Bản đồ giọng nói qua env: `vi-female` -> `banmai` / `vi-male` -> `leminh`. |
 
 Tất cả các dịch vụ AI hoạt động thông qua một endpoint tương thích với `OPENAI_BASE_URL`. Trong trường hợp phát sinh lỗi kết nối với dịch vụ Live AI, hệ thống sẽ tự động hạ cấp xuống dịch vụ mock nội bộ với cờ hiệu `degraded=true`.
 

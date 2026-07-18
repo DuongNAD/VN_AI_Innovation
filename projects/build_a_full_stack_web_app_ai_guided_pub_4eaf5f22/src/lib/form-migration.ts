@@ -111,7 +111,7 @@ export function selectActiveVersion<T extends VersionLike>(versions: T[], at: Da
 
   let selected: T | null = null;
   for (const v of versions) {
-    if (v.status === 'DRAFT') {
+    if (v.status !== 'ACTIVE' && v.status !== 'RETIRED') {
       continue;
     }
     if (v.effectiveFrom === null || !isValidDate(v.effectiveFrom)) {

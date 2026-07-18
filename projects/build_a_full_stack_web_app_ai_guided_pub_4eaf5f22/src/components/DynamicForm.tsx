@@ -1,21 +1,26 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PROVINCES } from '@/lib/constants';
 import { evaluateCondition, runRules, type ValidationErrorItem } from '@/lib/rule-engine';
 import type { FieldDef, RuleDef } from '@/lib/schema-guards';
+import SpeechButton from '@/components/SpeechButton';
 
 const INPUT_CLASS =
   'w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-lg focus:border-blue-500';
 
 /**
- * Keeps form state in lockstep with visibleWhen conditions: every visible field
- * has a key ('' default, so required rules fire on empty instead of absent) and
- * hidden fields lose their keys. Iterated to a fixpoint because hiding one field
- * can flip another field's condition; the pass cap guarantees termination.
+ * Seeds every visible field with a key ('' default, so required rules fire on
+ * empty instead of absent). Values of fields that later become hidden are kept:
+ * re-showing the field restores what the user typed, and the rule engine — not
+ * the UI — decides whether the combination is contradictory (e.g. "chưa từng
+ * kết hôn" while "số lần kết hôn" still holds a value). Iterated to a fixpoint
+ * because seeding one field can flip another field's condition; the pass cap
+ * guarantees termination.
  */
-function syncVisibility(fields: FieldDef[], data: Record<string, unknown>): Record<string, unknown> {
+export function syncVisibility(fields: FieldDef[], data: Record<string, unknown>): Record<string, unknown> {
   const next: Record<string, unknown> = {};
   for (const f of fields) {
     if (Object.prototype.hasOwnProperty.call(data, f.id)) {
@@ -30,9 +35,6 @@ function syncVisibility(fields: FieldDef[], data: Record<string, unknown>): Reco
       if (visible && !hasKey) {
         next[f.id] = '';
         changed = true;
-      } else if (!visible && hasKey) {
-        delete next[f.id];
-        changed = true;
       }
     }
     if (!changed) {
@@ -40,6 +42,10 @@ function syncVisibility(fields: FieldDef[], data: Record<string, unknown>): Reco
     }
   }
   return next;
+}
+
+export function visibleFieldsFor(fields: FieldDef[], data: Record<string, unknown>): FieldDef[] {
+  return fields.filter((f) => !f.visibleWhen || evaluateCondition(f.visibleWhen, data));
 }
 
 function asInputString(value: unknown): string {
@@ -61,6 +67,7 @@ type DynamicFormProps = {
   initialData?: Record<string, unknown>;
   submitLabel: string;
   onSubmit(data: Record<string, unknown>, clientErrors: ValidationErrorItem[]): void;
+  onDirtyChange?(dirty: boolean): void;
 };
 
 export default function DynamicForm({
@@ -69,6 +76,7 @@ export default function DynamicForm({
   initialData,
   submitLabel,
   onSubmit,
+  onDirtyChange,
 }: DynamicFormProps) {
   const [formData, setFormData] = useState<Record<string, unknown>>(() =>
     syncVisibility(fields, initialData ?? {})
@@ -77,39 +85,85 @@ export default function DynamicForm({
 
   const setField = (id: string, value: unknown) => {
     setFormData((prev) => syncVisibility(fields, { ...prev, [id]: value }));
+    onDirtyChange?.(true);
   };
 
-  const visibleFields = fields.filter((f) =>
-    Object.prototype.hasOwnProperty.call(formData, f.id)
-  );
+  const visibleFields = visibleFieldsFor(fields, formData);
   const visibleIds = new Set(visibleFields.map((f) => f.id));
+
+  const labelById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const f of fields) {
+      map[f.id] = f.label;
+    }
+    return map;
+  }, [fields]);
 
   const errorsFor = (id: string): ValidationErrorItem[] =>
     clientErrors.filter(
       (e) => e.field === id || (Array.isArray(e.fields) && e.fields.includes(id))
     );
 
-  const orphanErrors = clientErrors.filter((e) => {
-    if (e.field && visibleIds.has(e.field)) {
-      return false;
+  /** First visible field an error can be anchored to (cross-field errors pick the first visible member). */
+  const anchorFieldId = (err: ValidationErrorItem): string | null => {
+    if (err.field && visibleIds.has(err.field)) {
+      return err.field;
     }
-    if (Array.isArray(e.fields) && e.fields.some((id) => visibleIds.has(id))) {
-      return false;
+    if (Array.isArray(err.fields)) {
+      const hit = err.fields.find((id) => visibleIds.has(id));
+      if (hit) {
+        return hit;
+      }
     }
-    return true;
-  });
+    return null;
+  };
+
+  const errorLabel = (err: ValidationErrorItem): string => {
+    if (err.field) {
+      return labelById[err.field] ?? err.field;
+    }
+    if (Array.isArray(err.fields) && err.fields.length > 0) {
+      return err.fields.map((id) => labelById[id] ?? id).join(' + ');
+    }
+    return 'Lỗi chung';
+  };
+
+  const scrollToField = (id: string) => {
+    requestAnimationFrame(() => {
+      const wrap = document.getElementById('fieldwrap-' + id);
+      wrap?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const input = document.getElementById('field-' + id) as HTMLElement | null;
+      input?.focus({ preventScroll: true });
+    });
+  };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = syncVisibility(fields, formData);
     const errs = rules ? runRules(fields, rules, data) : [];
     setClientErrors(errs);
+    if (errs.length > 0) {
+      // Guide the user straight to the first thing that needs fixing.
+      const visAfter = new Set(visibleFieldsFor(fields, data).map((f) => f.id));
+      for (const err of errs) {
+        const anchor =
+          (err.field && visAfter.has(err.field) && err.field) ||
+          (Array.isArray(err.fields) ? err.fields.find((id) => visAfter.has(id)) : null);
+        if (anchor) {
+          scrollToField(anchor);
+          break;
+        }
+      }
+    }
     onSubmit(data, errs);
   };
 
   const renderInput = (field: FieldDef, value: unknown, hasError: boolean) => {
     const inputId = 'field-' + field.id;
     const base = INPUT_CLASS + (hasError ? ' border-red-500' : '');
+    const aria = hasError
+      ? { 'aria-invalid': true as const, 'aria-describedby': 'error-' + field.id }
+      : {};
 
     switch (field.type) {
       case 'text':
@@ -121,6 +175,7 @@ export default function DynamicForm({
             placeholder={field.placeholder}
             value={asInputString(value)}
             onChange={(e) => setField(field.id, e.target.value)}
+            {...aria}
           />
         );
       case 'textarea':
@@ -132,6 +187,7 @@ export default function DynamicForm({
             placeholder={field.placeholder}
             value={asInputString(value)}
             onChange={(e) => setField(field.id, e.target.value)}
+            {...aria}
           />
         );
       case 'number':
@@ -145,6 +201,7 @@ export default function DynamicForm({
             onChange={(e) =>
               setField(field.id, e.target.value === '' ? '' : Number(e.target.value))
             }
+            {...aria}
           />
         );
       case 'date':
@@ -155,6 +212,7 @@ export default function DynamicForm({
             className={base}
             value={typeof value === 'string' ? value : ''}
             onChange={(e) => setField(field.id, e.target.value)}
+            {...aria}
           />
         );
       case 'select': {
@@ -163,6 +221,7 @@ export default function DynamicForm({
           <select
             id={inputId}
             className={base}
+            {...aria}
             value={asInputString(value)}
             onChange={(e) => {
               const raw = e.target.value;
@@ -263,21 +322,45 @@ export default function DynamicForm({
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
       {clientErrors.length > 0 && (
-        <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-lg text-red-800" role="alert">
-          <p>
-            Biểu mẫu có {clientErrors.length} mục cần kiểm tra. Vui lòng xem các thông báo màu đỏ
-            bên dưới.
+        <div
+          className="rounded-lg border-l-4 border border-red-300 border-l-red-500 bg-red-50 p-4 text-lg text-red-800"
+          role="alert"
+        >
+          <p className="font-bold text-red-900">
+            Phát hiện {clientErrors.length} mục cần sửa trước khi tiếp tục
           </p>
-          {orphanErrors.length > 0 && (
-            <ul className="mt-2 list-inside list-disc">
-              {orphanErrors.map((err, i) => (
-                <li key={i}>
-                  {err.message}
-                  {err.suggestion ? ' — ' + err.suggestion : ''}
+          <ul className="mt-2 space-y-1.5">
+            {clientErrors.map((err, i) => {
+              const anchor = anchorFieldId(err);
+              const content = (
+                <>
+                  <span className="font-semibold">{errorLabel(err)}:</span> {err.message}
+                </>
+              );
+              return (
+                <li key={i} className="flex gap-2">
+                  <span aria-hidden="true">•</span>
+                  {anchor ? (
+                    <button
+                      type="button"
+                      onClick={() => scrollToField(anchor)}
+                      className="text-left underline decoration-red-400 underline-offset-4 hover:text-red-950"
+                    >
+                      {content}
+                    </button>
+                  ) : (
+                    <span>
+                      {content}
+                      {err.suggestion ? ' — ' + err.suggestion : ''}
+                    </span>
+                  )}
                 </li>
-              ))}
-            </ul>
-          )}
+              );
+            })}
+          </ul>
+          <p className="mt-2 text-base text-red-700">
+            Bấm vào từng dòng để đi tới đúng trường cần sửa. Dưới mỗi trường có hướng dẫn khắc phục.
+          </p>
         </div>
       )}
 
@@ -285,7 +368,7 @@ export default function DynamicForm({
         const value = formData[field.id];
         const fieldErrors = errorsFor(field.id);
         return (
-          <div key={field.id}>
+          <div key={field.id} id={'fieldwrap-' + field.id}>
             <label
               htmlFor={'field-' + field.id}
               className="mb-2 block text-lg font-semibold text-slate-900"
@@ -295,9 +378,18 @@ export default function DynamicForm({
             </label>
             {renderInput(field, value, fieldErrors.length > 0)}
             {fieldErrors.map((err, i) => (
-              <p key={i} className="mt-1 text-base font-medium text-red-600" role="alert">
+              <p
+                key={i}
+                id={i === 0 ? 'error-' + field.id : undefined}
+                className="mt-1 text-base font-medium text-red-600"
+                role="alert"
+              >
                 {err.message}
-                {err.suggestion ? ' — ' + err.suggestion : ''}
+                {err.suggestion ? (
+                  <span className="block text-slate-700">
+                    <span className="font-bold">Cách khắc phục:</span> {err.suggestion}
+                  </span>
+                ) : null}
               </p>
             ))}
           </div>
@@ -319,36 +411,57 @@ type MigrationPreview = {
   dropped: string[];
 };
 
+type AiGuide = {
+  text: string;
+  degraded: boolean;
+};
+
 type ApplicationFormRunnerProps = {
   applicationId: string;
+  formCode: string;
   fields: FieldDef[];
   rules?: RuleDef[];
   initialData?: Record<string, unknown>;
   revision: number;
   formVersion: string;
+  status: string;
+  reviewNote?: string | null;
+  reviewedBy?: string | null;
+  reviewedAt?: string | Date | null;
   updateAvailable: boolean;
   newVersion?: string;
   token: string;
+  onVersionChange?(version: string): void;
 };
 
 export function ApplicationFormRunner({
   applicationId,
+  formCode,
   fields: initialFields,
   rules: initialRules,
   initialData,
   revision: initialRevision,
   formVersion: initialFormVersion,
+  status: initialStatus,
+  reviewNote,
+  reviewedBy,
+  reviewedAt,
   updateAvailable: initialUpdateAvailable,
   newVersion: initialNewVersion,
   token,
+  onVersionChange,
 }: ApplicationFormRunnerProps) {
   const router = useRouter();
+  // Tracks unsaved edits inside DynamicForm; migration replaces the form with
+  // the server's last-saved data, so we warn before silently dropping edits.
+  const dirtyRef = useRef(false);
 
   const [fields, setFields] = useState<FieldDef[]>(initialFields);
   const [rules, setRules] = useState<RuleDef[] | undefined>(initialRules);
   const [data, setData] = useState<Record<string, unknown>>(initialData ?? {});
   const [revision, setRevision] = useState<number>(initialRevision);
   const [formVersion, setFormVersion] = useState<string>(initialFormVersion);
+  const [status, setStatus] = useState<string>(initialStatus);
   const [updateAvailable, setUpdateAvailable] = useState<boolean>(initialUpdateAvailable);
   const [newVersion, setNewVersion] = useState<string | undefined>(initialNewVersion);
   // Bumped on every refetch so DynamicForm remounts and re-reads initialData.
@@ -356,6 +469,8 @@ export function ApplicationFormRunner({
 
   const [notice, setNotice] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [blockedCount, setBlockedCount] = useState<number>(0);
+  const [aiGuide, setAiGuide] = useState<AiGuide | null>(null);
   const [eco, setEco] = useState(false);
   const [saving, setSaving] = useState(false);
   const [migrating, setMigrating] = useState(false);
@@ -421,22 +536,55 @@ export function ApplicationFormRunner({
     setRules(Array.isArray(body.rules) ? body.rules : undefined);
     setData(body.data && typeof body.data === 'object' ? body.data : {});
     setRevision(typeof body.revision === 'number' ? body.revision : 0);
+    if (typeof body.status === 'string') {
+      setStatus(body.status);
+    }
     setFormVersion(typeof body.formVersion === 'string' ? body.formVersion : '');
+    if (typeof body.formVersion === 'string') {
+      onVersionChange?.(body.formVersion);
+    }
     setUpdateAvailable(!!body.updateAvailable);
     setNewVersion(typeof body.newVersion === 'string' ? body.newVersion : undefined);
     setFormKey((k) => k + 1);
+    setBlockedCount(0);
+    setAiGuide(null);
+    dirtyRef.current = false;
     return body;
+  };
+
+  /**
+   * Fetches the grounded AI explanation for the current errors. The endpoint
+   * only ever sees error CODES (never the citizen's actual data values), so
+   * the guidance text is safe to show verbatim.
+   */
+  const fetchAiGuide = async (formData: Record<string, unknown>) => {
+    try {
+      const { res, body } = await apiFetch(
+        '/api/v1/forms/' + encodeURIComponent(formCode) + '/validate',
+        {
+          method: 'POST',
+          body: JSON.stringify({ formVersion, data: formData, applicationId }),
+        }
+      );
+      if (res.ok && typeof body?.aiExplanation === 'string' && body.aiExplanation.trim() !== '') {
+        setAiGuide({ text: body.aiExplanation, degraded: !!body.degraded || body.aiMode === 'mock' });
+      }
+    } catch {
+      // The inline rule messages already carry the legal guidance; the AI
+      // paraphrase is a bonus, so a failure here is silently ignored.
+    }
   };
 
   const handleSubmit = async (
     formData: Record<string, unknown>,
-    _clientErrors: ValidationErrorItem[]
+    clientErrors: ValidationErrorItem[]
   ) => {
     if (saving) {
       return;
     }
     setNotice(null);
     setErrorMsg(null);
+    setAiGuide(null);
     setSaving(true);
     try {
       const { res, body } = await apiFetch('/api/v1/applications/' + applicationId, {
@@ -453,6 +601,17 @@ export function ApplicationFormRunner({
         return;
       }
       setRevision(typeof body?.revision === 'number' ? body.revision : revision + 1);
+      dirtyRef.current = false;
+
+      // Blocking errors keep the citizen HERE, next to the fields that need
+      // fixing — the draft is already saved so nothing is lost. Only a clean
+      // form moves on to the review step.
+      const blocking = clientErrors.filter((e) => e.severity === 'error');
+      setBlockedCount(blocking.length);
+      if (blocking.length > 0) {
+        void fetchAiGuide(formData);
+        return;
+      }
       router.push('/result?applicationId=' + applicationId);
     } finally {
       setSaving(false);
@@ -516,6 +675,14 @@ export function ApplicationFormRunner({
     if (!preview || migrating) {
       return;
     }
+    if (
+      dirtyRef.current &&
+      !window.confirm(
+        'Bạn có thay đổi chưa lưu trên biểu mẫu. Việc cập nhật phiên bản sẽ dùng dữ liệu đã lưu gần nhất và bỏ qua các thay đổi chưa lưu. Tiếp tục?'
+      )
+    ) {
+      return;
+    }
     setNotice(null);
     setErrorMsg(null);
     setMigrating(true);
@@ -542,9 +709,80 @@ export function ApplicationFormRunner({
     !!preview &&
     preview.needsConfirmation.every((e) => typeof resolutions[e.from] === 'string');
 
+  const formatDateTime = (v: string | Date | null | undefined): string => {
+    if (!v) {
+      return '';
+    }
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) {
+      return '';
+    }
+    return d.toLocaleString('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  // Submitted/approved applications are frozen: the citizen follows the
+  // outcome on the result page instead of editing here.
+  if (status === 'SUBMITTED' || status === 'APPROVED') {
+    const approved = status === 'APPROVED';
+    return (
+      <div
+        className={
+          'card border ' +
+          (approved ? 'border-emerald-300 bg-emerald-50' : 'border-blue-300 bg-blue-50')
+        }
+        role="status"
+      >
+        <p className={'text-xl font-bold ' + (approved ? 'text-emerald-900' : 'text-blue-900')}>
+          {approved
+            ? 'Hồ sơ đã được cán bộ phê duyệt'
+            : 'Hồ sơ đã nộp và đang chờ cán bộ xét duyệt'}
+        </p>
+        <p className={'mt-1 text-lg ' + (approved ? 'text-emerald-800' : 'text-blue-800')}>
+          {approved
+            ? 'Bạn có thể xem kết quả và tờ khai hoàn chỉnh ở trang kết quả.'
+            : 'Trong thời gian chờ duyệt, hồ sơ được khóa và không thể chỉnh sửa.'}
+        </p>
+        <Link
+          href={'/result?applicationId=' + applicationId}
+          className={
+            'btn mt-4 inline-block text-white ' +
+            (approved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-700 hover:bg-blue-800')
+          }
+        >
+          Xem trạng thái hồ sơ
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       {eco && <span className="badge-eco" />}
+
+      {status === 'RETURNED' && (
+        <div className="card border-l-4 border border-amber-300 border-l-amber-500 bg-amber-50" role="alert">
+          <p className="text-lg font-bold text-amber-900">
+            Cán bộ đã xem hồ sơ và trả lại để bổ sung
+          </p>
+          {reviewNote && (
+            <p className="mt-1 text-lg text-amber-900">
+              <span className="font-semibold">Lý do từ cán bộ:</span> {reviewNote}
+            </p>
+          )}
+          <p className="mt-1 text-base text-amber-800">
+            {(reviewedBy ? reviewedBy : 'Cán bộ tiếp nhận') +
+              (formatDateTime(reviewedAt) ? ' · ' + formatDateTime(reviewedAt) : '')}
+            {' — '}sửa các nội dung trên rồi bấm &quot;Lưu và kiểm tra hồ sơ&quot; để nộp lại.
+          </p>
+        </div>
+      )}
 
       {updateAvailable && !preview && (
         <div className="card border border-amber-300 bg-amber-50">
@@ -659,6 +897,39 @@ export function ApplicationFormRunner({
         </div>
       )}
 
+      {blockedCount > 0 && (
+        <div className="card border-l-4 border border-red-300 border-l-red-500 bg-red-50" role="alert">
+          <p className="text-lg font-bold text-red-900">
+            {'Đã lưu bản nháp — còn ' + blockedCount + ' lỗi cần sửa trước khi tiếp tục'}
+          </p>
+          <p className="mt-1 text-base text-red-800">
+            Hồ sơ chỉ chuyển sang bước Kiểm tra khi không còn lỗi. Các trường cần sửa được đánh
+            dấu đỏ bên dưới, kèm hướng dẫn khắc phục cho từng trường.
+          </p>
+        </div>
+      )}
+
+      {aiGuide && blockedCount > 0 && (
+        <div className="card border border-indigo-200 bg-gradient-to-br from-indigo-50/80 to-purple-50/80">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-indigo-600" aria-hidden="true" />
+            <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-950">
+              Trợ lý AI giải thích lỗi
+            </h3>
+            {(aiGuide.degraded || eco) && <span className="badge-eco" aria-label="Chế độ tiết kiệm" />}
+          </div>
+          <p className="mt-2 whitespace-pre-line text-lg leading-relaxed text-indigo-900">
+            {aiGuide.text}
+          </p>
+          <div className="mt-3 flex flex-col gap-2 border-t border-indigo-100/60 pt-2 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-xs font-medium text-slate-500">
+              AI chỉ giải thích mã lỗi — nội dung pháp lý lấy từ cơ sở dữ liệu
+            </span>
+            <SpeechButton text={aiGuide.text} label="Nghe giải thích từ AI" />
+          </div>
+        </div>
+      )}
+
       <p className="text-base text-slate-500">Phiên bản biểu mẫu: {formVersion}</p>
 
       <DynamicForm
@@ -668,6 +939,9 @@ export function ApplicationFormRunner({
         initialData={data}
         submitLabel={saving ? 'Đang lưu...' : 'Lưu và kiểm tra hồ sơ'}
         onSubmit={handleSubmit}
+        onDirtyChange={(dirty) => {
+          dirtyRef.current = dirty;
+        }}
       />
     </div>
   );
