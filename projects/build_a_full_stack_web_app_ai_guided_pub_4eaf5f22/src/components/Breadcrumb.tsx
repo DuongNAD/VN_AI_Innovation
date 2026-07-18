@@ -32,7 +32,7 @@ export default function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
           <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
         </svg>
-        Trang chá»§
+        Trang chủ
       </Link>
 
       {breadcrumbs.map((item, index) => {
@@ -71,16 +71,16 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
   const breadcrumbs: BreadcrumbItem[] = [];
 
   const pathMap: Record<string, string> = {
-    user: 'NgÆ°á»i dĂ¹ng',
-    chat: 'TrĂ² chuyá»‡n',
-    checklist: 'Danh sĂ¡ch giáº¥y tá»',
-    form: 'Biá»ƒu máº«u',
-    result: 'Káº¿t quáº£',
-    manager: 'NgÆ°á»i quáº£n lĂ½',
-    admin: 'Quáº£n trá»‹',
-    sources: 'Nguá»“n dá»¯ liá»‡u',
+    user: 'Người dùng',
+    chat: 'Trò chuyện',
+    checklist: 'Danh sách giấy tờ',
+    form: 'Biểu mẫu',
+    result: 'Kết quả',
+    manager: 'Người quản lý',
+    admin: 'Quản trị',
+    sources: 'Nguồn dữ liệu',
     'widget-demo': 'Widget Demo',
-    architecture: 'Kiáº¿n trĂºc há»‡ thá»‘ng',
+    architecture: 'Kiến trúc hệ thống',
   };
 
   segments.forEach((segment, index) => {
@@ -93,4 +93,3 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
 }
 
 export { ProgressIndicator } from '@/components/ProgressIndicator';
-

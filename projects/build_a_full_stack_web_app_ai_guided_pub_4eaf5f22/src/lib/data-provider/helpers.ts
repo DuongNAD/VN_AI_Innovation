@@ -89,12 +89,13 @@ export function parseSteps(raw: any): { order: number; title: string; descriptio
         reason: `Step description at index ${idx} must be a non-empty string`
       });
     }
-    if (typeof example !== 'string' || !example) {
+    // Imported catalog steps may not include a worked example.
+    if (example != null && typeof example !== 'string') {
       throw new AppError(500, 'DATA_INTEGRITY', 'Dữ liệu cấu hình không hợp lệ.', {
-        reason: `Step example at index ${idx} must be a non-empty string`
+        reason: `Step example at index ${idx} must be a string when present`
       });
     }
-    return { order, title, description, example };
+    return { order, title, description, example: typeof example === 'string' ? example : '' };
   });
 }
 

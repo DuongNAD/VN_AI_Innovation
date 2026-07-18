@@ -7,6 +7,7 @@ import { validateAnswer, pruneAnswers, computeQuestionFlow } from '@/lib/intake-
 import { generateAccessToken, hashToken } from '@/lib/auth';
 import { getSessionTtlHours } from '@/lib/config';
 import { DISCLAIMER } from '@/lib/constants';
+import { presentQuestion } from '@/lib/ai/question-presentation';
 
 export const POST = handleRoute(async (req: Request) => {
   enforceRateLimit('intake-start', req);
@@ -72,6 +73,16 @@ export const POST = handleRoute(async (req: Request) => {
   });
 
   const flow = computeQuestionFlow(questions, answers);
+  const presented = flow.next
+    ? await presentQuestion(flow.next, {
+        code: procedure.code,
+        name: procedure.name,
+      })
+    : null;
+
+  // Guidance-only procedures (e.g. imported DVCQG catalog) have no dynamic form;
+  // surface this so the client can hide the "fill form" call-to-action.
+  const activeForm = await provider.getActiveFormVersion(procedureCode);
 
   return jsonOk(
     {
@@ -82,12 +93,19 @@ export const POST = handleRoute(async (req: Request) => {
         name: procedure.name,
       },
       done: flow.next === null,
-      question: flow.next,
+      question: presented?.question ?? null,
       progress: {
         answered: flow.answered,
         total: flow.total,
       },
+      formAvailable: activeForm !== null,
       disclaimer: DISCLAIMER,
+      ...(presented
+        ? {
+            aiMode: presented.aiMode,
+            degraded: presented.degraded,
+          }
+        : {}),
     },
     { status: 201 }
   );

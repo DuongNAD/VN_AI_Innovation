@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { runRules } from '@/lib/rule-engine';
+import { isValidIsoDate, runRules, sanitizeFormData } from '@/lib/rule-engine';
 import type { FieldDef, RuleDef } from '@/lib/schema-guards';
 
 function field(id: string, type: FieldDef['type'], extra: Partial<FieldDef> = {}): FieldDef {
@@ -109,6 +109,53 @@ describe('rule-engine · runRules', () => {
     const rules = [rule('r', 'date_not_future', {}, { fieldId: 'issued' })];
     expect(codes(runRules(fields, rules, { issued: '2999-01-01' }))).toEqual(['DATE_IN_FUTURE']);
     expect(runRules(fields, rules, { issued: '2000-01-01' })).toHaveLength(0);
+  });
+
+  it('rejects a prematurely committed 3-digit year padded as 0200', () => {
+    const fields = [field('birth_date', 'date')];
+    const rules = [rule('r', 'date_not_future', {}, { fieldId: 'birth_date' })];
+
+    expect(isValidIsoDate('0200-10-13')).toBe(false);
+    expect(codes(runRules(fields, rules, { birth_date: '0200-10-13' }))).toEqual([
+      'INVALID_DATE',
+    ]);
+    expect(sanitizeFormData(fields, { birth_date: '0200-10-13' })).toEqual({
+      ok: false,
+      issues: [{ field: 'birth_date', code: 'INVALID_DATE' }],
+    });
+  });
+
+  it('enforces marriage age and distinct-party rules even when DB rules are missing', () => {
+    const fields = [
+      field('male_birth_date', 'date'),
+      field('female_birth_date', 'date'),
+      field('male_identity_number', 'text'),
+      field('female_identity_number', 'text'),
+    ];
+    const currentYear = Number(new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      year: 'numeric',
+    }).format(new Date()));
+
+    const errors = runRules(fields, [], {
+      male_birth_date: `${currentYear - 19}-12-31`,
+      female_birth_date: `${currentYear - 6}-01-01`,
+      male_identity_number: '012345678901',
+      female_identity_number: '012345678901',
+    });
+
+    expect(codes(errors)).toEqual([
+      'DUPLICATE_PARTY_IDENTITY',
+      'MARRIAGE_FEMALE_UNDERAGE',
+      'MARRIAGE_MALE_UNDERAGE',
+    ]);
+  });
+
+  it('rejects implausible marriage ages such as 999 years old', () => {
+    const fields = [field('male_birth_date', 'date')];
+    expect(codes(runRules(fields, [], { male_birth_date: '1027-01-01' }))).toEqual([
+      'IMPLAUSIBLE_AGE',
+    ]);
   });
 
   it('date_after flags DATE_ORDER_INVALID when end <= start', () => {

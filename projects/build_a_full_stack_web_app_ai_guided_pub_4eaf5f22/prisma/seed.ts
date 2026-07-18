@@ -3,6 +3,8 @@ import { parseFieldDefs, parseRuleDefs, parseMigrationHints } from '../src/lib/s
 import { OFFICIAL_PROCEDURE_SOURCE_URLS } from '../src/lib/official-procedures';
 import { hashPassword } from '../src/lib/password';
 import { fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
 
 const prisma = new PrismaClient();
 
@@ -390,6 +392,70 @@ async function upsertFormAndVersions(
   return form;
 }
 
+/**
+ * Guidance-only procedures imported from the National Public Service Portal
+ * (DVCQG) dump. The committed file is produced by scripts/build-dvc-catalog.mjs.
+ * These broaden search/checklist coverage; they carry no dynamic Form/Rule engine
+ * (that stays hand-authored for the showcase procedures).
+ */
+interface ImportedProcedure {
+  code: string;
+  name: string;
+  sector: string;
+  agency: string;
+  audience: 'CITIZEN' | 'BUSINESS';
+  sourceUrl: string;
+  version: {
+    version: string;
+    status: string;
+    effectiveFrom: string | null;
+    stepsJson: any;
+    durationText: string;
+    feesText: string;
+    legalBasisText: string | null;
+  };
+  questions: any[];
+  documents: any[];
+}
+
+function loadImportedCatalog(): ImportedProcedure[] {
+  const file = join(dirname(fileURLToPath(import.meta.url)), 'data', 'dvc-catalog.generated.json');
+  try {
+    return JSON.parse(readFileSync(file, 'utf-8')) as ImportedProcedure[];
+  } catch (err) {
+    console.warn(`[seed] DVCQG catalog not found (${file}); skipping breadth import. Run "node scripts/build-dvc-catalog.mjs" to generate it.`);
+    return [];
+  }
+}
+
+async function seedImportedCatalog() {
+  const catalog = loadImportedCatalog();
+  for (const p of catalog) {
+    await upsertProcedure(
+      p.code,
+      p.name,
+      p.sector,
+      p.agency,
+      p.audience,
+      p.sourceUrl,
+      [{
+        version: p.version.version,
+        status: p.version.status,
+        effectiveFrom: p.version.effectiveFrom ? new Date(p.version.effectiveFrom) : null,
+        stepsJson: p.version.stepsJson,
+        durationText: p.version.durationText,
+        feesText: p.version.feesText,
+        legalBasisText: p.version.legalBasisText,
+      }],
+      p.questions,
+      p.documents,
+    );
+  }
+  if (catalog.length) {
+    console.log(`Imported ${catalog.length} DVCQG guidance procedures.`);
+  }
+}
+
 export async function main(options: { allowProductionBootstrap?: boolean } = {}) {
   if (!options.allowProductionBootstrap) {
     assertSeedAllowed();
@@ -634,7 +700,44 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
       { code: 'LEGAL_ACCOMMODATION_DOC', name: 'Giấy tờ chứng minh chỗ ở hợp pháp', originals: 1, copies: 0, orderNumber: 2, conditionJson: null, reasonText: null, submissionType: 'SUBMIT' }
     ];
 
-    await upsertProcedure(
+    // Tờ khai CT01 (thay đổi thông tin cư trú) — dynamic form fields + rules.
+    const tempResidenceFieldsV1Raw = [
+      { id: "full_name", type: "text", label: "Họ và tên", required: true },
+      { id: "birth_date", type: "date", label: "Ngày sinh", required: true },
+      { id: "gender", type: "radio", label: "Giới tính", required: true, options: [{ value: "male", label: "Nam" }, { value: "female", label: "Nữ" }] },
+      { id: "identity_number", type: "text", label: "Số định danh cá nhân/CCCD", required: true },
+      { id: "phone_number", type: "text", label: "Số điện thoại", required: true },
+      { id: "permanent_address", type: "text", label: "Nơi thường trú", required: true },
+      { id: "temporary_address", type: "text", label: "Nơi đề nghị đăng ký tạm trú", required: true },
+      { id: "temp_from_date", type: "date", label: "Tạm trú từ ngày", required: true },
+      { id: "temp_to_date", type: "date", label: "Tạm trú đến ngày", required: true },
+      { id: "relationship_to_owner", type: "text", label: "Quan hệ với chủ hộ/chủ sở hữu chỗ ở", required: true },
+      { id: "host_consent", type: "radio", label: "Chủ hộ/chủ sở hữu chỗ ở đồng ý", required: true, options: [{ value: true, label: "Có" }, { value: false, label: "Không" }] },
+      { id: "province", type: "province", label: "Tỉnh/thành phố đăng ký", required: true },
+      { id: "legal_accommodation_doc", type: "file", label: "Giấy tờ chứng minh chỗ ở hợp pháp", required: false, visibleWhen: { field: "host_consent", operator: "equals", value: true } }
+    ];
+
+    const tempResidenceRulesV1Raw = [
+      { id: "tr_v1_req_full_name", type: "required", fieldId: "full_name", params: {}, message: "Vui lòng nhập họ và tên.", suggestion: "Nhập đầy đủ họ tên theo giấy tờ tùy thân.", severity: "error", orderNumber: 1 },
+      { id: "tr_v1_req_birth_date", type: "required", fieldId: "birth_date", params: {}, message: "Vui lòng nhập ngày sinh.", suggestion: "Nhập đúng ngày tháng năm sinh.", severity: "error", orderNumber: 2 },
+      { id: "tr_v1_date_birth", type: "date_not_future", fieldId: "birth_date", params: {}, message: "Ngày sinh không được ở tương lai.", suggestion: "Vui lòng kiểm tra lại ngày sinh.", severity: "error", orderNumber: 3 },
+      { id: "tr_v1_req_gender", type: "required", fieldId: "gender", params: {}, message: "Vui lòng chọn giới tính.", suggestion: "Chọn Nam hoặc Nữ.", severity: "error", orderNumber: 4 },
+      { id: "tr_v1_req_identity", type: "required", fieldId: "identity_number", params: {}, message: "Vui lòng nhập số định danh cá nhân/CCCD.", suggestion: "Nhập đúng 12 số trên thẻ căn cước.", severity: "error", orderNumber: 5 },
+      { id: "tr_v1_fmt_identity", type: "regex", fieldId: "identity_number", params: { pattern: "^\\d{12}$" }, message: "Số định danh/CCCD phải gồm đúng 12 chữ số.", suggestion: "Ví dụ: 001099012345.", severity: "error", orderNumber: 6 },
+      { id: "tr_v1_req_phone", type: "required", fieldId: "phone_number", params: {}, message: "Vui lòng nhập số điện thoại.", suggestion: "Nhập số điện thoại liên hệ.", severity: "error", orderNumber: 7 },
+      { id: "tr_v1_fmt_phone", type: "regex", fieldId: "phone_number", params: { pattern: "^0\\d{9}$" }, message: "Số điện thoại phải gồm 10 chữ số bắt đầu bằng 0.", suggestion: "Ví dụ: 0912345678.", severity: "error", orderNumber: 8 },
+      { id: "tr_v1_req_permanent", type: "required", fieldId: "permanent_address", params: {}, message: "Vui lòng nhập nơi thường trú.", suggestion: "Nhập địa chỉ thường trú theo CSDL quốc gia về dân cư.", severity: "error", orderNumber: 9 },
+      { id: "tr_v1_req_temporary", type: "required", fieldId: "temporary_address", params: {}, message: "Vui lòng nhập nơi đề nghị đăng ký tạm trú.", suggestion: "Nhập địa chỉ chỗ ở hiện tại.", severity: "error", orderNumber: 10 },
+      { id: "tr_v1_req_from", type: "required", fieldId: "temp_from_date", params: {}, message: "Vui lòng nhập ngày bắt đầu tạm trú.", suggestion: "Chọn ngày bắt đầu tạm trú.", severity: "error", orderNumber: 11 },
+      { id: "tr_v1_req_to", type: "required", fieldId: "temp_to_date", params: {}, message: "Vui lòng nhập ngày kết thúc tạm trú.", suggestion: "Chọn ngày kết thúc tạm trú.", severity: "error", orderNumber: 12 },
+      { id: "tr_v1_date_order", type: "date_after", fieldId: "temp_to_date", params: { afterFieldId: "temp_from_date" }, message: "Ngày kết thúc tạm trú phải sau ngày bắt đầu.", suggestion: "Kiểm tra lại khoảng thời gian tạm trú.", severity: "error", orderNumber: 13 },
+      { id: "tr_v1_req_relationship", type: "required", fieldId: "relationship_to_owner", params: {}, message: "Vui lòng nhập quan hệ với chủ hộ/chủ sở hữu chỗ ở.", suggestion: "Ví dụ: người thuê nhà, con, cháu…", severity: "error", orderNumber: 14 },
+      { id: "tr_v1_req_consent", type: "required", fieldId: "host_consent", params: {}, message: "Vui lòng cho biết chủ hộ/chủ sở hữu có đồng ý không.", suggestion: "Chọn Có nếu đã được chủ hộ đồng ý.", severity: "error", orderNumber: 15 },
+      { id: "tr_v1_req_province", type: "required", fieldId: "province", params: {}, message: "Vui lòng chọn tỉnh/thành phố đăng ký.", suggestion: "Chọn địa phương nơi đăng ký tạm trú.", severity: "error", orderNumber: 16 },
+      { id: "tr_v1_cond_doc", type: "conditional_document", fieldId: "legal_accommodation_doc", params: { condition: { field: "host_consent", operator: "equals", value: true } }, message: "Vui lòng tải lên giấy tờ chứng minh chỗ ở hợp pháp.", suggestion: "Đính kèm hợp đồng thuê nhà hoặc giấy tờ nhà đất.", severity: "error", orderNumber: 17 }
+    ];
+
+    const tempResidenceProc = await upsertProcedure(
       'TEMP_RESIDENCE_REGISTRATION',
       'Đăng ký tạm trú',
       'Cư trú',
@@ -656,6 +759,22 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
       tempResidenceDocuments
     );
 
+    await upsertFormAndVersions(
+      'TEMP_RESIDENCE_REGISTRATION',
+      'Tờ khai đăng ký tạm trú (CT01)',
+      tempResidenceProc.id,
+      [
+        {
+          version: '1.0',
+          status: 'ACTIVE',
+          effectiveFrom: new Date('2026-01-01T00:00:00+07:00'),
+          fieldsRaw: tempResidenceFieldsV1Raw,
+          hintsRaw: [],
+          rulesRaw: tempResidenceRulesV1Raw
+        }
+      ]
+    );
+
     // 4. Seed CITIZEN_ID_ISSUANCE (Guidance-only, no Form/FormVersion)
     const citizenIdSteps = [
       { order: 1, title: 'Đăng ký lịch hẹn', description: 'Đặt lịch hẹn làm căn cước trực tuyến qua cổng dịch vụ công.', example: 'Bạn đặt lịch hẹn thu nhận thông tin căn cước tại Công an quận vào sáng thứ Ba.' },
@@ -673,7 +792,35 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
       { code: 'CIVIL_INFO_DOC', name: 'Giấy tờ hộ tịch chứng minh thông tin', originals: 1, copies: 0, orderNumber: 2, conditionJson: { field: 'age_group', operator: 'equals', value: 'under_6' }, reasonText: 'Cần thiết đối với trẻ em dưới 6 tuổi nếu thông tin hộ tịch chưa được đồng bộ trên hệ thống.', submissionType: 'SUBMIT' }
     ];
 
-    await upsertProcedure(
+    // Tờ khai căn cước — dynamic form fields + rules.
+    const citizenIdFieldsV1Raw = [
+      { id: "full_name", type: "text", label: "Họ và tên", required: true },
+      { id: "birth_date", type: "date", label: "Ngày sinh", required: true },
+      { id: "gender", type: "radio", label: "Giới tính", required: true, options: [{ value: "male", label: "Nam" }, { value: "female", label: "Nữ" }] },
+      { id: "issue_reason", type: "select", label: "Lý do đề nghị cấp", required: true, options: [{ value: "cap_moi", label: "Cấp mới (lần đầu)" }, { value: "cap_doi", label: "Cấp đổi" }, { value: "cap_lai", label: "Cấp lại" }] },
+      { id: "old_id_number", type: "text", label: "Số CCCD/CMND đã được cấp", required: false, visibleWhen: { field: "issue_reason", operator: "not_equals", value: "cap_moi" } },
+      { id: "permanent_address", type: "text", label: "Nơi thường trú", required: true },
+      { id: "phone_number", type: "text", label: "Số điện thoại", required: true },
+      { id: "province", type: "province", label: "Tỉnh/thành phố thực hiện", required: true },
+      { id: "appointment_confirmed", type: "radio", label: "Đã đặt lịch hẹn thu nhận thông tin", required: true, options: [{ value: true, label: "Rồi" }, { value: false, label: "Chưa" }] }
+    ];
+
+    const citizenIdRulesV1Raw = [
+      { id: "cc_v1_req_full_name", type: "required", fieldId: "full_name", params: {}, message: "Vui lòng nhập họ và tên.", suggestion: "Nhập đầy đủ họ tên theo giấy khai sinh.", severity: "error", orderNumber: 1 },
+      { id: "cc_v1_req_birth_date", type: "required", fieldId: "birth_date", params: {}, message: "Vui lòng nhập ngày sinh.", suggestion: "Nhập đúng ngày tháng năm sinh.", severity: "error", orderNumber: 2 },
+      { id: "cc_v1_date_birth", type: "date_not_future", fieldId: "birth_date", params: {}, message: "Ngày sinh không được ở tương lai.", suggestion: "Vui lòng kiểm tra lại ngày sinh.", severity: "error", orderNumber: 3 },
+      { id: "cc_v1_req_gender", type: "required", fieldId: "gender", params: {}, message: "Vui lòng chọn giới tính.", suggestion: "Chọn Nam hoặc Nữ.", severity: "error", orderNumber: 4 },
+      { id: "cc_v1_req_reason", type: "required", fieldId: "issue_reason", params: {}, message: "Vui lòng chọn lý do đề nghị cấp.", suggestion: "Chọn Cấp mới, Cấp đổi hoặc Cấp lại.", severity: "error", orderNumber: 5 },
+      { id: "cc_v1_cond_old_id", type: "conditional_required", fieldId: "old_id_number", params: { condition: { field: "issue_reason", operator: "not_equals", value: "cap_moi" } }, message: "Vui lòng nhập số CCCD/CMND đã được cấp.", suggestion: "Cần thiết khi cấp đổi hoặc cấp lại.", severity: "error", orderNumber: 6 },
+      { id: "cc_v1_fmt_old_id", type: "regex", fieldId: "old_id_number", params: { pattern: "^\\d{9,12}$" }, message: "Số CCCD/CMND phải gồm 9 đến 12 chữ số.", suggestion: "CMND có 9 số, CCCD/định danh có 12 số.", severity: "error", orderNumber: 7 },
+      { id: "cc_v1_req_permanent", type: "required", fieldId: "permanent_address", params: {}, message: "Vui lòng nhập nơi thường trú.", suggestion: "Nhập địa chỉ thường trú theo CSDL quốc gia về dân cư.", severity: "error", orderNumber: 8 },
+      { id: "cc_v1_req_phone", type: "required", fieldId: "phone_number", params: {}, message: "Vui lòng nhập số điện thoại.", suggestion: "Nhập số điện thoại liên hệ.", severity: "error", orderNumber: 9 },
+      { id: "cc_v1_fmt_phone", type: "regex", fieldId: "phone_number", params: { pattern: "^0\\d{9}$" }, message: "Số điện thoại phải gồm 10 chữ số bắt đầu bằng 0.", suggestion: "Ví dụ: 0912345678.", severity: "error", orderNumber: 10 },
+      { id: "cc_v1_req_province", type: "required", fieldId: "province", params: {}, message: "Vui lòng chọn tỉnh/thành phố thực hiện.", suggestion: "Chọn địa phương nơi làm thẻ căn cước.", severity: "error", orderNumber: 11 },
+      { id: "cc_v1_req_appointment", type: "required", fieldId: "appointment_confirmed", params: {}, message: "Vui lòng cho biết đã đặt lịch hẹn chưa.", suggestion: "Chọn Rồi nếu đã đặt lịch hẹn thu nhận thông tin.", severity: "error", orderNumber: 12 }
+    ];
+
+    const citizenIdProc = await upsertProcedure(
       'CITIZEN_ID_ISSUANCE',
       'Cấp thẻ căn cước',
       'Căn cước',
@@ -695,6 +842,22 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
       citizenIdDocuments
     );
 
+    await upsertFormAndVersions(
+      'CITIZEN_ID_ISSUANCE',
+      'Tờ khai cấp thẻ căn cước',
+      citizenIdProc.id,
+      [
+        {
+          version: '1.0',
+          status: 'ACTIVE',
+          effectiveFrom: new Date('2026-01-01T00:00:00+07:00'),
+          fieldsRaw: citizenIdFieldsV1Raw,
+          hintsRaw: [],
+          rulesRaw: citizenIdRulesV1Raw
+        }
+      ]
+    );
+
     // 5. Seed PASSPORT_ISSUANCE (Guidance-only, no Form/FormVersion)
     const passportSteps = [
       { order: 1, title: 'Khai tờ khai trực tuyến', description: 'Điền thông tin tờ khai đề nghị cấp hộ chiếu trên Cổng dịch vụ công.', example: 'Bạn chụp ảnh chân dung 4x6 nền trắng và tải lên tờ khai điện tử.' },
@@ -713,7 +876,40 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
       { code: 'OLD_PASSPORT', name: 'Hộ chiếu phổ thông cũ gần nhất', originals: 1, copies: 0, orderNumber: 3, conditionJson: { field: 'passport_type', operator: 'equals', value: 'chipped' }, reasonText: 'Nộp lại hộ chiếu cũ để làm thủ tục hủy hoặc gia hạn.', submissionType: 'SUBMIT' }
     ];
 
-    await upsertProcedure(
+    // Tờ khai đề nghị cấp hộ chiếu (mẫu X01) — dynamic form fields + rules.
+    const passportFieldsV1Raw = [
+      { id: "full_name", type: "text", label: "Họ và tên", required: true },
+      { id: "birth_date", type: "date", label: "Ngày sinh", required: true },
+      { id: "gender", type: "radio", label: "Giới tính", required: true, options: [{ value: "male", label: "Nam" }, { value: "female", label: "Nữ" }] },
+      { id: "birth_place", type: "text", label: "Nơi sinh", required: true },
+      { id: "identity_number", type: "text", label: "Số định danh cá nhân/CCCD", required: true },
+      { id: "phone_number", type: "text", label: "Số điện thoại", required: true },
+      { id: "permanent_address", type: "text", label: "Nơi thường trú", required: true },
+      { id: "province", type: "province", label: "Tỉnh/thành phố nộp hồ sơ", required: true },
+      { id: "has_old_passport", type: "radio", label: "Đã từng được cấp hộ chiếu chưa", required: true, options: [{ value: true, label: "Rồi" }, { value: false, label: "Chưa" }] },
+      { id: "old_passport_number", type: "text", label: "Số hộ chiếu đã cấp gần nhất", required: false, visibleWhen: { field: "has_old_passport", operator: "equals", value: true } },
+      { id: "old_passport_file", type: "file", label: "Hộ chiếu cũ (bản chụp)", required: false, visibleWhen: { field: "has_old_passport", operator: "equals", value: true } }
+    ];
+
+    const passportRulesV1Raw = [
+      { id: "pp_v1_req_full_name", type: "required", fieldId: "full_name", params: {}, message: "Vui lòng nhập họ và tên.", suggestion: "Nhập đầy đủ họ tên theo giấy khai sinh.", severity: "error", orderNumber: 1 },
+      { id: "pp_v1_req_birth_date", type: "required", fieldId: "birth_date", params: {}, message: "Vui lòng nhập ngày sinh.", suggestion: "Nhập đúng ngày tháng năm sinh.", severity: "error", orderNumber: 2 },
+      { id: "pp_v1_date_birth", type: "date_not_future", fieldId: "birth_date", params: {}, message: "Ngày sinh không được ở tương lai.", suggestion: "Vui lòng kiểm tra lại ngày sinh.", severity: "error", orderNumber: 3 },
+      { id: "pp_v1_req_gender", type: "required", fieldId: "gender", params: {}, message: "Vui lòng chọn giới tính.", suggestion: "Chọn Nam hoặc Nữ.", severity: "error", orderNumber: 4 },
+      { id: "pp_v1_req_birth_place", type: "required", fieldId: "birth_place", params: {}, message: "Vui lòng nhập nơi sinh.", suggestion: "Nhập nơi sinh theo giấy khai sinh.", severity: "error", orderNumber: 5 },
+      { id: "pp_v1_req_identity", type: "required", fieldId: "identity_number", params: {}, message: "Vui lòng nhập số định danh cá nhân/CCCD.", suggestion: "Nhập đúng 12 số trên thẻ căn cước.", severity: "error", orderNumber: 6 },
+      { id: "pp_v1_fmt_identity", type: "regex", fieldId: "identity_number", params: { pattern: "^\\d{12}$" }, message: "Số định danh/CCCD phải gồm đúng 12 chữ số.", suggestion: "Ví dụ: 001099012345.", severity: "error", orderNumber: 7 },
+      { id: "pp_v1_req_phone", type: "required", fieldId: "phone_number", params: {}, message: "Vui lòng nhập số điện thoại.", suggestion: "Nhập số điện thoại liên hệ.", severity: "error", orderNumber: 8 },
+      { id: "pp_v1_fmt_phone", type: "regex", fieldId: "phone_number", params: { pattern: "^0\\d{9}$" }, message: "Số điện thoại phải gồm 10 chữ số bắt đầu bằng 0.", suggestion: "Ví dụ: 0912345678.", severity: "error", orderNumber: 9 },
+      { id: "pp_v1_req_permanent", type: "required", fieldId: "permanent_address", params: {}, message: "Vui lòng nhập nơi thường trú.", suggestion: "Nhập địa chỉ thường trú theo CSDL quốc gia về dân cư.", severity: "error", orderNumber: 10 },
+      { id: "pp_v1_req_province", type: "required", fieldId: "province", params: {}, message: "Vui lòng chọn tỉnh/thành phố nộp hồ sơ.", suggestion: "Chọn địa phương nơi nộp hồ sơ.", severity: "error", orderNumber: 11 },
+      { id: "pp_v1_req_has_old", type: "required", fieldId: "has_old_passport", params: {}, message: "Vui lòng cho biết đã từng được cấp hộ chiếu chưa.", suggestion: "Chọn Rồi hoặc Chưa.", severity: "error", orderNumber: 12 },
+      { id: "pp_v1_cond_old_number", type: "conditional_required", fieldId: "old_passport_number", params: { condition: { field: "has_old_passport", operator: "equals", value: true } }, message: "Vui lòng nhập số hộ chiếu đã cấp gần nhất.", suggestion: "Xem số hộ chiếu ở trang thông tin của hộ chiếu cũ.", severity: "error", orderNumber: 13 },
+      { id: "pp_v1_fmt_old_number", type: "regex", fieldId: "old_passport_number", params: { pattern: "^[A-Za-z]\\d{7}$" }, message: "Số hộ chiếu gồm 1 chữ cái và 7 chữ số.", suggestion: "Ví dụ: C1234567.", severity: "error", orderNumber: 14 },
+      { id: "pp_v1_cond_old_file", type: "conditional_document", fieldId: "old_passport_file", params: { condition: { field: "has_old_passport", operator: "equals", value: true } }, message: "Vui lòng tải lên bản chụp hộ chiếu cũ.", suggestion: "Đính kèm ảnh chụp trang thông tin của hộ chiếu cũ.", severity: "error", orderNumber: 15 }
+    ];
+
+    const passportProc = await upsertProcedure(
       'PASSPORT_ISSUANCE',
       'Cấp hộ chiếu phổ thông trong nước',
       'Xuất nhập cảnh',
@@ -733,6 +929,22 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
       ],
       passportQuestions,
       passportDocuments
+    );
+
+    await upsertFormAndVersions(
+      'PASSPORT_ISSUANCE',
+      'Tờ khai đề nghị cấp hộ chiếu phổ thông',
+      passportProc.id,
+      [
+        {
+          version: '1.0',
+          status: 'ACTIVE',
+          effectiveFrom: new Date('2026-01-01T00:00:00+07:00'),
+          fieldsRaw: passportFieldsV1Raw,
+          hintsRaw: [],
+          rulesRaw: passportRulesV1Raw
+        }
+      ]
     );
 
     // 6. Seed HOUSEHOLD_BUSINESS_REGISTRATION (audience: BUSINESS, full form flow)
@@ -874,6 +1086,8 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
         },
       },
     });
+
+    await seedImportedCatalog();
 
     await seedUsers();
 

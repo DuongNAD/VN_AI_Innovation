@@ -100,6 +100,6 @@ export const POST = handleRoute(async (req: Request) => {
   throw new AppError(
     404,
     'PROCEDURE_NOT_FOUND',
-    'Chưa nhận diện được thủ tục. Hiện hỗ trợ: Đăng ký kết hôn, Đăng ký khai sinh.'
+    'Chưa nhận diện được thủ tục. Vui lòng mô tả cụ thể hơn hoặc chọn một thủ tục trong danh mục gợi ý.'
   );
 });

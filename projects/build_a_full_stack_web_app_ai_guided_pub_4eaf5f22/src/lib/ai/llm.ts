@@ -2,6 +2,21 @@ import { fetchUpstreamJson, UpstreamError } from './upstream';
 import { logAiUsage } from './usage';
 import { getAiProvider } from '@/lib/config';
 
+export type QuestionRewriteInput = {
+  procedureCode: string;
+  procedureName: string;
+  questionCode: string;
+  questionText: string;
+  fieldType: 'radio' | 'select' | 'text' | 'province';
+  optionLabels: string[];
+};
+
+export type QuestionRewrite = {
+  questionText: string;
+  helpText: string;
+  examples: string[];
+};
+
 export interface LlmProvider {
   readonly name: string;
   classifyIntent(
@@ -12,14 +27,20 @@ export interface LlmProvider {
     errors: { code: string; field?: string; fields?: string[] }[],
     formCode: string
   ): Promise<string>;
+  rewriteQuestion(input: QuestionRewriteInput): Promise<QuestionRewrite>;
 }
 
 const MAX_MESSAGE = 2000;
-const MAX_CATALOG = 50;
+const MAX_CATALOG = 100;
 const MAX_NAME = 120;
 const MAX_ERRORS = 20;
 const MAX_FIELDS = 20;
-const CODE_RE = /^[A-Z][A-Z0-9_]{0,63}$/;
+const MAX_QUESTION_TEXT = 500;
+const MAX_QUESTION_HELP = 800;
+const MAX_QUESTION_EXAMPLES = 3;
+// Procedure codes come in two shapes: hand-authored (MARRIAGE_REGISTRATION) and
+// imported from the DVCQG portal (numeric-dotted, e.g. "1.000656", "3.000333").
+const CODE_RE = /^(?:[A-Z][A-Z0-9_]{0,63}|\d{1,3}(?:\.\d{1,9}){1,4})$/;
 const FIELD_RE = /^[A-Za-z][A-Za-z0-9_.:-]{0,63}$/;
 const FORM_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
@@ -50,10 +71,43 @@ const ERROR_EXPLANATIONS: Record<string, (err: { field?: string; fields?: string
   OUT_OF_RANGE: (err) => `Giá trị tại ${err.field ? `trường ${err.field}` : 'trường yêu cầu'} vượt ngoài phạm vi cho phép.`,
   CONFLICT: (err) => `Thông tin mâu thuẫn giữa ${err.fields && err.fields.length > 0 ? `các trường ${err.fields.join(', ')}` : 'các trường liên quan'}.`,
   MISSING_DOCUMENT: (err) => `Thiếu tài liệu đính kèm bắt buộc: ${err.field || 'tài liệu yêu cầu'}.`,
+  MARRIAGE_MALE_UNDERAGE: () => 'Người nam chưa đủ 20 tuổi theo điều kiện đăng ký kết hôn.',
+  MARRIAGE_FEMALE_UNDERAGE: () => 'Người nữ chưa đủ 18 tuổi theo điều kiện đăng ký kết hôn.',
+  IMPLAUSIBLE_AGE: (err) => `Ngày sinh tại ${err.field ? `trường ${err.field}` : 'biểu mẫu'} tạo ra độ tuổi bất thường và cần được kiểm tra lại.`,
+  DUPLICATE_PARTY_IDENTITY: () => 'Hai bên đăng ký đang sử dụng cùng một số CCCD, trong khi mỗi người phải có số định danh riêng.',
   RULE_CONFIG_INVALID: () => `Lỗi cấu hình quy tắc hệ thống.`,
 };
 
 const EXPLAIN_ERRORS_FALLBACK = 'Giải thích: Biểu mẫu có lỗi, vui lòng kiểm tra lại các ô đã nhập.';
+
+const QUESTION_PRESENTATIONS: Record<string, QuestionRewrite> = {
+  'MARRIAGE_REGISTRATION:has_foreign_element': {
+    questionText: 'Một trong hai người có phải là người nước ngoài hoặc đang cư trú ở nước ngoài không?',
+    helpText:
+      'Chọn “Có” nếu ít nhất một người không có quốc tịch Việt Nam hoặc hiện đang cư trú ở nước ngoài. Nếu cả hai là công dân Việt Nam và đang cư trú trong nước, thường chọn “Không”.',
+    examples: [
+      'Chọn Có: một người mang quốc tịch khác.',
+      'Chọn Không: cả hai là công dân Việt Nam đang sống trong nước.',
+    ],
+  },
+  'MARRIAGE_REGISTRATION:previously_married': {
+    questionText: 'Trước đây bạn đã từng được cấp Giấy chứng nhận kết hôn chưa?',
+    helpText:
+      'Chọn “Có” kể cả khi cuộc hôn nhân trước đã chấm dứt do ly hôn hoặc người vợ/chồng trước đã mất.',
+    examples: [],
+  },
+  'MARRIAGE_REGISTRATION:province': {
+    questionText: 'Bạn muốn làm thủ tục đăng ký kết hôn tại tỉnh hoặc thành phố nào?',
+    helpText: 'Hãy chọn địa phương nơi cơ quan có thẩm quyền sẽ tiếp nhận hồ sơ.',
+    examples: [],
+  },
+  'MARRIAGE_REGISTRATION:submission_channel': {
+    questionText: 'Bạn muốn gửi hồ sơ qua mạng hay đến nộp trực tiếp?',
+    helpText:
+      'Chọn “Trực tuyến” nếu muốn khai và gửi hồ sơ trên cổng dịch vụ công; chọn “Trực tiếp” nếu muốn đến cơ quan tiếp nhận.',
+    examples: [],
+  },
+};
 
 function foldString(input: string): string {
   if (!input) return '';
@@ -153,6 +207,83 @@ function sanitizeFormCode(input: any): string {
   return 'UNKNOWN';
 }
 
+function cleanQuestionText(value: unknown, maxLength: number): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const cleaned = value
+    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned && cleaned.length <= maxLength ? cleaned : null;
+}
+
+function sanitizeQuestionInput(input: QuestionRewriteInput): QuestionRewriteInput {
+  const procedureCode =
+    typeof input?.procedureCode === 'string' && CODE_RE.test(input.procedureCode)
+      ? input.procedureCode
+      : 'UNKNOWN';
+  const questionCode =
+    typeof input?.questionCode === 'string' && FIELD_RE.test(input.questionCode)
+      ? input.questionCode
+      : 'unknown_question';
+  const procedureName =
+    cleanQuestionText(input?.procedureName, MAX_NAME) ?? 'Thủ tục hành chính';
+  const questionText =
+    cleanQuestionText(input?.questionText, MAX_QUESTION_TEXT) ?? 'Vui lòng chọn câu trả lời phù hợp.';
+  const fieldTypes = new Set(['radio', 'select', 'text', 'province']);
+  const fieldType = fieldTypes.has(input?.fieldType) ? input.fieldType : 'text';
+  const optionLabels = Array.isArray(input?.optionLabels)
+    ? input.optionLabels
+        .slice(0, 20)
+        .map((label) => cleanQuestionText(label, 100))
+        .filter((label): label is string => !!label)
+    : [];
+  return {
+    procedureCode,
+    procedureName,
+    questionCode,
+    questionText,
+    fieldType,
+    optionLabels,
+  };
+}
+
+function fallbackQuestionRewrite(input: QuestionRewriteInput): QuestionRewrite {
+  const sanitized = sanitizeQuestionInput(input);
+  const curated = QUESTION_PRESENTATIONS[`${sanitized.procedureCode}:${sanitized.questionCode}`];
+  if (curated) {
+    return curated;
+  }
+  return {
+    questionText: sanitized.questionText,
+    helpText:
+      sanitized.fieldType === 'province'
+        ? 'Hãy chọn tỉnh hoặc thành phố đúng với nơi bạn muốn thực hiện thủ tục.'
+        : 'Hãy chọn phương án đúng với tình huống thực tế của bạn. Nội dung này chỉ giúp diễn giải câu hỏi chính thức.',
+    examples: [],
+  };
+}
+
+function parseQuestionRewrite(value: unknown): QuestionRewrite {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new UpstreamError('Question rewrite is not an object');
+  }
+  const raw = value as Record<string, unknown>;
+  const questionText = cleanQuestionText(raw.questionText, MAX_QUESTION_TEXT);
+  const helpText = cleanQuestionText(raw.helpText, MAX_QUESTION_HELP);
+  const examples = Array.isArray(raw.examples)
+    ? raw.examples
+        .slice(0, MAX_QUESTION_EXAMPLES)
+        .map((item) => cleanQuestionText(item, 240))
+        .filter((item): item is string => !!item)
+    : [];
+  if (!questionText || !helpText) {
+    throw new UpstreamError('Question rewrite fields are invalid');
+  }
+  return { questionText, helpText, examples };
+}
+
 export const mockLlm: LlmProvider = {
   name: 'mock',
   async classifyIntent(message, catalog) {
@@ -170,6 +301,10 @@ export const mockLlm: LlmProvider = {
       return { procedureCode: hit.procedureCode, confidence: 0.95 };
     }
     return { procedureCode: null, confidence: 0 };
+  },
+
+  async rewriteQuestion(input) {
+    return fallbackQuestionRewrite(input);
   },
 
   async explainErrors(errors, formCode) {
@@ -235,6 +370,22 @@ Yêu cầu bắt buộc:
 3. Trả về kết quả dưới định dạng JSON có cấu trúc chính xác như sau:
 {
   "explanation": string
+}`;
+
+const SYSTEM_PROMPT_REWRITE_QUESTION = `Bạn là biên tập viên ngôn ngữ cho cổng dịch vụ công.
+Hãy viết lại câu hỏi hành chính được cung cấp thành tiếng Việt đơn giản, dễ hiểu với người dân và người lớn tuổi.
+
+Yêu cầu bắt buộc:
+1. Giữ nguyên ý nghĩa pháp lý của câu hỏi gốc; không thêm điều kiện, quyền lợi hoặc kết luận pháp lý mới.
+2. Không thay đổi các phương án trả lời.
+3. questionText là một câu hỏi ngắn, trực tiếp.
+4. helpText giải thích cách hiểu bằng ngôn ngữ đời thường.
+5. examples có tối đa 3 ví dụ ngắn; có thể là mảng rỗng.
+6. Chỉ trả về JSON:
+{
+  "questionText": string,
+  "helpText": string,
+  "examples": string[]
 }`;
 
 export const openaiLlm: LlmProvider = {
@@ -316,6 +467,47 @@ export const openaiLlm: LlmProvider = {
     }
 
     return { procedureCode, confidence };
+  },
+
+  async rewriteQuestion(input) {
+    const sanitized = sanitizeQuestionInput(input);
+    const startTime = Date.now();
+    const response = await fetchUpstreamJson('/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: buildChatCompletionBody([
+        { role: 'system', content: SYSTEM_PROMPT_REWRITE_QUESTION },
+        { role: 'user', content: JSON.stringify(sanitized) },
+      ]),
+    }) as any;
+
+    const usage = response?.usage;
+    logAiUsage({
+      serviceType: 'llm',
+      model: LLM_MODEL,
+      latencyMs: Date.now() - startTime,
+      ...(typeof usage?.prompt_tokens === 'number'
+        ? { promptTokens: usage.prompt_tokens }
+        : {}),
+      ...(typeof usage?.completion_tokens === 'number'
+        ? { completionTokens: usage.completion_tokens }
+        : {}),
+    });
+
+    const reply = response?.choices?.[0]?.message?.content;
+    if (typeof reply !== 'string') {
+      throw new UpstreamError('Empty question rewrite response');
+    }
+    try {
+      return parseQuestionRewrite(JSON.parse(reply));
+    } catch (error) {
+      if (error instanceof UpstreamError) {
+        throw error;
+      }
+      throw new UpstreamError('Failed to parse question rewrite response');
+    }
   },
 
   async explainErrors(errors, formCode) {

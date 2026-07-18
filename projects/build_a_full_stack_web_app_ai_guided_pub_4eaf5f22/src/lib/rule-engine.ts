@@ -6,6 +6,8 @@ export const DATA_INTEGRITY_MESSAGE = "Dữ liệu cấu hình không hợp lệ
 export const DATA_INTEGRITY_SUGGESTION = "Vui lòng liên hệ quản trị viên để kiểm tra lại cấu hình hệ thống.";
 export const FALLBACK_MESSAGE = "Dữ liệu nhập vào không hợp lệ.";
 export const FALLBACK_SUGGESTION = "Vui lòng kiểm tra và nhập lại thông tin chính xác.";
+export const INVALID_DATE_MESSAGE = "Ngày tháng không hợp lệ.";
+export const INVALID_DATE_SUGGESTION = "Vui lòng nhập đủ ngày, tháng và năm gồm 4 chữ số (ví dụ: 13/10/2000).";
 
 export type ValidationErrorItem = {
   code: string;
@@ -131,6 +133,12 @@ export function isValidIsoDate(s: string): boolean {
   const year = parseInt(parts[0], 10);
   const month = parseInt(parts[1], 10);
   const day = parseInt(parts[2], 10);
+
+  // Giữ cùng miền năm với schema cấu hình. Các giá trị như "0200" có đủ
+  // 4 ký tự nhưng không phải năm dân sự hợp lệ cho các thủ tục trong hệ thống.
+  if (year < 1000 || year > 9999) {
+    return false;
+  }
 
   const date = new Date(Date.UTC(year, month - 1, day));
   if (
@@ -306,6 +314,113 @@ function isFieldVisible(fieldId: string, fieldsMap: Map<string, FieldDef>, data:
     return true;
   }
   return evaluateCondition(fieldDef.visibleWhen, data);
+}
+
+function ageInFullYears(birthDate: string, onDate: string): number {
+  const [birthYear, birthMonth, birthDay] = birthDate.split('-').map(Number);
+  const [currentYear, currentMonth, currentDay] = onDate.split('-').map(Number);
+  let age = currentYear - birthYear;
+  if (
+    currentMonth < birthMonth ||
+    (currentMonth === birthMonth && currentDay < birthDay)
+  ) {
+    age--;
+  }
+  return age;
+}
+
+function dateAfterYears(birthDate: string, years: number): string {
+  const [year, month, day] = birthDate.split('-').map(Number);
+  // Người sinh 29/02 đạt mốc tuổi vào ngày cuối tháng 2 của năm không nhuận.
+  const candidate = new Date(Date.UTC(year + years, month - 1, day));
+  if (candidate.getUTCMonth() !== month - 1) {
+    return `${year + years}-02-28`;
+  }
+  return `${year + years}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function formatVietnameseDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-');
+  return `${day}/${month}/${year}`;
+}
+
+/**
+ * Điều kiện pháp lý cốt lõi không được phụ thuộc vào việc quản trị viên có
+ * quên cấu hình rule trong DB hay không. Các kiểm tra này được nhận diện bằng
+ * field id chính thức và chạy ở client, lúc nộp, lẫn lúc cán bộ phê duyệt.
+ */
+function appendMarriageDomainErrors(
+  fieldsMap: Map<string, FieldDef>,
+  data: Record<string, unknown>,
+  errors: ValidationErrorItem[]
+): void {
+  const today = todayInVietnam();
+  const ageChecks = [
+    {
+      fieldId: 'male_birth_date',
+      minAge: 20,
+      personLabel: 'Người nam',
+      code: 'MARRIAGE_MALE_UNDERAGE',
+    },
+    {
+      fieldId: 'female_birth_date',
+      minAge: 18,
+      personLabel: 'Người nữ',
+      code: 'MARRIAGE_FEMALE_UNDERAGE',
+    },
+  ] as const;
+
+  for (const check of ageChecks) {
+    if (!fieldsMap.has(check.fieldId)) {
+      continue;
+    }
+    const value = data[check.fieldId];
+    if (typeof value !== 'string' || !isValidIsoDate(value) || value > today) {
+      continue;
+    }
+    const age = ageInFullYears(value, today);
+    if (age < check.minAge) {
+      const eligibleDate = dateAfterYears(value, check.minAge);
+      errors.push({
+        code: check.code,
+        field: check.fieldId,
+        message: `${check.personLabel} mới ${age} tuổi, chưa đủ tuổi đăng ký kết hôn.`,
+        suggestion: `${check.personLabel} phải từ đủ ${check.minAge} tuổi. Có thể đăng ký từ ngày ${formatVietnameseDate(eligibleDate)}.`,
+        severity: 'error',
+      });
+    } else if (age > 120) {
+      errors.push({
+        code: 'IMPLAUSIBLE_AGE',
+        field: check.fieldId,
+        message: `Ngày sinh đang cho kết quả ${age} tuổi, có khả năng đã nhập sai.`,
+        suggestion: 'Kiểm tra lại ngày sinh trên CCCD hoặc giấy tờ hộ tịch.',
+        severity: 'error',
+      });
+    }
+  }
+
+  if (
+    fieldsMap.has('male_identity_number') &&
+    fieldsMap.has('female_identity_number')
+  ) {
+    const maleId = data.male_identity_number;
+    const femaleId = data.female_identity_number;
+    if (
+      typeof maleId === 'string' &&
+      maleId !== '' &&
+      typeof femaleId === 'string' &&
+      femaleId !== '' &&
+      maleId === femaleId
+    ) {
+      errors.push({
+        code: 'DUPLICATE_PARTY_IDENTITY',
+        fields: ['male_identity_number', 'female_identity_number'],
+        message: 'Hai người đăng ký kết hôn đang dùng cùng một số CCCD.',
+        suggestion: 'Kiểm tra và nhập đúng số CCCD riêng của từng người.',
+        severity: 'error',
+      });
+    }
+  }
 }
 
 export function runRules(
@@ -515,8 +630,8 @@ export function runRules(
           errors.push({
             code: 'INVALID_DATE',
             field: rule.fieldId,
-            message: msg,
-            suggestion: sug,
+            message: INVALID_DATE_MESSAGE,
+            suggestion: INVALID_DATE_SUGGESTION,
             severity: 'error'
           });
         } else {
@@ -525,8 +640,8 @@ export function runRules(
             errors.push({
               code: 'INVALID_DATE',
               field: rule.fieldId,
-              message: msg,
-              suggestion: sug,
+              message: INVALID_DATE_MESSAGE,
+              suggestion: INVALID_DATE_SUGGESTION,
               severity: 'error'
             });
           } else if (trimmed > todayInVietnam()) {
@@ -555,8 +670,8 @@ export function runRules(
           errors.push({
             code: 'INVALID_DATE',
             field: startField,
-            message: msg,
-            suggestion: sug,
+            message: INVALID_DATE_MESSAGE,
+            suggestion: INVALID_DATE_SUGGESTION,
             severity: 'error'
           });
         } else {
@@ -566,8 +681,8 @@ export function runRules(
             errors.push({
               code: 'INVALID_DATE',
               field: startField,
-              message: msg,
-              suggestion: sug,
+              message: INVALID_DATE_MESSAGE,
+              suggestion: INVALID_DATE_SUGGESTION,
               severity: 'error'
             });
           }
@@ -578,8 +693,8 @@ export function runRules(
           errors.push({
             code: 'INVALID_DATE',
             field: endField,
-            message: msg,
-            suggestion: sug,
+            message: INVALID_DATE_MESSAGE,
+            suggestion: INVALID_DATE_SUGGESTION,
             severity: 'error'
           });
         } else {
@@ -589,8 +704,8 @@ export function runRules(
             errors.push({
               code: 'INVALID_DATE',
               field: endField,
-              message: msg,
-              suggestion: sug,
+              message: INVALID_DATE_MESSAGE,
+              suggestion: INVALID_DATE_SUGGESTION,
               severity: 'error'
             });
           }
@@ -718,5 +833,6 @@ export function runRules(
     }
   }
 
+  appendMarriageDomainErrors(fieldsMap, data, errors);
   return errors;
 }

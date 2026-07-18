@@ -4,8 +4,14 @@ import { readJsonBody, requireString, optionalString } from '@/lib/http';
 import { requireSessionToken } from '@/lib/auth';
 import { buildIdempotencyKey, withIdempotency } from '@/lib/idempotency';
 import { getProvider } from '@/lib/data-provider';
-import { validateAnswer, pruneAnswers, computeQuestionFlow } from '@/lib/intake-machine';
+import {
+  validateAnswer,
+  pruneAnswers,
+  computeQuestionFlow,
+  type QuestionRow,
+} from '@/lib/intake-machine';
 import { prisma } from '@/lib/db';
+import { presentQuestion } from '@/lib/ai/question-presentation';
 
 export const POST = handleRoute(async (req: Request, { params }: { params: Promise<{ sessionId: string }> }) => {
   const { sessionId } = await params;
@@ -27,6 +33,13 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
 
   // Authorize session token
   requireSessionToken(req, session.accessTokenHash);
+
+  // Guidance-only procedures (e.g. imported DVCQG catalog) have no dynamic form;
+  // surface this so the client can hide the "fill form" call-to-action when done.
+  const dataProvider = getProvider();
+  const activeForm = await dataProvider.getActiveFormVersion(session.procedureCode);
+  const formAvailable = activeForm !== null;
+  const procedureSummary = await dataProvider.getProcedure(session.procedureCode);
 
   // Read request body
   const body = await readJsonBody(req);
@@ -111,6 +124,7 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
               answered: flow.answered,
               total: flow.total,
             },
+            formAvailable,
             removedAnswers: pruned.removed,
           },
         };
@@ -121,7 +135,26 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
         headers['X-Idempotent-Replay'] = 'true';
       }
 
-      return jsonOk(result.body, {
+      const resultBody = result.body as Record<string, unknown>;
+      const rawQuestion = (resultBody.question ?? null) as QuestionRow | null;
+      const presented =
+        rawQuestion && procedureSummary
+          ? await presentQuestion(rawQuestion, {
+              code: procedureSummary.code,
+              name: procedureSummary.name,
+            })
+          : null;
+
+      return jsonOk({
+        ...resultBody,
+        question: presented?.question ?? rawQuestion ?? null,
+        ...(presented
+          ? {
+              aiMode: presented.aiMode,
+              degraded: presented.degraded,
+            }
+          : {}),
+      }, {
         status: result.status,
         headers,
       });

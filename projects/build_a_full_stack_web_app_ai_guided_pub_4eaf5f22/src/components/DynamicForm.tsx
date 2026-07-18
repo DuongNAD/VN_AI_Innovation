@@ -4,7 +4,12 @@ import { FormEvent, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PROVINCES } from '@/lib/constants';
-import { evaluateCondition, runRules, type ValidationErrorItem } from '@/lib/rule-engine';
+import {
+  evaluateCondition,
+  isValidIsoDate,
+  runRules,
+  type ValidationErrorItem,
+} from '@/lib/rule-engine';
 import type { FieldDef, RuleDef } from '@/lib/schema-guards';
 import SpeechButton from '@/components/SpeechButton';
 
@@ -119,11 +124,112 @@ function asInputString(value: unknown): string {
   return '';
 }
 
+function formatIsoDateForInput(value: unknown): string {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+  const [year, month, day] = value.split('-');
+  return `${day}/${month}/${year}`;
+}
+
+function formatDateDigits(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) {
+    return digits;
+  }
+  if (digits.length <= 4) {
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  }
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+function dateInputToIso(value: string): string | null {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length !== 8) {
+    return null;
+  }
+  const day = digits.slice(0, 2);
+  const month = digits.slice(2, 4);
+  const year = digits.slice(4);
+  const iso = `${year}-${month}-${day}`;
+  return isValidIsoDate(iso) ? iso : null;
+}
+
+type DateEntryInputProps = {
+  id: string;
+  className: string;
+  value: unknown;
+  invalid: boolean;
+  required: boolean;
+  describedBy?: string;
+  onValueChange(value: string): void;
+};
+
+function DateEntryInput({
+  id,
+  className,
+  value,
+  invalid,
+  required,
+  describedBy,
+  onValueChange,
+}: DateEntryInputProps) {
+  const [draft, setDraft] = useState(() => formatIsoDateForInput(value));
+  const isoValue = typeof value === 'string' && isValidIsoDate(value) ? value : '';
+
+  const updateFromText = (raw: string) => {
+    const formatted = formatDateDigits(raw);
+    setDraft(formatted);
+    const iso = dateInputToIso(formatted);
+    // Giữ bản nháp để rule engine báo đúng lỗi nếu ngày đã đủ 8 số nhưng
+    // không tồn tại; khi hợp lệ mới chuyển sang chuẩn ISO cho máy chủ.
+    onValueChange(iso ?? formatted);
+  };
+
+  const updateFromPicker = (iso: string) => {
+    setDraft(formatIsoDateForInput(iso));
+    onValueChange(iso);
+  };
+
+  return (
+    <div className="date-entry">
+      <input
+        id={id}
+        type="text"
+        inputMode="numeric"
+        autoComplete="bday"
+        className={className + ' pr-16'}
+        value={draft}
+        maxLength={10}
+        placeholder="dd/mm/yyyy"
+        onChange={(event) => updateFromText(event.target.value)}
+        aria-invalid={invalid || undefined}
+        aria-required={required || undefined}
+        aria-describedby={describedBy}
+      />
+      <span className="date-entry__calendar" aria-hidden="true" />
+      <input
+        type="date"
+        className="date-entry__picker"
+        min="1000-01-01"
+        value={isoValue}
+        onChange={(event) => updateFromPicker(event.target.value)}
+        aria-label="Chọn ngày trên lịch"
+        tabIndex={-1}
+      />
+    </div>
+  );
+}
+
 type DynamicFormProps = {
   fields: FieldDef[];
   rules?: RuleDef[];
   initialData?: Record<string, unknown>;
   submitLabel: string;
+  submitting?: boolean;
   onSubmit(data: Record<string, unknown>, clientErrors: ValidationErrorItem[]): void;
   onDirtyChange?(dirty: boolean): void;
 };
@@ -133,6 +239,7 @@ export default function DynamicForm({
   rules,
   initialData,
   submitLabel,
+  submitting = false,
   onSubmit,
   onDirtyChange,
 }: DynamicFormProps) {
@@ -140,9 +247,57 @@ export default function DynamicForm({
     syncVisibility(fields, initialData ?? {})
   );
   const [clientErrors, setClientErrors] = useState<ValidationErrorItem[]>([]);
+  const [hasValidated, setHasValidated] = useState(false);
+  const [validationAttempt, setValidationAttempt] = useState(0);
+  const [resolvedFieldIds, setResolvedFieldIds] = useState<Set<string>>(() => new Set());
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guidedErrorIndex, setGuidedErrorIndex] = useState(0);
+
+  const affectedFieldIds = (errors: ValidationErrorItem[]): Set<string> => {
+    const ids = new Set<string>();
+    for (const error of errors) {
+      if (error.field) {
+        ids.add(error.field);
+      }
+      for (const id of error.fields ?? []) {
+        ids.add(id);
+      }
+    }
+    return ids;
+  };
 
   const setField = (id: string, value: unknown) => {
-    setFormData((prev) => syncVisibility(fields, { ...prev, [id]: value }));
+    const nextData = syncVisibility(fields, { ...formData, [id]: value });
+    setFormData(nextData);
+
+    // Sau lần kiểm tra đầu tiên, phản hồi ngay khi người dân sửa dữ liệu:
+    // lỗi biến mất tại chỗ và trường vừa sửa đúng được xác nhận bằng màu xanh.
+    if (hasValidated && rules) {
+      const nextErrors = runRules(fields, rules, nextData);
+      const previousErrorIds = affectedFieldIds(clientErrors);
+      const nextErrorIds = affectedFieldIds(nextErrors);
+
+      setResolvedFieldIds((previouslyResolved) => {
+        const nextResolved = new Set(previouslyResolved);
+        for (const fieldId of previousErrorIds) {
+          if (!nextErrorIds.has(fieldId)) {
+            nextResolved.add(fieldId);
+          }
+        }
+        for (const fieldId of nextErrorIds) {
+          nextResolved.delete(fieldId);
+        }
+        return nextResolved;
+      });
+      setClientErrors(nextErrors);
+      if (nextErrors.length === 0) {
+        setGuideOpen(false);
+        setGuidedErrorIndex(0);
+      } else if (guidedErrorIndex >= nextErrors.length) {
+        setGuidedErrorIndex(0);
+      }
+    }
+
     onDirtyChange?.(true);
   };
 
@@ -195,11 +350,32 @@ export default function DynamicForm({
     });
   };
 
+  const openAiGuide = (requestedIndex = 0) => {
+    if (clientErrors.length === 0) {
+      return;
+    }
+    const index = Math.max(0, Math.min(requestedIndex, clientErrors.length - 1));
+    setGuidedErrorIndex(index);
+    setGuideOpen(true);
+    const anchor = anchorFieldId(clientErrors[index]);
+    if (anchor) {
+      scrollToField(anchor);
+    }
+  };
+
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (submitting) {
+      return;
+    }
     const data = syncVisibility(fields, formData);
     const errs = rules ? runRules(fields, rules, data) : [];
+    setHasValidated(true);
+    setValidationAttempt((attempt) => attempt + 1);
+    setResolvedFieldIds(new Set());
     setClientErrors(errs);
+    setGuidedErrorIndex(0);
+    setGuideOpen(errs.length > 0);
     if (errs.length > 0) {
       // Guide the user straight to the first thing that needs fixing.
       const visAfter = new Set(visibleFieldsFor(fields, data).map((f) => f.id));
@@ -215,6 +391,12 @@ export default function DynamicForm({
     }
     onSubmit(data, errs);
   };
+
+  const safeGuidedErrorIndex =
+    clientErrors.length > 0 ? Math.min(guidedErrorIndex, clientErrors.length - 1) : 0;
+  const guidedError =
+    guideOpen && clientErrors.length > 0 ? clientErrors[safeGuidedErrorIndex] : null;
+  const guidedAnchor = guidedError ? anchorFieldId(guidedError) : null;
 
   const renderInput = (
     field: FieldDef,
@@ -271,13 +453,14 @@ export default function DynamicForm({
         );
       case 'date':
         return (
-          <input
+          <DateEntryInput
             id={inputId}
-            type="date"
             className={base}
-            value={typeof value === 'string' ? value : ''}
-            onChange={(e) => setField(field.id, e.target.value)}
-            {...a11y}
+            value={value}
+            invalid={hasError}
+            required={!!field.required}
+            describedBy={hasError ? errorId : undefined}
+            onValueChange={(nextValue) => setField(field.id, nextValue)}
           />
         );
       case 'select': {
@@ -401,12 +584,25 @@ export default function DynamicForm({
     const value = formData[field.id];
     const fieldErrors = errorsFor(field.id);
     const hasError = fieldErrors.length > 0;
+    const wasResolved = hasValidated && !hasError && resolvedFieldIds.has(field.id);
+    const isGuidedError = !!guidedError && guidedAnchor === field.id;
     const inputId = 'field-' + field.id;
     const errorId = 'field-' + field.id + '-error';
     const isRadio = field.type === 'radio';
 
     return (
-      <div key={field.id} id={'fieldwrap-' + field.id} className="space-y-2">
+      <div
+        key={`${field.id}:${hasError ? validationAttempt : 'stable'}`}
+        id={'fieldwrap-' + field.id}
+        className={
+          'validation-field space-y-2 ' +
+          (hasError
+            ? 'validation-field--error'
+            : wasResolved
+              ? 'validation-field--resolved'
+              : '')
+        }
+      >
         {isRadio ? (
           <div className="mb-1 text-lg font-semibold text-slate-900" id={inputId + '-label'}>
             {field.label}
@@ -436,82 +632,227 @@ export default function DynamicForm({
         )}
         {renderInput(field, value, hasError, errorId)}
         {hasError && (
-          <p id={errorId} className="text-base font-medium text-red-700" role="alert">
-            {fieldErrors.map((err, i) => (
-              <span key={i}>
-                {i > 0 ? ' ' : ''}
-                {err.message}
-                {err.suggestion ? ' — ' + err.suggestion : ''}
-              </span>
-            ))}
+          <div id={errorId} className="validation-field__message" role="alert">
+            <span className="validation-field__status-icon" aria-hidden="true">!</span>
+            <div>
+              {fieldErrors.map((err, i) => (
+                <div key={i} className={i > 0 ? 'mt-2' : ''}>
+                  <p className="font-bold text-red-900">{err.message}</p>
+                  {err.suggestion && (
+                    <p className="mt-0.5 text-sm font-medium text-red-700">
+                      Cách sửa: {err.suggestion}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {wasResolved && (
+          <p className="validation-field__resolved-message" role="status">
+            <span className="validation-field__resolved-icon" aria-hidden="true">✓</span>
+            Đã sửa đúng
           </p>
+        )}
+        {isGuidedError && guidedError && (
+          <div
+            className="ai-field-guide"
+            role="region"
+            aria-live="polite"
+            aria-label="Trợ lý AI giải thích lỗi đang chọn"
+          >
+            <span className="ai-field-guide__pointer" aria-hidden="true">↑</span>
+            <div className="ai-field-guide__header">
+              <span className="ai-field-guide__avatar" aria-hidden="true">
+                <span>AI</span>
+                <i>✦</i>
+              </span>
+              <div>
+                <p className="font-extrabold text-indigo-950">Trợ lý AI đang chỉ vào lỗi này</p>
+                <p className="text-xs font-semibold text-indigo-600">
+                  Lỗi {safeGuidedErrorIndex + 1} / {clientErrors.length}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="ai-field-guide__close"
+                onClick={() => setGuideOpen(false)}
+                aria-label="Đóng hướng dẫn AI"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="ai-field-guide__content">
+              <div>
+                <p className="ai-field-guide__label">Vì sao sai?</p>
+                <p className="mt-1 font-semibold text-slate-900">{guidedError.message}</p>
+              </div>
+              {guidedError.suggestion && (
+                <div className="ai-field-guide__fix">
+                  <p className="ai-field-guide__label">Cách xử lý</p>
+                  <p className="mt-1 font-medium text-indigo-950">{guidedError.suggestion}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="ai-field-guide__actions">
+              {clientErrors.length > 1 && (
+                <button
+                  type="button"
+                  className="ai-field-guide__next"
+                  onClick={() =>
+                    openAiGuide((safeGuidedErrorIndex + 1) % clientErrors.length)
+                  }
+                >
+                  Lỗi tiếp theo
+                  <span aria-hidden="true">→</span>
+                </button>
+              )}
+              <button
+                type="button"
+                className="ai-field-guide__understood"
+                onClick={() => setGuideOpen(false)}
+              >
+                Đã hiểu
+              </button>
+            </div>
+          </div>
         )}
       </div>
     );
   };
 
+  const blockingErrorCount = clientErrors.filter((error) => error.severity === 'error').length;
+  const warningCount = clientErrors.length - blockingErrorCount;
+
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
       {clientErrors.length > 0 && (
         <div
-          className="rounded-lg border-l-4 border border-red-300 border-l-red-500 bg-red-50 p-4 text-lg text-red-800"
-          role="alert"
+          key={`validation-summary-${validationAttempt}`}
+          className={
+            'validation-summary ' +
+            (blockingErrorCount > 0
+              ? 'validation-summary--error'
+              : 'validation-summary--warning')
+          }
+          role={blockingErrorCount > 0 ? 'alert' : 'status'}
+          aria-live={blockingErrorCount > 0 ? 'assertive' : 'polite'}
         >
-          <p className="font-bold text-red-900">
-            Phát hiện {clientErrors.length} mục cần sửa trước khi tiếp tục
-          </p>
-          <ul className="mt-2 space-y-1.5">
-            {clientErrors.map((err, i) => {
-              const anchor = anchorFieldId(err);
-              const content = (
-                <>
-                  <span className="font-semibold">{errorLabel(err)}:</span> {err.message}
-                </>
-              );
-              return (
-                <li key={i} className="flex gap-2">
-                  <span aria-hidden="true">•</span>
-                  {anchor ? (
-                    <button
-                      type="button"
-                      onClick={() => scrollToField(anchor)}
-                      className="text-left underline decoration-red-400 underline-offset-4 hover:text-red-950"
-                    >
-                      {content}
-                    </button>
-                  ) : (
-                    <span>
-                      {content}
-                      {err.suggestion ? ' — ' + err.suggestion : ''}
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          <p className="mt-2 text-base text-red-700">
-            Bấm vào từng dòng để đi tới đúng trường cần sửa. Dưới mỗi trường có hướng dẫn khắc phục.
-          </p>
+          <div className="flex items-start gap-3">
+            <span className="validation-summary__icon" aria-hidden="true">!</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-lg font-extrabold">
+                {blockingErrorCount > 0
+                  ? `Còn ${blockingErrorCount} lỗi cần sửa trước khi tiếp tục`
+                  : `Có ${warningCount} cảnh báo cần xem lại`}
+              </p>
+              <p className="mt-1 text-sm font-medium opacity-90">
+                Hệ thống đã đưa bạn đến lỗi đầu tiên. Bấm từng mục dưới đây để chuyển nhanh đến chỗ cần sửa.
+              </p>
+              <button
+                type="button"
+                className="ai-guide-start"
+                onClick={() => openAiGuide(0)}
+                aria-pressed={guideOpen}
+              >
+                <span className="ai-guide-start__spark" aria-hidden="true">✦</span>
+                {guideOpen ? 'AI đang hướng dẫn tại trường bên dưới' : 'Nhờ AI chỉ và giải thích từng lỗi'}
+                <span aria-hidden="true">↓</span>
+              </button>
+              <ul className="mt-3 space-y-2">
+                {clientErrors.map((err, i) => {
+                  const anchor = anchorFieldId(err);
+                  const content = (
+                    <>
+                      <span className="font-bold">{errorLabel(err)}:</span> {err.message}
+                    </>
+                  );
+                  return (
+                    <li key={i}>
+                      {anchor ? (
+                        <button
+                          type="button"
+                          onClick={() => scrollToField(anchor)}
+                          className="validation-summary__link"
+                        >
+                          <span aria-hidden="true">→</span>
+                          <span>{content}</span>
+                        </button>
+                      ) : (
+                        <span className="flex gap-2">
+                          <span aria-hidden="true">•</span>
+                          <span>
+                            {content}
+                            {err.suggestion ? ' — ' + err.suggestion : ''}
+                          </span>
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hasValidated && clientErrors.length === 0 && (
+        <div className="validation-summary validation-summary--success" role="status" aria-live="polite">
+          <span className="validation-summary__icon" aria-hidden="true">✓</span>
+          <div>
+            <p className="text-lg font-extrabold">Thông tin đã hợp lệ</p>
+            <p className="mt-0.5 text-sm font-medium">
+              Không phát hiện lỗi trong các thông tin vừa nhập.
+            </p>
+          </div>
         </div>
       )}
 
       {sections.map((section) => (
-        <section
-          key={section.key}
-          className="card-premium space-y-5 border-l-4 border-l-brand-600 pl-5"
-          aria-labelledby={`section-${section.key}-title`}
-        >
-          <h2
-            id={`section-${section.key}-title`}
-            className="border-b border-surface-border/80 pb-3 text-title text-brand-900"
+        (() => {
+          const sectionErrorCount = section.fields.reduce(
+            (count, field) => count + (errorsFor(field.id).length > 0 ? 1 : 0),
+            0
+          );
+          return (
+          <section
+            key={section.key}
+            className={
+              'card-premium space-y-5 border-l-4 pl-5 ' +
+              (sectionErrorCount > 0
+                ? 'validation-section--error border-l-red-500'
+                : 'border-l-brand-600')
+            }
+            aria-labelledby={`section-${section.key}-title`}
           >
-            {section.title}
-          </h2>
-          <div className="space-y-5">{section.fields.map(renderFieldBlock)}</div>
-        </section>
+            <div className="flex items-center justify-between gap-3 border-b border-surface-border/80 pb-3">
+              <h2
+                id={`section-${section.key}-title`}
+                className="text-title text-brand-900"
+              >
+                {section.title}
+              </h2>
+              {sectionErrorCount > 0 && (
+                <span className="validation-section__badge" aria-label={`${sectionErrorCount} trường có lỗi`}>
+                  {sectionErrorCount} cần sửa
+                </span>
+              )}
+            </div>
+            <div className="space-y-5">{section.fields.map(renderFieldBlock)}</div>
+          </section>
+          );
+        })()
       ))}
 
-      <button type="submit" className="btn-primary w-full sm:w-auto">
+      <button
+        type="submit"
+        className="btn-primary w-full gap-2 sm:w-auto"
+        disabled={submitting}
+        aria-busy={submitting}
+      >
+        {submitting && <span className="validation-submit-spinner" aria-hidden="true" />}
         {submitLabel}
       </button>
     </form>
@@ -1053,6 +1394,7 @@ export function ApplicationFormRunner({
         rules={rules}
         initialData={data}
         submitLabel={saving ? 'Đang lưu...' : 'Lưu và kiểm tra hồ sơ'}
+        submitting={saving}
         onSubmit={handleSubmit}
         onDirtyChange={(dirty) => {
           dirtyRef.current = dirty;

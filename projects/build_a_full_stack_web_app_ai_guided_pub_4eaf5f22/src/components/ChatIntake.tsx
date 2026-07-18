@@ -32,6 +32,9 @@ interface Question {
   label: string;
   fieldType: 'radio' | 'select' | 'province' | 'text';
   options?: { value: string; label: string }[];
+  helpText?: string;
+  examples?: string[];
+  originalQuestionText?: string;
 }
 
 interface Flow {
@@ -50,6 +53,12 @@ function toQuestion(raw: any): Question | null {
     label: raw.label ?? raw.questionText ?? '',
     fieldType: raw.fieldType,
     options: raw.options ?? undefined,
+    helpText: typeof raw.helpText === 'string' ? raw.helpText : undefined,
+    examples: Array.isArray(raw.examples)
+      ? raw.examples.filter((item: unknown) => typeof item === 'string')
+      : undefined,
+    originalQuestionText:
+      typeof raw.originalQuestionText === 'string' ? raw.originalQuestionText : undefined,
   };
 }
 
@@ -174,6 +183,8 @@ export default function ChatIntake({
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  // Whether the resolved procedure has a dynamic form (guidance-only imports do not).
+  const [formAvailable, setFormAvailable] = useState(false);
   const [flow, setFlow] = useState<Flow | null>(null);
   const [answeredList, setAnsweredList] = useState<{ questionCode: string; label: string; value: string; displayValue: string }[]>([]);
   const [editingCode, setEditingCode] = useState<string | null>(null);
@@ -334,12 +345,13 @@ export default function ChatIntake({
         {
           id: randomUUID(),
           role: 'bot',
-          text: 'Chưa nhận diện được thủ tục yêu cầu. Hiện tại hệ thống chỉ hỗ trợ hai thủ tục sau. Vui lòng chọn một thủ tục để bắt đầu:',
+          text: 'Mình chưa nhận diện chính xác thủ tục bạn cần. Bạn thử mô tả cụ thể hơn (ví dụ: “đăng ký khai tử”, “cấp phiếu lý lịch tư pháp”, “xác nhận tình trạng hôn nhân”), hoặc chọn một trong các thủ tục phổ biến sau để bắt đầu:',
           attachment: {
             type: 'supported_procedures',
             procedures: [
               { code: 'MARRIAGE_REGISTRATION', name: 'Đăng ký kết hôn' },
               { code: 'BIRTH_REGISTRATION', name: 'Đăng ký khai sinh' },
+              { code: 'HOUSEHOLD_BUSINESS_REGISTRATION', name: 'Đăng ký hộ kinh doanh' },
             ],
             originalMessage: message,
           },
@@ -380,6 +392,7 @@ export default function ChatIntake({
       }
       const newSessionId = data.sessionId;
       const token = data.accessToken;
+      setFormAvailable(!!data.formAvailable);
 
       const startFlow: Flow = toFlow(data);
 
@@ -436,6 +449,7 @@ export default function ChatIntake({
         setEcoBadge(true);
       }
 
+      setFormAvailable(!!data.formAvailable);
       const newFlow: Flow = toFlow(data);
 
       const currentQuestion = editingCode
@@ -721,6 +735,51 @@ export default function ChatIntake({
     );
   };
 
+  const renderQuestionHelp = (q: Question) => {
+    if (!q.helpText) {
+      return null;
+    }
+    const speechText = [
+      q.label,
+      q.helpText,
+      ...(q.examples ?? []),
+    ].join('. ');
+    return (
+      <div className="mx-auto mb-4 w-full max-w-2xl rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm">
+        <div className="flex items-start gap-3">
+          <span
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 text-xs font-black text-white shadow-md"
+            aria-hidden="true"
+          >
+            AI
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-extrabold text-indigo-950">AI giải thích câu hỏi dễ hiểu</p>
+              <SpeechButton text={speechText} label="Nghe giải thích" compact />
+            </div>
+            <p className="mt-1 text-sm font-medium leading-relaxed text-slate-700">
+              {q.helpText}
+            </p>
+            {q.examples && q.examples.length > 0 && (
+              <ul className="mt-2 space-y-1 text-sm text-indigo-900">
+                {q.examples.map((example, index) => (
+                  <li key={index} className="flex gap-2">
+                    <span className="font-black text-indigo-500" aria-hidden="true">•</span>
+                    <span>{example}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-2 text-xs text-slate-500">
+              AI chỉ diễn giải câu hỏi chính thức, không thay đổi điều kiện của thủ tục.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // RENDER PROVINCE SELECT
   const renderProvinceSelect = (q: Question) => {
     return (
@@ -997,6 +1056,7 @@ export default function ChatIntake({
                 Hủy bỏ
               </button>
             </div>
+            {renderQuestionHelp(activeQuestion)}
             {activeQuestion.fieldType === 'radio' && renderOptions(activeQuestion)}
             {activeQuestion.fieldType === 'select' && renderOptions(activeQuestion)}
             {activeQuestion.fieldType === 'province' && renderProvinceSelect(activeQuestion)}
@@ -1011,6 +1071,7 @@ export default function ChatIntake({
 
       {phase === 'intake' && activeQuestion && !editingCode && (
         <div className="shrink-0 border-t border-surface-border bg-surface p-4">
+          {renderQuestionHelp(activeQuestion)}
           {activeQuestion.fieldType === 'radio' && renderOptions(activeQuestion)}
           {activeQuestion.fieldType === 'select' && renderOptions(activeQuestion)}
           {activeQuestion.fieldType === 'province' && renderProvinceSelect(activeQuestion)}
@@ -1027,14 +1088,16 @@ export default function ChatIntake({
           >
             Xem danh sách giấy tờ
           </button>
-          <button
-            type="button"
-            onClick={handleCreateApplication}
-            disabled={busy}
-            className="btn min-h-[48px] flex-1 rounded-xl bg-accent-500 px-6 py-3 text-center font-bold text-slate-950 transition-all duration-200 hover:bg-accent-400 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
-          >
-            Điền biểu mẫu ngay
-          </button>
+          {formAvailable && (
+            <button
+              type="button"
+              onClick={handleCreateApplication}
+              disabled={busy}
+              className="btn min-h-[48px] flex-1 rounded-xl bg-accent-500 px-6 py-3 text-center font-bold text-slate-950 transition-all duration-200 hover:bg-accent-400 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+            >
+              Điền biểu mẫu ngay
+            </button>
+          )}
         </div>
       )}
 

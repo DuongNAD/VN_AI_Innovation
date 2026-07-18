@@ -1,0 +1,2738 @@
+[
+  {
+    "code": "1.000080",
+    "name": "Thủ tục đăng ký nhận cha, mẹ, con có yếu tố nước ngoài tại khu vực biên giới",
+    "sector": "Nhận cha, mẹ con",
+    "agency": "Ủy ban Nhân dân xã, phường, thị trấn.",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-380b-73df-9a18-5658e09794d3",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Nếu lựa chọn hình thức nộp hồ sơ trực tiếp, người yêu cầu đăng ký nhận cha, mẹ, con nộp hồ sơ đăng ký nhận cha, mẹ, con tại Trung tâm phục vụ hành chính công có thẩm quyền nộp lệ phí nếu thuộc trường hợp phải nộp lệ phí đăng ký nhận cha, mẹ, con; nộp phí cấp bản sao Trích lục đăng ký nhận cha, mẹ, con nếu có yêu cầu cấp bản sao Trích lục đăng ký nhận cha, mẹ, con. - Nếu lựa chọn hình thức nộp hồ sơ trực tuyến, người yêu cầu đăng ký nhận cha, mẹ, con truy cập Cổng dịch vụ công quốc gia hoặc…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 7 ngày kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Nghị định sửa đổi, bổ sung một số nghị định để cắt giảm, đơn giản hóa thủ tục hành chính, điều kiện kinh doanh thuộc phạm vi quản lý của Bộ Tư pháp; Nghị định quy định về Cơ sở dữ liệu hộ tịch điện tử, đăng ký hộ tịch trực tuyến; Thông tư số 03/2023/TT-BTP ngày 02/8/2023 của Bộ trưởng Bộ Tư pháp"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Chứng cứ chứng minh quan hệ cha, con hoặc quan hệ mẹ, con gồm:",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Văn bản của cơ quan y tế, cơ quan giám định hoặc cơ quan khác có thẩm quyền xác nhận quan hệ cha con, quan hệ mẹ con.",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Giấy tờ có giá trị chứng minh thông tin về cư trú trong trường hợp cơ quan đăng ký hộ tịch không thể khai thác được thông tin về nơi cư trú của công dân theo các phương thức quy định tại khoản 2 Điều 14 Nghị định số…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D4",
+        "name": "Hộ chiếu/Thẻ căn cước công dân/Thẻ căn cước/Căn cước điện tử/Giấy chứng nhận căn cước hoặc các giấy tờ khác có dán ảnh và thông tin cá nhân do cơ quan có thẩm quyền cấp, còn giá trị sử dụng (sau đây gọi tắt là giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D5",
+        "name": "Bản sao giấy tờ chứng minh nhân thân, giấy tờ chứng minh nơi thường trú ở khu vực biên giới của công dân nước láng giềng.",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D6",
+        "name": "Giấy tờ do cơ quan có thẩm quyền của nước ngoài cấp, công chứng hoặc xác nhận để sử dụng cho việc đăng ký hộ tịch tại Việt Nam phải được hợp pháp hóa lãnh sự theo quy định của pháp luật, trừ trường hợp được miễn theo…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D7",
+        "name": "Bản chụp các giấy tờ gửi kèm theo hồ sơ đăng ký nhận cha, mẹ, con trực tuyến phải bảo đảm rõ nét, đầy đủ, toàn vẹn về nội dung, là bản chụp bằng máy ảnh, điện thoại hoặc được chụp, được quét bằng thiết bị điện tử, từ…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 7,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D8",
+        "name": "Mẫu hộ tịch điện tử tương tác đăng ký nhận cha, mẹ, con (do người yêu cầu cung cấp thông tin theo hướng dẫn trên Cổng dịch vụ công, nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tuyến)",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 8,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.000419",
+    "name": "Thủ tục đăng ký khai tử lưu động",
+    "sector": "Khai tử",
+    "agency": "Ủy ban Nhân dân xã, phường, thị trấn.",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-380b-73c4-9566-9e8b26bbfec6",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Công chức tư pháp - hộ tịch được giao nhiệm vụ đăng ký khai tử lưu động có trách nhiệm chuẩn bị đầy đủ mẫu Tờ khai đăng ký khai tử, giấy tờ hộ tịch và điều kiện cần thiết để thực hiện đăng ký lưu động tại nhà riêng hoặc tại địa điểm tổ chức đăng ký lưu động, bảo đảm thuận lợi cho người dân. - Tại địa điểm đăng ký khai tử lưu động, công chức tư pháp - hộ tịch hướng dẫn người yêu cầu điền đầy đủ thông tin trong Tờ khai đăng ký khai tử, kiểm tra các giấy tờ làm cơ sở cho việc đăng ký khai tử; viết…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 5 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Hướng dẫn Luật hộ tịch và Nghị định 123/2015/NĐ-CP hướng dẫn Luật hộ tịch do Bộ trưởng Bộ Tư pháp ban hành; Nghị định sửa đổi, bổ sung một số điều của các Nghị định trong lĩnh vực hộ tịch, quốc tịch, chứng thực.; Nghị định số 120/2025/NĐ-CP ngày 11/6/2025 của Chính phủ quy định về phân định thẩm quyền của chính quyền địa phương 02 cấp trong lĩnh vực quản lý nhà nước của Bộ Tư pháp."
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Tờ khai đăng ký khai tử theo mẫu;",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Giấy báo tử hoặc giấy tờ thay Giấy báo tử do cơ quan có thẩm quyền cấp. Trường hợp người yêu cầu đã nộp bản điện tử Giấy báo tử hoặc cơ quan đăng ký hộ tịch đã khai thác được dữ liệu điện tử có ký số của Giấy báo tử thì…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D3",
+        "name": "Giấy tờ chứng minh nơi cư trú cuối cùng của người chết để xác định thẩm quyền trong trường hợp cơ quan đăng ký hộ tịch không thể khai thác được thông tin về nơi cư trú của công dân theo các phương thức quy định tại…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D4",
+        "name": "Hộ chiếu/Thẻ căn cước công dân/Thẻ căn cước/Căn cước điện tử/Giấy chứng nhận căn cước hoặc các giấy tờ khác có dán ảnh và thông tin cá nhân do cơ quan có thẩm quyền cấp, còn giá trị sử dụng (sau đây gọi tắt là giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.000656",
+    "name": "Thủ tục đăng ký khai tử",
+    "sector": "Khai tử",
+    "agency": "Ủy ban Nhân dân xã, phường, thị trấn.",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-3fac-7489-b53b-9c6c958f2da4",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Nếu lựa chọn hình thức nộp hồ sơ trực tiếp, người yêu cầu đăng ký khai tử nộp hồ sơ đăng ký khai tử tại Trung tâm Phục vụ hành chính công có thẩm quyền; nộp lệ phí nếu thuộc trường hợp phải nộp lệ phí đăng ký khai tử; nộp phí cấp bản sao Trích lục khai tử nếu có yêu cầu cấp bản sao Trích lục khai tử. - Nếu lựa chọn hình thức nộp hồ sơ trực tuyến, người yêu cầu đăng ký khai tử truy cập Cổng dịch vụ công quốc gia hoặc Ứng dụng định danh quốc gia. Người yêu cầu đăng ký khai tử trực tuyến cung…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 1 ngày kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Thông tư Hướng dẫn về phí và lệ phí thuộc thẩm quyền quyết định của Hội đồng nhân dân tỉnh, thành phố trực thuộc Trung ương; Nghị định sửa đổi, bổ sung một số điều của các Nghị định liên quan đến việc nộp xuất trình sổ hộ khẩu, sổ tạm trú giấy khi thực hiện thủ tục hành chính, cung cấp dịch vụ công; Nghị định số 123/2015/NĐ-CP ngày 15/11/2015 của Chính phủ quy định chi tiết một số điều và biện pháp thi hành Luật Hộ tịch"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Giấy báo tử hoặc giấy tờ thay Giấy báo tử do cơ quan có thẩm quyền cấp. Trường hợp người yêu cầu đã nộp bản điện tử Giấy báo tử hoặc cơ quan đăng ký hộ tịch đã khai thác được dữ liệu điện tử có ký số của Giấy báo tử thì…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D2",
+        "name": "Văn bản ủy quyền (được chứng thực) theo quy định của pháp luật trong trường hợp ủy quyền thực hiện việc đăng ký khai tử. Trường hợp người có trách nhiệm đăng ký khai tử ủy quyền cho người khác thực hiện việc đăng ký…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Giấy tờ, tài liệu, chứng cứ do cơ quan, tổ chức có thẩm quyền cấp hoặc xác nhận hợp lệ chứng minh sự kiện chết đối với trường hợp đăng ký khai tử cho người chết đã lâu, không có Giấy báo tử hoặc giấy tờ thay thế Giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D4",
+        "name": "Giấy tờ chứng minh nơi cư trú cuối cùng của người chết để xác định thẩm quyền trong trường hợp cơ quan đăng ký hộ tịch không thể khai thác được thông tin về nơi cư trú của công dân theo các phương thức quy định tại…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D5",
+        "name": "Hộ chiếu/Thẻ căn cước công dân/Thẻ căn cước/Căn cước điện tử/Giấy chứng nhận căn cước hoặc các giấy tờ khác có dán ảnh và thông tin cá nhân do cơ quan có thẩm quyền cấp, còn giá trị sử dụng (sau đây gọi tắt là giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D6",
+        "name": "Giấy tờ do cơ quan có thẩm quyền của nước ngoài cấp, công chứng hoặc xác nhận để sử dụng cho việc đăng ký hộ tịch tại Việt Nam phải được hợp pháp hóa lãnh sự theo quy định của pháp luật, trừ trường hợp được miễn theo…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D7",
+        "name": "Bản chụp các giấy tờ gửi kèm theo hồ sơ đăng ký khai tử trực tuyến phải bảo đảm rõ nét, đầy đủ, toàn vẹn về nội dung, là bản chụp bằng máy ảnh, điện thoại hoặc được chụp, được quét bằng thiết bị điện tử, từ giấy tờ được…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 7,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D8",
+        "name": "Mẫu hộ tịch điện tử tương tác đăng ký khai tử (do người yêu cầu cung cấp thông tin theo hướng dẫn trên Cổng dịch vụ công, nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tuyến)",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 8,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.001022",
+    "name": "Thủ tục đăng ký nhận cha, mẹ, con",
+    "sector": "Nhận cha, mẹ con",
+    "agency": "Ủy ban Nhân dân xã, phường, thị trấn.",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-3fa6-722f-ac1a-e949c8ce3418",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Nếu lựa chọn hình thức nộp hồ sơ trực tiếp, người yêu cầu đăng ký nhận cha, mẹ, con nộp hồ sơ đăng ký nhận cha, mẹ, con tại Trung tâm phục vụ hành chính công có thẩm quyền nộp lệ phí nếu thuộc trường hợp phải nộp lệ phí đăng ký nhận cha, mẹ, con; nộp phí cấp bản sao Trích lục đăng ký nhận cha, mẹ, con nếu có yêu cầu cấp bản sao Trích lục đăng ký nhận cha, mẹ, con. - Nếu lựa chọn hình thức nộp hồ sơ trực tuyến, người yêu cầu đăng ký nhận cha, mẹ, con truy cập Cổng dịch vụ công quốc gia hoặc…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 3 ngày kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Sửa đổi, bổ sung một số điều của Thông tư số 02/2020/TT-BTP ngày 08/4/2020 của Bộ trưởng Bộ Tư pháp ban hành, hướng dẫn sử dụng, quản lý mẫu sổ quốc tịch và mẫu giấy tờ về quốc tịch và Thông tư số 04/2020/TT-BTP ngày 28/5/2020 của Bộ trưởng Bộ Tư pháp quy định chi tiết thi hành một số điều của Luật Hộ tịch và Nghị định số 123/2015/NĐ-CP ngày 15/11/2015 của Chính phủ quy định chi tiết một số điều và biện pháp thi hành Luật Hộ tịch; Thông tư số 03/2023/TT-BTP ngày 02/8/2023 của Bộ trưởng Bộ Tư pháp; Thông tư sửa đổi, bổ sung một số điều của Thông tư số 85/2019/TT-BTC ngày 29/11/2019 của Bộ Tài chính hướng dẫn về phí và lệ phí thuộc thẩm quyền quyết định của Hội đồng nhân dân tỉnh, thành phố trực thuộc Trung ương."
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Chứng cứ chứng minh quan hệ cha, con hoặc quan hệ mẹ, con gồm:",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Văn bản của cơ quan y tế, cơ quan giám định hoặc cơ quan khác có thẩm quyền xác nhận quan hệ cha con, quan hệ mẹ con.",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Hộ chiếu/Thẻ căn cước công dân/Thẻ căn cước/Căn cước điện tử/Giấy chứng nhận căn cước hoặc các giấy tờ khác có dán ảnh và thông tin cá nhân do cơ quan có thẩm quyền cấp, còn giá trị sử dụng (sau đây gọi tắt là giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D4",
+        "name": "Giấy tờ có giá trị chứng minh thông tin về cư trú trong trường hợp cơ quan đăng ký hộ tịch không thể khai thác được thông tin về nơi cư trú của công dân theo các phương thức quy định tại khoản 2 Điều 14 Nghị định số…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D5",
+        "name": "Giấy tờ do cơ quan có thẩm quyền của nước ngoài cấp, công chứng hoặc xác nhận để sử dụng cho việc đăng ký hộ tịch tại Việt Nam phải được hợp pháp hóa lãnh sự theo quy định của pháp luật, trừ trường hợp được miễn theo…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D6",
+        "name": "Bản chụp các giấy tờ gửi kèm theo hồ sơ đăng ký nhận cha, mẹ, con trực tuyến phải bảo đảm rõ nét, đầy đủ, toàn vẹn về nội dung, là bản chụp bằng máy ảnh, điện thoại hoặc được chụp, được quét bằng thiết bị điện tử, từ…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D7",
+        "name": "Tờ khai đăng ký đăng ký nhận cha, mẹ, con theo mẫu (nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tiếp);",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 7,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D8",
+        "name": "Mẫu hộ tịch điện tử tương tác đăng ký nhận cha, mẹ, con (do người yêu cầu cung cấp thông tin theo hướng dẫn trên Cổng dịch vụ công, nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tuyến)",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 8,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.001669",
+    "name": "Thủ tục đăng ký giám hộ có yếu tố nước ngoài",
+    "sector": "Giám hộ",
+    "agency": "Phòng Tư Pháp",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-47a7-74cf-a1de-4c9e077743e9",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Nếu lựa chọn hình thức nộp hồ sơ trực tiếp, người yêu cầu đăng ký giám hộ nộp hồ sơ đăng ký giám hộ tại Trung tâm Phục vụ hành chính công có thẩm quyền; nộp lệ phí nếu thuộc trường hợp phải nộp lệ phí đăng ký giám hộ; nộp phí cấp bản sao Trích lục đăng ký giám hộ nếu có yêu cầu cấp bản sao Trích lục đăng ký giám hộ. - Nếu lựa chọn hình thức nộp hồ sơ trực tuyến, người yêu cầu đăng ký giám hộ truy cập Cổng dịch vụ công quốc gia hoặc Ứng dụng định danh quốc gia. Người yêu cầu đăng ký giám hộ…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 5 ngày kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Sửa đổi, bổ sung một số điều của Thông tư số 02/2020/TT-BTP ngày 08/4/2020 của Bộ trưởng Bộ Tư pháp ban hành, hướng dẫn sử dụng, quản lý mẫu sổ quốc tịch và mẫu giấy tờ về quốc tịch và Thông tư số 04/2020/TT-BTP ngày 28/5/2020 của Bộ trưởng Bộ Tư pháp quy định chi tiết thi hành một số điều của Luật Hộ tịch và Nghị định số 123/2015/NĐ-CP ngày 15/11/2015 của Chính phủ quy định chi tiết một số điều và biện pháp thi hành Luật Hộ tịch; Thông tư sửa đổi, bổ sung một số điều của Thông tư số 85/2019/TT-BTC ngày 29/11/2019 của Bộ Tài chính hướng dẫn về phí và lệ phí thuộc thẩm quyền quyết định của Hội đồng nhân dân tỉnh, thành phố trực thuộc Trung ương.; Hướng dẫn Luật hộ tịch và Nghị định 123/2015/NĐ-CP hướng dẫn Luật hộ tịch do Bộ trưởng Bộ Tư pháp ban hành"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Văn bản ủy quyền (được chứng thực) theo quy định của pháp luật trong trường hợp ủy quyền thực hiện đăng ký giám hộ. Trường hợp người được ủy quyền là ông, bà, cha, mẹ, con, vợ, chồng, anh, chị, em ruột của người ủy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Văn bản cử người giám hộ theo quy định của Bộ luật Dân sự đối với trường hợp đăng ký giám hộ cử; giấy tờ chứng minh điều kiện giám hộ đương nhiên theo quy định của Bộ luật Dân sự đối với trường hợp đăng ký giám hộ đương…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Hộ chiếu/Thẻ căn cước công dân/Thẻ căn cước/Căn cước điện tử/Giấy chứng nhận căn cước hoặc các giấy tờ khác có dán ảnh và thông tin cá nhân do cơ quan có thẩm quyền cấp, còn giá trị sử dụng (sau đây gọi tắt là giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D4",
+        "name": "Giấy tờ có giá trị chứng minh thông tin về cư trú trong trường hợp cơ quan đăng ký hộ tịch không thể khai thác được thông tin về nơi cư trú của công dân theo các phương thức quy định tại khoản 2 Điều 14 Nghị định số…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D5",
+        "name": "Bản chụp các giấy tờ gửi kèm theo hồ sơ đăng ký giám hộ trực tuyến phải bảo đảm rõ nét, đầy đủ, toàn vẹn về nội dung, là bản chụp bằng máy ảnh, điện thoại hoặc được chụp, được quét bằng thiết bị điện tử, từ giấy tờ được…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D6",
+        "name": "Giấy tờ do cơ quan có thẩm quyền của nước ngoài cấp, công chứng hoặc xác nhận để sử dụng cho việc đăng ký hộ tịch tại Việt Nam phải được hợp pháp hóa lãnh sự theo quy định của pháp luật, trừ trường hợp được miễn theo…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D7",
+        "name": "Mẫu hộ tịch điện tử tương tác đăng ký giám hộ (do người yêu cầu cung cấp thông tin theo hướng dẫn trên Cổng dịch vụ công nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tuyến);",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 7,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D8",
+        "name": "Tờ khai đăng ký giám hộ theo mẫu (nếu người yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tiếp hoặc gửi hồ sơ qua hệ thống bưu chính);",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 8,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.001766",
+    "name": "Thủ tục đăng ký khai tử có yếu tố nước ngoài",
+    "sector": "Khai tử",
+    "agency": "Bộ Tư pháp",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-47da-7259-b8fe-0d5327727234",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Nếu lựa chọn hình thức nộp hồ sơ trực tiếp, người yêu cầu đăng ký khai tử nộp hồ sơ đăng ký khai tử tại Trung tâm Phục vụ hành chính công có thẩm quyền; nộp lệ phí nếu thuộc trường hợp phải nộp lệ phí đăng ký khai tử; nộp phí cấp bản sao Trích lục khai tử nếu có yêu cầu cấp bản sao Trích lục khai tử. - Nếu lựa chọn hình thức nộp hồ sơ trực tuyến, người yêu cầu đăng ký khai tử truy cập Cổng dịch vụ công quốc gia hoặc Ứng dụng định danh quốc gia. Người yêu cầu đăng ký khai tử trực tuyến cung…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 1 ngày kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Thông tư Hướng dẫn về phí và lệ phí thuộc thẩm quyền quyết định của Hội đồng nhân dân tỉnh, thành phố trực thuộc Trung ương; Nghị định sửa đổi, bổ sung một số điều của các Nghị định liên quan đến việc nộp xuất trình sổ hộ khẩu, sổ tạm trú giấy khi thực hiện thủ tục hành chính, cung cấp dịch vụ công; Nghị định số 123/2015/NĐ-CP ngày 15/11/2015 của Chính phủ quy định chi tiết một số điều và biện pháp thi hành Luật Hộ tịch"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Văn bản ủy quyền (được chứng thực) theo quy định của pháp luật trong trường hợp ủy quyền thực hiện việc đăng ký khai tử. Trường hợp người có trách nhiệm đăng ký khai tử ủy quyền cho người khác thực hiện việc đăng ký…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Giấy báo tử hoặc giấy tờ thay Giấy báo tử do cơ quan có thẩm quyền cấp. Trường hợp người yêu cầu đã nộp bản điện tử Giấy báo tử hoặc cơ quan đăng ký hộ tịch đã khai thác được dữ liệu điện tử có ký số của Giấy báo tử thì…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D3",
+        "name": "Giấy tờ, tài liệu, chứng cứ do cơ quan, tổ chức có thẩm quyền cấp hoặc xác nhận hợp lệ chứng minh sự kiện chết đối với trường hợp đăng ký khai tử cho người chết đã lâu, không có Giấy báo tử hoặc giấy tờ thay thế Giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D4",
+        "name": "Hộ chiếu/Thẻ căn cước công dân/Thẻ căn cước/Căn cước điện tử/Giấy chứng nhận căn cước hoặc các giấy tờ khác có dán ảnh và thông tin cá nhân do cơ quan có thẩm quyền cấp, còn giá trị sử dụng (sau đây gọi tắt là giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D5",
+        "name": "Giấy tờ có giá trị chứng minh thông tin về cư trú trong trường hợp cơ quan đăng ký hộ tịch không thể khai thác được thông tin về nơi cư trú của công dân theo các phương thức quy định tại khoản 2 Điều 14 Nghị định số…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D6",
+        "name": "Bản chụp các giấy tờ gửi kèm theo hồ sơ đăng ký khai tử trực tuyến phải bảo đảm rõ nét, đầy đủ, toàn vẹn về nội dung, là bản chụp bằng máy ảnh, điện thoại hoặc được chụp, được quét bằng thiết bị điện tử, từ giấy tờ được…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D7",
+        "name": "Giấy tờ do cơ quan có thẩm quyền của nước ngoài cấp, công chứng hoặc xác nhận để sử dụng cho việc đăng ký hộ tịch tại Việt Nam phải được hợp pháp hóa lãnh sự theo quy định của pháp luật, trừ trường hợp được miễn theo…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 7,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D8",
+        "name": "Tờ khai đăng ký khai tử theo mẫu (nếu nộp hồ sơ theo hình thức trực tiếp hoặc gửi hồ sơ qua hệ thống bưu chính).",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 8,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.003197",
+    "name": "Xóa đăng ký thường trú",
+    "sector": "Đăng ký, quản lý cư trú",
+    "agency": "Công an cấp Xã",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bf7-6f18-72e5-974d-ed6803c7178a",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Bước 1",
+          "description": "Cá nhân, tổ chức chuẩn bị hồ sơ theo quy định của pháp luật.",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        },
+        {
+          "order": 2,
+          "title": "Bước 2",
+          "description": "Cá nhân, tổ chức nộp hồ sơ đến Công an cấp xã.",
+          "example": "Có thể nộp trực tuyến qua Cổng Dịch vụ công Quốc gia hoặc nộp trực tiếp tại cơ quan tiếp nhận."
+        },
+        {
+          "order": 3,
+          "title": "Bước 3",
+          "description": "Khi tiếp nhận hồ sơ xóa đăng ký thường trú, cơ quan đăng ký cư trú kiểm tra tính pháp lý và nội dung hồ sơ: - Trường hợp hồ sơ đã đầy đủ, hợp lệ thì tiếp nhận hồ sơ và cấp Phiếu tiếp nhận hồ sơ và hẹn trả kết quả (mẫu CT04 ban hành kèm theo Thông tư số 66/2023/TT-BCA) cho người đăng ký. - Trường hợp hồ sơ không đủ điều kiện thì từ chối và cấp Phiếu từ chối tiếp nhận, giải quyết hồ sơ (mẫu CT06 ban hành kèm theo Thông tư số 66/2023/TT-BCA) cho người đăng ký.",
+          "example": "Theo dõi tiến độ xử lý và nhận thông báo kết quả theo lịch hẹn."
+        },
+        {
+          "order": 4,
+          "title": "Bước 4",
+          "description": "Căn cứ theo ngày hẹn trên Phiếu tiếp nhận hồ sơ và hẹn trả kết quả để nhận thông báo kết quả giải quyết thủ tục đăng ký cư trú (nếu có).",
+          "example": "Đối chiếu kỹ thông tin với cơ quan có thẩm quyền trước khi hoàn tất."
+        }
+      ],
+      "durationText": "Khoảng 5 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Thông tư số 54/2025/TT-BCA ngày 01/7/2025 của Bộ trưởng Bộ Công an quy định về quy trình đăng ký cư trú.; Thông tư 56/2021/TT-BCA; Thông tư 55/2021/TT-BCA"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Tờ khai thay đổi thông tin cư trú (Mẫu CT01 ban hành kèm theo Thông tư số 53/2025/TT-BCA).",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.003677",
+    "name": "Khai báo tạm vắng",
+    "sector": "Tạm vắng",
+    "agency": "Công an cấp Xã",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bf7-6f56-704f-95b8-8d949272c6ad",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Bước 1",
+          "description": "Cá nhân, tổ chức chuẩn bị hồ sơ theo quy định của pháp luật.",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        },
+        {
+          "order": 2,
+          "title": "Bước 2",
+          "description": "Cá nhân, tổ chức nộp hồ sơ đến Công an cấp xã.",
+          "example": "Có thể nộp trực tuyến qua Cổng Dịch vụ công Quốc gia hoặc nộp trực tiếp tại cơ quan tiếp nhận."
+        },
+        {
+          "order": 3,
+          "title": "Bước 3",
+          "description": "Khi tiếp nhận hồ sơ khai báo tạm vắng trong Cơ sở dữ liệu về cư trú, cơ quan đăng ký cư trú kiểm tra tính pháp lý và nội dung hồ sơ: - Trường hợp hồ sơ đã đầy đủ, hợp lệ thì tiếp nhận hồ sơ và cấp Phiếu tiếp nhận hồ sơ và hẹn trả kết quả (mẫu CT04 ban hành kèm theo Thông tư số 66/2023/TT-BCA) cho người đăng ký. - Trường hợp hồ sơ không đủ điều kiện thì từ chối và cấp Phiếu từ chối tiếp nhận, giải quyết hồ sơ (mẫu CT06 ban hành kèm theo Thông tư số 66/2023/TT-BCA) cho người đăng ký.",
+          "example": "Theo dõi tiến độ xử lý và nhận thông báo kết quả theo lịch hẹn."
+        },
+        {
+          "order": 4,
+          "title": "Bước 4",
+          "description": "Căn cứ theo ngày hẹn trên Phiếu tiếp nhận hồ sơ và hẹn trả kết quả để nhận thông báo kết quả giải quyết thủ tục đăng ký cư trú (nếu có).",
+          "example": "Đối chiếu kỹ thông tin với cơ quan có thẩm quyền trước khi hoàn tất."
+        }
+      ],
+      "durationText": "Khoảng 1 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Thông tư số 53/2025/TT-BCAngày 01/7/2025 của Bộ Công an sửa đổi, bổ sung một số điều của Thông tư số 55/2021/TT-BCA ngày 15 tháng 5 năm 2021 của Bộ trưởng Bộ Công an quy định chi tiết một số điều và biện pháp thi hành Luật Cư trú được sửa đổi, bổ sung bởi Thông tư số 66/2023/TT-BCA ngày 17 tháng 11 năm 2023; Thông tư số 56/2021/TT-BCA ngày 15 tháng 5 năm 2021 của Bộ trưởng Bộ Công an quy định về biểu mẫu trong đăng ký, quản lý cư trú được sửa đổi, bổ sung bởi Thông tư số 66/2023/TT-BCA ngày 17 tháng 11 năm 2023; Thông tư số 17/2024/TT-BCA ngày 15 tháng 5 năm 2024 của Bộ trưởng Bộ Công an quy định chi tiết một số điều và biện pháp thi hành Luật Căn cước.; Thông tư số 66/2023/TT-BCA Sửa đổi, bổ sung một số điều của Thông tư số 55/2021/TT-BCA ngày 15/5/2021 quy định chi tiết một số điều và biện pháp thi hành Luật Cư trú; Thông tư số 56/2021/TT-BCA ngày 15/5/2021 của Bộ trưởng Bộ Công an quy định về biểu mẫu trong đăng ký, quản lý cư trú; Thông tư số 57/2021/TT-BCA ngày 15/5/2021 của Bộ trưởng Bộ Công an quy định về quy trình đăng ký cư trú.; Luật Cư trú 2020"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Đề nghị khai báo tạm vắng;",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Văn bản đồng ý của cơ quan có thẩm quyền giám sát, quản lý, giáo dục người đó.",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.004222",
+    "name": "Đăng ký thường trú",
+    "sector": "Cư trú",
+    "agency": "Công an cấp Xã",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bf7-7704-7449-9e95-fe7ebb959aa2",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Bước 1",
+          "description": "Cá nhân, tổ chức chuẩn bị hồ sơ theo quy định của pháp luật.",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        },
+        {
+          "order": 2,
+          "title": "Bước 2",
+          "description": "Cá nhân, tổ chức nộp hồ sơ đến Công an cấp xã.",
+          "example": "Có thể nộp trực tuyến qua Cổng Dịch vụ công Quốc gia hoặc nộp trực tiếp tại cơ quan tiếp nhận."
+        },
+        {
+          "order": 3,
+          "title": "Bước 3",
+          "description": "Khi tiếp nhận hồ sơ đăng ký thường trú, cán bộ đăng ký kiểm tra hồ sơ, đối chiếu các thông tin mà công dân đã khai báo với thông tin trong Cơ sở dữ liệu quốc gia về dân cư, Cơ sở dữ liệu về cư trú, cơ sở dữ liệu khác có liên quan, hệ thống thông tin, Kho quản lý dữ liệu điện tử của tổ chức, cá nhân để kiểm tra tính chính xác các thông tin. Đối chiếu với các quy định của pháp luật về cư trú và thực hiện như sau: - Trường hợp hồ sơ đủ điều kiện theo quy định tại Điều 20 Luật Cư trú thì cán bộ…",
+          "example": "Theo dõi tiến độ xử lý và nhận thông báo kết quả theo lịch hẹn."
+        },
+        {
+          "order": 4,
+          "title": "Bước 4",
+          "description": "Cá nhân, tổ chức nộp lệ phí đăng ký thường trú theo quy định.",
+          "example": "Đối chiếu kỹ thông tin với cơ quan có thẩm quyền trước khi hoàn tất."
+        },
+        {
+          "order": 5,
+          "title": "Bước 5",
+          "description": "Căn cứ theo ngày hẹn trên Phiếu tiếp nhận hồ sơ và hẹn trả kết quả để nhận thông báo kết quả giải quyết thủ tục đăng ký cư trú (nếu có).",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 7 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "10.000 đồng – 20.000 đồng",
+      "legalBasisText": "Nghị quyết số 66.7/2025/NQ-CP của Chính phủ: Quy định cắt giảm, đơn giản hóa thủ tục hành chính dựa trên dữ liệu; Luật Cư trú 2020; Thông tư số 75/2022/TT-BTC của Bộ Tài chính: Quy định mức thu, chế độ thu, nộp và quản lý lệ phí đăng ký cư trú"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Văn bản xác nhận của Ủy ban nhân dân cấp xã về địa điểm phương tiện đăng ký đậu, đỗ thường xuyên trong trường hợp phương tiện không phải đăng ký hoặc nơi đăng ký phương tiện không trùng với nơi thường xuyên đậu, đỗ (nội…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Giấy chứng nhận đăng ký phương tiện và giấy chứng nhận an toàn kỹ thuật và bảo vệ môi trường của phương tiện hoặc văn bản xác nhận của Ủy ban nhân dân cấp xã về việc sử dụng phương tiện đó vào mục đích để ở đối với…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Giấy tờ, tài liệu xác nhận về việc chăm sóc, nuôi dưỡng, trợ giúp.",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D4",
+        "name": "Văn bản đề nghị của người đứng đầu cơ sở trợ giúp xã hội đối với người được cơ sở trợ giúp xã hội nhận chăm sóc, nuôi dưỡng, trợ giúp.",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D5",
+        "name": "Văn bản xác nhận của Ủy ban nhân dân cấp xã về việc trong cơ sở tín ngưỡng, cơ sở tôn giáo có công trình phụ trợ là nhà ở.",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D6",
+        "name": "Văn bản xác nhận của Ủy ban nhân dân cấp xã về việc người đăng ký thường trú thuộc đối tượng quy định tại khoản 2 Điều 17 Luật Cư trú và việc trong cơ sở tín ngưỡng, cơ sở tôn giáo có công trình phụ trợ là nhà ở.",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D7",
+        "name": "Giấy tờ, tài liệu chứng minh là nhà tu hành, chức sắc, chức việc hoặc người khác hoạt động tôn giáo và được hoạt động tại cơ sở tôn giáo đó theo quy định của pháp luật về tín ngưỡng, tôn giáo đối với người quy định tại…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 7,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D8",
+        "name": "Tờ khai thay đổi thông tin cư trú (mẫu CT01 ban hành kèm theo Thông tư số 53/2025/TT-BCA).",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 8,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.004837",
+    "name": "Thủ tục đăng ký giám hộ",
+    "sector": "Giám hộ",
+    "agency": "Bộ Tư pháp",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-671b-75fa-82fb-8ad05a37f638",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Nếu lựa chọn hình thức nộp hồ sơ trực tiếp, người yêu cầu đăng ký giám hộ nộp hồ sơ đăng ký giám hộ tại Trung tâm Phục vụ hành chính công có thẩm quyền; nộp lệ phí nếu thuộc trường hợp phải nộp lệ phí đăng ký giám hộ; nộp phí cấp bản sao Trích lục đăng ký giám hộ nếu có yêu cầu cấp bản sao Trích lục đăng ký giám hộ. - Nếu lựa chọn hình thức nộp hồ sơ trực tuyến, người yêu cầu đăng ký giám hộ truy cập Cổng dịch vụ công quốc gia hoặc Ứng dụng định danh quốc gia. Người yêu cầu đăng ký giám hộ…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 3 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Hướng dẫn Luật hộ tịch và Nghị định 123/2015/NĐ-CP hướng dẫn Luật hộ tịch do Bộ trưởng Bộ Tư pháp ban hành; Nghị định sửa đổi, bổ sung một số điều của các Nghị định trong lĩnh vực hộ tịch, quốc tịch, chứng thực.; Nghị định số 120/2025/NĐ-CP ngày 11/6/2025 của Chính phủ quy định về phân định thẩm quyền của chính quyền địa phương 02 cấp trong lĩnh vực quản lý nhà nước của Bộ Tư pháp."
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Giấy tờ có giá trị chứng minh thông tin về cư trú trong trường hợp cơ quan đăng ký hộ tịch không thể khai thác được thông tin về nơi cư trú của công dân theo các phương thức quy định tại khoản 2 Điều 14 Nghị định số…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D2",
+        "name": "Hộ chiếu/Thẻ căn cước công dân/Thẻ căn cước/Căn cước điện tử/Giấy chứng nhận căn cước hoặc các giấy tờ khác có dán ảnh và thông tin cá nhân do cơ quan có thẩm quyền cấp, còn giá trị sử dụng (sau đây gọi tắt là giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Văn bản ủy quyền theo quy định của pháp luật trong trường hợp ủy quyền thực hiện việc đăng ký giám hộ. Trường hợp người được ủy quyền là ông, bà, cha, mẹ, con, vợ, chồng, anh, chị, em ruột của người ủy quyền thì văn bản…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D4",
+        "name": "Giấy tờ chứng minh điều kiện giám hộ đương nhiên theo quy định của Bộ luật Dân sự đối với trường hợp đăng ký giám hộ đương nhiên. Trường hợp có nhiều người cùng đủ điều kiện làm giám hộ đương nhiên thì nộp thêm văn bản…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D5",
+        "name": "Văn bản cử người giám hộ theo quy định của Bộ luật Dân sự đối với trường hợp đăng ký giám hộ cử.",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D6",
+        "name": "Giấy tờ do cơ quan có thẩm quyền của nước ngoài cấp, công chứng hoặc xác nhận để sử dụng cho việc đăng ký hộ tịch tại Việt Nam phải được hợp pháp hóa lãnh sự theo quy định của pháp luật, trừ trường hợp được miễn theo…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D7",
+        "name": "Mẫu hộ tịch điện tử tương tác đăng ký giám hộ (do người yêu cầu cung cấp thông tin theo hướng dẫn trên Cổng dịch vụ công, nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tuyến)",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 7,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D8",
+        "name": "Tờ khai đăng ký giám hộ theo mẫu (nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tiếp);",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 8,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.004845",
+    "name": "Thủ tục đăng ký chấm dứt giám hộ",
+    "sector": "Hộ tịch",
+    "agency": "Bộ Tư pháp",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-6724-715f-822c-28e986912730",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Nếu lựa chọn hình thức nộp hồ sơ trực tiếp, người yêu cầu đăng ký chấm dứt giám hộ nộp hồ sơ đăng ký chấm dứt giám hộ tại Trung tâm Phục vụ hành chính công có thẩm quyền; nộp lệ phí nếu thuộc trường hợp phải nộp lệ phí đăng ký chấm dứt giám hộ; nộp phí cấp bản sao Trích lục đăng ký chấm dứt giám hộ nếu có yêu cầu cấp bản sao Trích lục đăng ký chấm dứt giám hộ. - Nếu lựa chọn hình thức nộp hồ sơ trực tuyến, người yêu cầu đăng ký chấm dứt giám hộ truy cập Cổng dịch vụ công quốc gia hoặc Ứng…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 2 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Hướng dẫn Luật hộ tịch và Nghị định 123/2015/NĐ-CP hướng dẫn Luật hộ tịch do Bộ trưởng Bộ Tư pháp ban hành; Nghị định sửa đổi, bổ sung một số điều của các Nghị định trong lĩnh vực hộ tịch, quốc tịch, chứng thực.; Nghị định số 120/2025/NĐ-CP ngày 11/6/2025 của Chính phủ quy định về phân định thẩm quyền của chính quyền địa phương 02 cấp trong lĩnh vực quản lý nhà nước của Bộ Tư pháp."
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Giấy tờ có giá trị chứng minh thông tin về cư trú trong trường hợp cơ quan đăng ký hộ tịch không thể khai thác được thông tin về nơi cư trú của công dân theo các phương thức quy định tại khoản 2 Điều 14 Nghị định số…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D2",
+        "name": "Hộ chiếu/Thẻ căn cước công dân/Thẻ căn cước/Căn cước điện tử/Giấy chứng nhận căn cước hoặc các giấy tờ khác có dán ảnh và thông tin cá nhân do cơ quan có thẩm quyền cấp, còn giá trị sử dụng (sau đây gọi tắt là giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Văn bản ủy quyền theo quy định của pháp luật trong trường hợp ủy quyền thực hiện việc đăng ký chấm dứt giám hộ. Trường hợp người được ủy quyền là ông, bà, cha, mẹ, con, vợ, chồng, anh, chị, em ruột của người ủy quyền…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D4",
+        "name": "Giấy tờ làm căn cứ chấm dứt giám hộ theo quy định của Bộ luật Dân sự.",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D5",
+        "name": "Bản chụp các giấy tờ gửi kèm theo hồ sơ đăng ký chấm dứt giám hộ trực tuyến phải bảo đảm rõ nét, đầy đủ, toàn vẹn về nội dung, là bản chụp bằng máy ảnh, điện thoại hoặc được chụp, được quét bằng thiết bị điện tử, từ…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D6",
+        "name": "Giấy tờ do cơ quan có thẩm quyền của nước ngoài cấp, công chứng hoặc xác nhận để sử dụng cho việc đăng ký hộ tịch tại Việt Nam phải được hợp pháp hóa lãnh sự theo quy định của pháp luật, trừ trường hợp được miễn theo…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D7",
+        "name": "Tờ khai đăng ký chấm dứt giám hộ theo mẫu (nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tiếp hoặc gửi hồ sơ qua hệ thống bưu chính););",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 7,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D8",
+        "name": "Mẫu hộ tịch điện tử tương tác đăng ký chấm dứt giám hộ (do người yêu cầu cung cấp thông tin theo hướng dẫn trên Cổng dịch vụ công, nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tuyến)",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 8,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.004859",
+    "name": "Thủ tục thay đổi, cải chính, bổ sung thông tin hộ tịch, xác định lại dân tộc",
+    "sector": "Cải chính, trích lục hộ tịch",
+    "agency": "Bộ Tư pháp",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-671e-714b-8fd6-8230c82f7867",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Nếu lựa chọn hình thức nộp hồ sơ trực tiếp, người yêu cầu đăng ký thay đổi, cải chính, bổ sung thông tin hộ tịch, xác định lại dân tộc nộp hồ sơ thay đổi, cải chính, bổ sung thông tin hộ tịch, xác định lại dân tộc tại Trung tâm Phục vụ hành chính công có thẩm quyền; nộp lệ phí nếu thuộc trường hợp phải nộp lệ phí thay đổi, cải chính, bổ sung thông tin hộ tịch, xác định lại dân tộc; nộp phí cấp bản sao Trích lục thay đổi, cải chính, bổ sung thông tin hộ tịch, xác định lại dân tộc nếu có yêu cầu…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 1 ngày kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Sửa đổi, bổ sung một số điều của Thông tư số 02/2020/TT-BTP ngày 08/4/2020 của Bộ trưởng Bộ Tư pháp ban hành, hướng dẫn sử dụng, quản lý mẫu sổ quốc tịch và mẫu giấy tờ về quốc tịch và Thông tư số 04/2020/TT-BTP ngày 28/5/2020 của Bộ trưởng Bộ Tư pháp quy định chi tiết thi hành một số điều của Luật Hộ tịch và Nghị định số 123/2015/NĐ-CP ngày 15/11/2015 của Chính phủ quy định chi tiết một số điều và biện pháp thi hành Luật Hộ tịch; Thông tư sửa đổi, bổ sung một số điều của Thông tư số 85/2019/TT-BTC ngày 29/11/2019 của Bộ Tài chính hướng dẫn về phí và lệ phí thuộc thẩm quyền quyết định của Hội đồng nhân dân tỉnh, thành phố trực thuộc Trung ương.; Thông tư Hướng dẫn về phí và lệ phí thuộc thẩm quyền quyết định của Hội đồng nhân dân tỉnh, thành phố trực thuộc Trung ương"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Giấy tờ có giá trị chứng minh thông tin về cư trú trong trường hợp cơ quan đăng ký hộ tịch không thể khai thác được thông tin về nơi cư trú của công dân theo các phương thức quy định tại khoản 2 Điều 14 Nghị định số…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D2",
+        "name": "Hộ chiếu/Thẻ căn cước công dân/Thẻ căn cước/Căn cước điện tử/Giấy chứng nhận căn cước hoặc các giấy tờ khác có dán ảnh và thông tin cá nhân do cơ quan có thẩm quyền cấp, còn giá trị sử dụng (sau đây gọi tắt là giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Bản chụp các giấy tờ gửi kèm theo hồ sơ đăng ký thay đổi, cải chính, bổ sung thông tin hộ tịch, xác định lại dân tộc trực tuyến phải bảo đảm rõ nét, đầy đủ, toàn vẹn về nội dung, là bản chụp bằng máy ảnh, điện thoại…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D4",
+        "name": "Văn bản ủy quyền theo quy định của pháp luật trong trường hợp ủy quyền thực hiện việc đăng ký thay đổi, cải chính, bổ sung thông tin hộ tịch. Trường hợp người được ủy quyền là ông, bà, cha, mẹ, con, vợ, chồng, anh, chị,…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D5",
+        "name": "Giấy tờ làm căn cứ thay đổi, cải chính, bổ sung thông tin hộ tịch.",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D6",
+        "name": "Mẫu hộ tịch điện tử tương tác thực hiện đăng ký thay đổi, cải chính, bổ sung thông tin hộ tịch, xác định lại dân tộc",
+        "originals": 1,
+        "copies": 1,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D7",
+        "name": "Tờ khai đăng ký thay đổi, cải chính, bổ sung thông tin hộ tịch, xác định lại dân tộc theo mẫu (nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tiếp hoặc gửi hồ sơ qua hệ thống bưu chính);",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 7,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.004873",
+    "name": "Thủ tục cấp Giấy xác nhận tình trạng hôn nhân",
+    "sector": "Hộ tịch",
+    "agency": "Bộ Tư pháp",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-6eb3-7019-bf3f-fc58c9ee44b9",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Nếu lựa chọn hình thức nộp hồ sơ trực tiếp, người yêu cầu cấp Giấy xác nhận tình trạng hôn nhân nộp hồ sơ yêu cầu cấp Giấy xác nhận tình trạng hôn nhân tại Trung tâm phục vụ hành chính công có thẩm quyền nộp lệ phí nếu thuộc trường hợp phải nộp lệ phí cấp Giấy xác nhận tình trạng hôn nhân. - Nếu lựa chọn hình thức nộp hồ sơ trực tuyến, người yêu cầu cấp Giấy xác nhận tình trạng hôn nhân truy cập Cổng dịch vụ công quốc gia hoặc Ứng dụng định danh quốc gia. Người yêu cầu cấp Giấy xác nhận…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 3 ngày kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Nghị định sửa đổi, bổ sung một số điều của các Nghị định liên quan đến việc nộp xuất trình sổ hộ khẩu, sổ tạm trú giấy khi thực hiện thủ tục hành chính, cung cấp dịch vụ công; Luật 52/2014/QH13; Hướng dẫn Luật hộ tịch và Nghị định 123/2015/NĐ-CP hướng dẫn Luật hộ tịch do Bộ trưởng Bộ Tư pháp ban hành"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Văn bản ủy quyền theo quy định của pháp luật trong trường hợp ủy quyền thực hiện việc cấp Giấy xác nhận tình trạng hôn nhân. Trường hợp người được ủy quyền là ông, bà, cha, mẹ, con, vợ, chồng, anh, chị, em ruột của…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Hộ chiếu/Thẻ căn cước công dân/Thẻ căn cước/Căn cước điện tử/Giấy chứng nhận căn cước hoặc các giấy tờ khác có dán ảnh và thông tin cá nhân do cơ quan có thẩm quyền cấp, còn giá trị sử dụng (sau đây gọi tắt là giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Giấy tờ có giá trị chứng minh thông tin về cư trú trong trường hợp cơ quan đăng ký hộ tịch không thể khai thác được thông tin về nơi cư trú của công dân theo các phương thức quy định tại khoản 2 Điều 14 Nghị định số…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D4",
+        "name": "Giấy tờ do cơ quan có thẩm quyền của nước ngoài cấp, công chứng hoặc xác nhận để sử dụng cho việc đăng ký hộ tịch tại Việt Nam phải được hợp pháp hóa lãnh sự theo quy định của pháp luật, trừ trường hợp được miễn theo…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D5",
+        "name": "Bản chụp các giấy tờ gửi kèm theo hồ sơ cấp Giấy xác nhận tình trạng hôn nhân trực tuyến phải bảo đảm rõ nét, đầy đủ, toàn vẹn về nội dung, là bản chụp bằng máy ảnh, điện thoại hoặc được chụp, được quét bằng thiết bị…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D6",
+        "name": "Mẫu điện tử tương tác cấp Giấy xác nhận tình trạng hôn nhân (do người yêu cầu cung cấp thông tin theo hướng dẫn trên Cổng dịch vụ công nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tuyến)",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D7",
+        "name": "Tờ khai cấp Giấy xác nhận tình trạng hôn nhân (nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tiếp);",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 7,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.005461",
+    "name": "Đăng ký lại khai tử",
+    "sector": "Hộ tịch",
+    "agency": "Ủy ban Nhân dân xã, phường, thị trấn.",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-6ebc-709e-8678-a9f8b66738f2",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Nếu lựa chọn hình thức nộp hồ sơ trực tiếp, người yêu cầu đăng ký lại khai tử nộp hồ sơ đăng ký lại khai tử tại Trung tâm Phục vụ hành chính công có thẩm quyền; nộp lệ phí nếu thuộc trường hợp phải nộp lệ phí đăng ký lại khai tử; nộp phí cấp bản sao Trích lục khai tử nếu có yêu cầu cấp bản sao Trích lục khai tử. - Nếu lựa chọn hình thức nộp hồ sơ trực tuyến, người yêu cầu đăng ký lại khai tử truy cập Cổng dịch vụ công quốc gia hoặc Ứng dụng định danh quốc gia. Người yêu cầu đăng ký lại…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 5 ngày kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Thông tư số 08/2025/TT-BTP ngày 12/6/2025 của Bộ trưởng Bộ Tư pháp quy định về phân định thẩm quyền của chính quyền địa phương 02 cấp và phân cấp trong lĩnh vực quản lý nhà nước của Bộ Tư pháp; Nghị định sửa đổi, bổ sung một số nghị định để cắt giảm, đơn giản hóa thủ tục hành chính, điều kiện kinh doanh thuộc phạm vi quản lý của Bộ Tư pháp; Thông tư Hướng dẫn về phí và lệ phí thuộc thẩm quyền quyết định của Hội đồng nhân dân tỉnh, thành phố trực thuộc Trung ương"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Giấy tờ có giá trị chứng minh thông tin về cư trú trong trường hợp cơ quan đăng ký hộ tịch không thể khai thác được thông tin về nơi cư trú của công dân theo các phương thức quy định tại khoản 2 Điều 14 Nghị định số…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D2",
+        "name": "Hộ chiếu/Thẻ căn cước công dân/Thẻ căn cước/Căn cước điện tử/Giấy chứng nhận căn cước hoặc các giấy tờ khác có dán ảnh và thông tin cá nhân do cơ quan có thẩm quyền cấp, còn giá trị sử dụng (sau đây gọi tắt là giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Bản sao Giấy chứng tử trước đây được cấp hợp lệ. Nếu không có bản sao Giấy chứng tử trước đây được cấp hợp lệ thì nộp bản sao hồ sơ, giấy tờ liên quan có nội dung chứng minh sự kiện chết.",
+        "originals": 0,
+        "copies": 1,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D4",
+        "name": "Văn bản ủy quyền theo quy định của pháp luật trong trường hợp ủy quyền thực hiện việc đăng ký lại khai tử. Trường hợp người được ủy quyền là ông, bà, cha, mẹ, con, vợ, chồng, anh, chị, em ruột của người ủy quyền thì văn…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D5",
+        "name": "Mẫu hộ tịch điện tử tương tác đăng ký lại khai tử",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D6",
+        "name": "Tờ khai đăng ký lại khai tử theo mẫu (nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tiếp hoặc gửi hồ sơ qua hệ thống bưu chính);",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.010038",
+    "name": "Tách hộ",
+    "sector": "Đăng ký, quản lý cư trú",
+    "agency": "Công an cấp Xã",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bf7-7f1e-71e3-be3e-7f22dce4ac4d",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Bước 1",
+          "description": "Cá nhân, tổ chức chuẩn bị hồ sơ theo quy định của pháp luật.",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        },
+        {
+          "order": 2,
+          "title": "Bước 2",
+          "description": "Cá nhân, tổ chức nộp hồ sơ đến Công an cấp xã.",
+          "example": "Có thể nộp trực tuyến qua Cổng Dịch vụ công Quốc gia hoặc nộp trực tiếp tại cơ quan tiếp nhận."
+        },
+        {
+          "order": 3,
+          "title": "Bước 3",
+          "description": "Khi tiếp nhận hồ sơ tách hộ, cơ quan đăng ký cư trú kiểm tra tính pháp lý và nội dung hồ sơ: - Trường hợp hồ sơ đã đầy đủ, hợp lệ thì tiếp nhận hồ sơ và cấp Phiếu tiếp nhận hồ sơ và hẹn trả kết quả (mẫu CT04 ban hành kèm theo Thông tư số 66/2023/TT-BCA) cho người đăng ký. - Trường hợp hồ sơ không đủ điều kiện thì từ chối và cấp Phiếu từ chối tiếp nhận, giải quyết hồ sơ (mẫu CT06 ban hành kèm theo Thông tư số 66/2023/TT-BCA) cho người đăng ký.",
+          "example": "Theo dõi tiến độ xử lý và nhận thông báo kết quả theo lịch hẹn."
+        },
+        {
+          "order": 4,
+          "title": "Bước 4",
+          "description": "Căn cứ theo ngày hẹn trên Phiếu tiếp nhận hồ sơ và hẹn trả kết quả để nhận thông báo kết quả giải quyết thủ tục đăng ký cư trú (nếu có).",
+          "example": "Đối chiếu kỹ thông tin với cơ quan có thẩm quyền trước khi hoàn tất."
+        }
+      ],
+      "durationText": "Khoảng 5 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "5.000 đồng – 10.000 đồng",
+      "legalBasisText": "Thông tư số 53/2025/TT-BCAngày 01/7/2025 của Bộ Công an sửa đổi, bổ sung một số điều của Thông tư số 55/2021/TT-BCA ngày 15 tháng 5 năm 2021 của Bộ trưởng Bộ Công an quy định chi tiết một số điều và biện pháp thi hành Luật Cư trú được sửa đổi, bổ sung bởi Thông tư số 66/2023/TT-BCA ngày 17 tháng 11 năm 2023; Thông tư số 56/2021/TT-BCA ngày 15 tháng 5 năm 2021 của Bộ trưởng Bộ Công an quy định về biểu mẫu trong đăng ký, quản lý cư trú được sửa đổi, bổ sung bởi Thông tư số 66/2023/TT-BCA ngày 17 tháng 11 năm 2023; Thông tư số 17/2024/TT-BCA ngày 15 tháng 5 năm 2024 của Bộ trưởng Bộ Công an quy định chi tiết một số điều và biện pháp thi hành Luật Căn cước.; Thông tư số 66/2023/TT-BCA Sửa đổi, bổ sung một số điều của Thông tư số 55/2021/TT-BCA ngày 15/5/2021 quy định chi tiết một số điều và biện pháp thi hành Luật Cư trú; Thông tư số 56/2021/TT-BCA ngày 15/5/2021 của Bộ trưởng Bộ Công an quy định về biểu mẫu trong đăng ký, quản lý cư trú; Thông tư số 57/2021/TT-BCA ngày 15/5/2021 của Bộ trưởng Bộ Công an quy định về quy trình đăng ký cư trú.; Nghị quyết số 66.7/2025/NQ-CP của Chính phủ: Quy định cắt giảm, đơn giản hóa thủ tục hành chính dựa trên dữ liệu"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Tờ khai thay đổi thông tin cư trú (Mẫu CT01 ban hành kèm theo Thông tư số 53/2025/TT-BCA);",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Giấy tờ, tài liệu chứng minh việc ly hôn và việc tiếp tục được sử dụng chỗ ở hợp pháp đó.",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Tờ khai thay đổi thông tin cư trú (Mẫu CT01 ban hành kèm theo Thông tư số 53/2025/TT-BCA), trong đó ghi rõ ý kiến đồng ý cho tách hộ của chủ hộ, chủ sở hữu chỗ ở hợp pháp, trừ trường hợp đã có ý kiến đồng ý bằng văn bản.",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.010091",
+    "name": "Hỗ trợ khám chữa bệnh, trợ cấp tai nạn cho lực lượng xung kích phòng chống thiên tai cấp xã trong trường hợp chưa tham gia bảo hiểm y tế, bảo hiểm xã hội",
+    "sector": "Quản lý Đê điều và Phòng, chống thiên tai",
+    "agency": "Cơ quan chuyên môn về Nông nghiệp và Môi trường thuộc UBND cấp xã",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfa-5781-744b-a4a6-7d52c45ad026",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Bước 1",
+          "description": "Người tham gia lực lượng xung kích phòng chống thiên tai cấp xã hoặc người đại diện hợp pháp lập 01 bộ hồ sơ gửi Ủy ban nhân dân cấp xã. -",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        },
+        {
+          "order": 2,
+          "title": "Bước 2",
+          "description": "Uỷ ban nhân dân cấp xã trả lời ngay tính đầy đủ của hồ sơ đối với trường hợp nộp trực tiếp; trả lời trong 01 ngày làm việc đối với trường hợp nộp hồ sơ qua môi trường điện tử hoặc qua dịch vụ bưu chính bằng văn bản. -",
+          "example": "Có thể nộp trực tuyến qua Cổng Dịch vụ công Quốc gia hoặc nộp trực tiếp tại cơ quan tiếp nhận."
+        },
+        {
+          "order": 3,
+          "title": "Bước 3",
+          "description": "Trong thời hạn 07 ngày làm việc, kể từ ngày nhận đủ hồ sơ hợp lệ, cơ quan chuyên môn về nông nghiệp và môi trường thuộc Uỷ ban nhân dân cấp xã tổng hợp, trình Chủ tịch Ủy ban nhân dân cấp xã quyết định hỗ trợ kinh phí khám bệnh, chữa bệnh, trợ cấp tai nạn cho người tham gia lực lượng xung kích phòng chống thiên tai cấp xã; trường hợp không hỗ trợ thì có ngay văn bản thông báo và nêu rõ lý do cho tổ chức, cá nhân. -",
+          "example": "Theo dõi tiến độ xử lý và nhận thông báo kết quả theo lịch hẹn."
+        },
+        {
+          "order": 4,
+          "title": "Bước 4",
+          "description": "Trong thời hạn 03 ngày làm việc, kể từ ngày có quyết định hỗ trợ, Ủy ban nhân dân cấp xã có trách nhiệm thực hiện chi trả chi phí khám chữa bệnh, tiền trợ cấp cho đối tượng được hưởng; việc chi trả bằng hình thức chuyển khoản hoặc qua đường bưu chính hoặc trực tiếp nhận ở cấp xã.",
+          "example": "Đối chiếu kỹ thông tin với cơ quan có thẩm quyền trước khi hoàn tất."
+        }
+      ],
+      "durationText": "Khoảng 10 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Nghị định quy định chi tiết thi hành một số điều của Luật Phòng, chống thiên tai và Luật sửa đổi, bổ sung một số điều của Luật Phòng, chống thiên tai và Luật Đê điều.; Nghị định số 53/2026/NĐ-CP ngày 05/02/2026 của Chính phủ"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Phiếu xét nghiệm, đơn thuốc, hóa đơn thu tiền, giấy ra viện",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Đơn đề nghị thanh toán chi phí khám bệnh, chữa bệnh theo mẫu quy định tại Phụ lục VI ban hành kèm theo Nghị định số 66/2021/NĐ-CP ngày 06/7/2021 của Chính phủ. Trong đó thay thế cụm từ “Số Chứng minh nhân dân (Căn cước…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Giấy ra viện",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D4",
+        "name": "Biên bản điều tra của cơ quan công an (trường hợp bị tai nạn giao thông)",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D5",
+        "name": "Đơn đề nghị trợ cấp tai nạn theo mẫu quy định tại Phụ lục II Nghị định số 53/2026/NĐ-CP ngày 05/02/2026 sửa đổi, bổ sung một số điều của các Nghị định trong lĩnh vực đê điều và phòng, chống thiên tai;",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.010497",
+    "name": "Đề nghị miễn giảm học phí, hỗ trợ chi phí học tập, hỗ trợ tiền đóng học phí đối với người học tại các cơ sở giáo dục mầm non, giáo dục phổ thông, giáo dục thường xuyên, giáo dục nghề nghiệp và giáo…",
+    "sector": "Giáo dục và Đào tạo thuộc hệ thống giáo dục quốc dân",
+    "agency": "Sở Giáo dục và Đào tạo tỉnh Tuyên Quang",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019dc562-901d-73ca-9cbf-76f252e06d59",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Gửi (nộp) hồ sơ TTHC - Trong vòng 45 ngày làm việc kể từ ngày khai giảng năm học, cha mẹ (hoặc người giám hộ) trẻ em mầm non, học sinh phổ thông, học viên học tại cơ sở giáo dục thường xuyên; học sinh, sinh viên, học viên học ở các cơ sở giáo dục nghề nghiệp và giáo dục đại học thuộc đối tượng được miễn giảm học phí, hỗ trợ tiền đóng học phí, chi phí học tập nộp hồ sơ quy định tại khoản 1 Điều 19 Nghị định số 81/2021/NĐ-CP ngày 27/8/2021 của Chính phủ quy định về cơ chế thu, quản lý học phí đối…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        },
+        {
+          "order": 2,
+          "title": "Bước 1",
+          "description": "Xét duyệt hồ sơ, lập danh sách học sinh - Trong vòng 10 ngày làm việc kể từ khi nhận được đơn đề nghị miễn giảm học phí và hỗ trợ chi phí học tập, hỗ trợ tiền đóng học phí cho học sinh tiểu học tư thục ở địa bàn không đủ trường công lập, Hiệu trưởng nhà trường có trách nhiệm xét duyệt hồ sơ và lập danh sách học sinh được miễn, giảm học phí và hỗ trợ chi phí học tập, hỗ trợ tiền đóng học phí học sinh tiểu học tư thục. - Gửi cấp phê duyệt cụ thể: + Đối với cơ sở giáo dục mầm non, tiểu học và…",
+          "example": "Có thể nộp trực tuyến qua Cổng Dịch vụ công Quốc gia hoặc nộp trực tiếp tại cơ quan tiếp nhận."
+        },
+        {
+          "order": 3,
+          "title": "Bước 2",
+          "description": "Thẩm định, phê duyệt danh sách - Phòng Giáo dục và Đào tạo thực hiện thẩm định và ban hành Quyết định phê duyệt danh sách học sinh được học sinh hưởng chính sách theo Nghị định số 81/2021/NĐ-CP gửi cơ sở giáo dục thực theo quy định đối với cơ sở giáo dục mầm non, tiểu học và trung học cơ sở, cơ sở giáo dục thường xuyên thuộc Phòng giáo dục đào tạo. - Sở Giáo dục và Đào tạo thực hiện thẩm định và ban hành Quyết định phê duyệt danh sách học sinh được học sinh hưởng chính sách theo Nghị định số…",
+          "example": "Theo dõi tiến độ xử lý và nhận thông báo kết quả theo lịch hẹn."
+        }
+      ],
+      "durationText": "Khoảng 5 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Nghị định 81/2021/NĐ-CP"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Giấy xác nhận của cơ quan quản lý đối tượng người có công đối với đối tượng được quy định tại khoản 1 Điều 15 Nghị định số 81/2021/NĐ-CP",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Giấy xác nhận khuyết tật do Ủy ban nhân dân cấp xã cấp hoặc Quyết định về việc trợ cấp xã hội của Chủ tịch Ủy ban nhân dân cấp huyện đối với đối tượng được quy định tại khoản 2 Điều 15 Nghị định số 81/2021/NĐ-CP",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Quyết định về việc trợ cấp xã hội của Chủ tịch Ủy ban nhân dân cấp huyện đối với đối tượng được quy định tại khoản 3 Điều 15 Nghị định số 81/2021/NĐ-CP",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D4",
+        "name": "Giấy xác nhận hộ nghèo do Ủy ban nhân dân cấp xã cấp cho đối tượng được quy định tại khoản 4 Điều 15 Nghị định số 81/2021/NĐ-CP",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D5",
+        "name": "Giấy chứng nhận đối tượng được hưởng chế độ miễn học phí theo quy định tại Nghị định số 27/2016/NĐ-CP ngày 06 tháng 4 năm 2016 của Chính phủ quy định một số chế độ, chính sách đối với hạ sĩ quan, binh sĩ phục vụ tại…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D6",
+        "name": "Giấy khai sinh và giấy xác nhận hộ nghèo hoặc hộ cận nghèo do Ủy ban nhân dân cấp xã cấp cho đối tượng được quy định tại khoản 12 Điều 15 Nghị định số 81/2021/NĐ-CP",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D7",
+        "name": "Giấy khai sinh và sổ hộ khẩu thường trú hoặc giấy xác nhận của cơ quan công an về việc đăng ký thường trú (trường hợp sổ hộ khẩu bị thất lạc) đối với đối tượng được quy định tại khoản 5, khoản 8, khoản 15 Điều 15 và…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 7,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D8",
+        "name": "Sổ hưởng trợ cấp hàng tháng của cha hoặc mẹ bị tai nạn lao động hoặc mắc bệnh nghề nghiệp do tổ chức bảo hiểm xã hội cấp đối với đối tượng được quy định tại điểm a khoản 2 Điều 16 Nghị định số 81/2021/NĐ-CP",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 8,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.013314",
+    "name": "Xác nhận về điều kiện diện tích bình quân nhà ở để đăng ký thường trú vào chỗ ở do thuê, mượn, ở nhờ; nhà ở, đất ở không có tranh chấp quyền sở hữu nhà ở, quyền sử dụng đất ở, không thuộc địa điểm…",
+    "sector": "Đăng ký, quản lý cư trú",
+    "agency": "Bộ Công an",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bf7-9660-707e-97b1-ef8876f54d3b",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Bước 1",
+          "description": "Cá nhân chuẩn bị hồ sơ theo quy định của pháp luật. -",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        },
+        {
+          "order": 2,
+          "title": "Bước 2",
+          "description": "Cá nhân nộp hồ sơ đến Ủy ban nhân dân cấp xã nơi cư trú. Trường hợp công dân nộp hồ sơ đề nghị xác nhận tới cơ quan đăng ký cư trú cùng hồ sơ đăng ký thường trú, đăng ký tạm trú, cơ quan đăng ký cư trú có trách nhiệm chuyển hồ sơ đề nghị xác nhận đến Ủy ban nhân dân cấp xã xem xét, giải quyết. -",
+          "example": "Có thể nộp trực tuyến qua Cổng Dịch vụ công Quốc gia hoặc nộp trực tiếp tại cơ quan tiếp nhận."
+        },
+        {
+          "order": 3,
+          "title": "Bước 3",
+          "description": "Cán bộ tiếp nhận hồ sơ kiểm tra tính pháp lý và nội dung hồ sơ: + Trường hợp hồ sơ đã đầy đủ, hợp lệ thì tiếp nhận và cấp giấy hẹn trả kết quả cho công dân; + Trường hợp hồ sơ không đủ điều kiện thì từ chối và trả lời bằng văn bản, nêu rõ lý do và trả kết quả cho công dân. -",
+          "example": "Theo dõi tiến độ xử lý và nhận thông báo kết quả theo lịch hẹn."
+        },
+        {
+          "order": 4,
+          "title": "Bước 4",
+          "description": "Căn cứ ngày hẹn trả kết quả để nhận kết quả giải quyết thủ tục xác nhận.",
+          "example": "Đối chiếu kỹ thông tin với cơ quan có thẩm quyền trước khi hoàn tất."
+        }
+      ],
+      "durationText": "Khoảng 2 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Thông tư số 53/2025/TT-BCAngày 01/7/2025 của Bộ Công an sửa đổi, bổ sung một số điều của Thông tư số 55/2021/TT-BCA ngày 15 tháng 5 năm 2021 của Bộ trưởng Bộ Công an quy định chi tiết một số điều và biện pháp thi hành Luật Cư trú được sửa đổi, bổ sung bởi Thông tư số 66/2023/TT-BCA ngày 17 tháng 11 năm 2023; Thông tư số 56/2021/TT-BCA ngày 15 tháng 5 năm 2021 của Bộ trưởng Bộ Công an quy định về biểu mẫu trong đăng ký, quản lý cư trú được sửa đổi, bổ sung bởi Thông tư số 66/2023/TT-BCA ngày 17 tháng 11 năm 2023; Thông tư số 17/2024/TT-BCA ngày 15 tháng 5 năm 2024 của Bộ trưởng Bộ Công an quy định chi tiết một số điều và biện pháp thi hành Luật Căn cước.; Luật Cư trú 2020; Thông tư số 54/2025/TT-BCA ngày 01/7/2025 của Bộ trưởng Bộ Công an quy định về quy trình đăng ký cư trú."
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Tờ khai xác nhận tình trạng chỗ ở hợp pháp, diện tích nhà ở tối thiểu để đăng ký thường trú, đăng ký tạm trú (Mẫu số 02 ban hành kèm theo Nghị định số 154/2024/NĐ-CP).",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.014103",
+    "name": "Xác nhận đối tượng hộ thoát nghèo để miễn, giảm học phí cho học sinh",
+    "sector": "Giảm nghèo",
+    "agency": "UBND Thành phố Đà Nẵng",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019db0d7-bc46-7258-81ff-39f3997af710",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Bước 1",
+          "description": "Cá nhân hoàn thiện hồ sơ theo hướng dẫn.",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        },
+        {
+          "order": 2,
+          "title": "Bước 2",
+          "description": "Bộ phận Trung tâm phục vụ hành chính công cấp xã kiểm tra tính hợp lệ đầy đủ của hồ sơ; chuyển cho công chức chuyên môn.",
+          "example": "Có thể nộp trực tuyến qua Cổng Dịch vụ công Quốc gia hoặc nộp trực tiếp tại cơ quan tiếp nhận."
+        },
+        {
+          "order": 3,
+          "title": "Bước 3",
+          "description": "Công chức chuyên môn xử lý hồ sơ, trình lãnh đạo ký xác nhận, chuyển kết quả Trung tâm phục vụ hành chính công cấp xã để trao cho cá nhân.",
+          "example": "Theo dõi tiến độ xử lý và nhận thông báo kết quả theo lịch hẹn."
+        }
+      ],
+      "durationText": "Khoảng 1 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Hướng dẫn phương pháp rà soát, phân loại hộ nghèo, hộ cận nghèo; xác định thu nhập của hộ làm nông nghiệp, lâm nghiệp, ngư nghiệp, diêm nghiệp có mức sống trung bình giai đoạn 2022-2025 và mẫu biểu báo cáo; Thông tư số 13/2025/TT-BNNMT ngày 19/6/2025 của Bộ Nông nghiệp và Môi trường Quy định phân định thẩm quyền quản lý nhà nước trong lĩnh vực kinh tế hợp tác và phát triển nông thôn và lĩnh vực giảm nghèo; 75/2021/NQ-HĐND-Quy định về chính sách hỗ trợ hộ nghèo, hộ cận nghèo, hộ thoát nghèo trên địa bàn thành phố Đà Nẵng"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Đơn đề nghị miễn giảm học phí và Giấy xác nhận hộ thoát nghèo trong vòng 02 năm kể từ thời điểm thoát nghèo theo chuẩn thành phố",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.014137",
+    "name": "Thủ tục cấp thẻ bảo hiểm y tế",
+    "sector": "Bảo hiểm y tế",
+    "agency": "Bảo hiểm xã hội tỉnh",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bff-3d08-7599-80c7-c185678b6753",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Bước 1",
+          "description": "Người tham gia bảo hiểm y tế kê khai đầy đủ thông tin theo Mẫu số 2 Phụ lục ban hành kèm theo Nghị định số 188/2025/NĐ-CP hoặc cơ quan, tổ chức quản lý đối tượng kê khai đầy đủ thông tin theo Mẫu số 3 Phụ lục ban hành kèm theo Nghị định số 188/2025/NĐ-CP trên Cổng dịch vụ công quốc gia hoặc qua ứng dụng của cơ quan bảo hiểm xã hội hoặc nộp trực tiếp tại bộ phận một cửa của cơ quan bảo hiểm xã hội hoặc gửi qua dịch vụ bưu chính công ích đến cơ quan bảo hiểm xã hội được giao nhiệm vụ tiếp nhận. +…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        },
+        {
+          "order": 2,
+          "title": "Bước 2",
+          "description": "Cổng dịch vụ công quốc gia hoặc ứng dụng của cơ quan bảo hiểm xã hội hoặc cán bộ tiếp nhận hồ sơ trả Giấy tiếp nhận hồ sơ và hẹn trả kết quả cấp thẻ bảo hiểm y tế cho người tham gia bảo hiểm y tế hoặc cho cơ quan, tổ chức quản lý đối tượng. -",
+          "example": "Có thể nộp trực tuyến qua Cổng Dịch vụ công Quốc gia hoặc nộp trực tiếp tại cơ quan tiếp nhận."
+        },
+        {
+          "order": 3,
+          "title": "Bước 3",
+          "description": "Trong thời hạn 05 ngày làm việc, kể từ ngày nhận đủ hồ sơ theo quy định, cơ quan bảo hiểm xã hội trả thẻ bảo hiểm y tế, cụ thể như sau: + Trường hợp cấp thẻ bảo hiểm y tế bản điện tử, cơ quan bảo hiểm xã hội trả kết quả thẻ bảo hiểm y tế bản điện tử vào ứng dụng bảo hiểm xã hội số (VssID), hòm thư điện tử cá nhân (email), liên kết với tài khoản định danh điện tử (VNeID) mức độ 2. + Trường hợp cấp thẻ bảo hiểm y tế bản giấy, cơ quan bảo hiểm xã hội chuyển thẻ bảo hiểm y tế bản giấy cho người…",
+          "example": "Theo dõi tiến độ xử lý và nhận thông báo kết quả theo lịch hẹn."
+        }
+      ],
+      "durationText": "Khoảng 5 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Luật 25/2008/QH12 - Bảo hiểm y tế; Luật số 51/2024/QH15 ngày 27/11/2024 của Quốc hội sửa đổi, bổ sung một số điều của Luật Bảo hiểm y tế; Nghị định quy định chi tiết và hướng dẫn thi hành một số điều của Luật Bảo hiểm y tế (188/2025/NĐ-CP ngày 01/7/2025)"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Tờ khai tham gia, điều chỉnh thông tin bảo hiểm y tế theo Mẫu số 2 Phụ lục ban hành kèm theo Nghị định số 188/2025/NĐ-CP",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.014193",
+    "name": "Thủ tục khám bệnh, chữa bệnh bảo hiểm y tế",
+    "sector": "Bảo hiểm y tế",
+    "agency": "Cơ sở khám bệnh, chữa bệnh",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bff-3d2b-70b2-9083-51112278f353",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Bước 1",
+          "description": "Người tham gia bảo hiểm y tế khi khám bệnh, chữa bệnh phải xuất trình thông tin về thẻ bảo hiểm y tế, giấy tờ chứng minh nhân thân và các giấy tờ liên quan theo quy định cho cơ sở khám bệnh, chữa bệnh.",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        },
+        {
+          "order": 2,
+          "title": "Bước 2",
+          "description": "Cơ sở khám bệnh, chữa bệnh tiếp nhận người bệnh tham gia bảo hiểm y tế vào cơ sở khám bệnh, chữa bệnh để chẩn đoán và điều trị.",
+          "example": "Có thể nộp trực tuyến qua Cổng Dịch vụ công Quốc gia hoặc nộp trực tiếp tại cơ quan tiếp nhận."
+        }
+      ],
+      "durationText": "Theo quy định của cơ quan có thẩm quyền",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Luật 25/2008/QH12 - Bảo hiểm y tế; Luật số 51/2024/QH15 ngày 27/11/2024 của Quốc hội sửa đổi, bổ sung một số điều của Luật Bảo hiểm y tế; 46/2014/QH13 Sửa đổi, bổ sung một số điều của Luật Bảo hiểm y tế"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Thẻ bảo hiểm y tế bản điện tử hoặc bản giấy. Đối với đối tượng tham gia bảo hiểm y tế quy định tại các điểm a, b, c và d khoản 3 Điều 12 của Luật Bảo hiểm y tế chưa có thông tin về thẻ bảo hiểm y tế tra cứu được trên hệ…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D2",
+        "name": "Căn cước hoặc căn cước công dân hoặc tài khoản định danh điện tử (VNeID) mức độ 2 đã tích hợp thông tin về thẻ bảo hiểm y tế",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D3",
+        "name": "Phiếu hẹn khám lại bản giấy có đóng dấu treo của cơ sở khám bệnh, chữa bệnh trên góc trái, phía trên và chữ ký của bác sĩ điều trị. Phiếu hẹn khám lại bản điện tử có chữ ký số của bác sĩ điều trị. Mỗi Phiếu hẹn khám lại…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "1.014333",
+    "name": "Đề nghị miễn, giảm học phí trong cơ sở giáo dục nghề nghiệp và cơ sở giáo dục đại học công lập",
+    "sector": "Giáo dục và Đào tạo thuộc hệ thống giáo dục quốc dân",
+    "agency": "Cơ sở giáo dục nghề nghiệp và giáo dục đại học công lập",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bf8-c7e1-75ac-9762-bc33fb416d13",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "a) Trong vòng 45 ngày làm việc kể từ ngày nhập học, người học thuộc đối tượng được miễn, giảm học phí nộp Đơn đề nghị miễn, giảm học phí theo mẫu tại Phụ lục III Nghị định số 238/2025/NĐ-CP ngày 03/9/2025 của Chính phủ quy định về chính sách học phí, miễn, giảm, hỗ trợ học phí, hỗ trợ chi phí học tập và giá dịch vụ trong lĩnh vực giáo dục (sau đây gọi là Nghị định số 238/2025/NĐ-CP) kèm theo giấy tờ minh chứng đối tượng được miễn, giảm học phí gửi cơ sở giáo dục nghề nghiệp, cơ sở giáo dục đại…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 10 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Nghị định số 238/2025/NĐ-CP của Chính phủ quy định về chính sách học phí, miễn, giảm, hỗ trợ học phí, hỗ trợ chi phí học tập và giá dịch vụ trong lĩnh vực giáo dục, đào tạo"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Đơn đề nghị miễn, giảm học phí theo mẫu tại Phụ lục III Nghị định số 238/2025/NĐ-CP",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Bản sao chứng thực hoặc bản sao kèm bản chính để đối chiếu hoặc bản sao từ sổ gốc giấy tờ chứng minh thuộc đối tượng miễn, giảm học phí trong các trường hợp sau: - Giấy xác nhận của cơ quan quản lý đối với người có công…",
+        "originals": 0,
+        "copies": 1,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "2.000497",
+    "name": "Thủ tục đăng ký lại khai tử có yếu tố nước ngoài",
+    "sector": "Khai tử",
+    "agency": "Bộ Tư pháp",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-8651-7749-bf4c-8444ae336e6c",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Nếu lựa chọn hình thức nộp hồ sơ trực tiếp, người yêu cầu đăng ký lại khai tử nộp hồ sơ đăng ký lại khai tử tại Trung tâm phục vụ hành chính công có thẩm quyền nộp lệ phí nếu thuộc trường hợp phải nộp lệ phí đăng ký lại khai tử; nộp phí cấp bản sao Trích lục khai tử nếu có yêu cầu cấp bản sao Trích lục khai tử. - Nếu lựa chọn hình thức nộp hồ sơ trực tuyến, người yêu cầu đăng ký lại khai tử truy cập Cổng dịch vụ công quốc gia hoặc Ứng dụng định danh quốc gia. Người yêu cầu đăng ký lại khai…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 5 ngày kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "quy định mức thu, chế độ thu, nộp, quản lý và sử dụng phí khai thác, sử dụng thông tin trong cơ sở dữ liệu hộ tịch, phí xác nhận có quốc tịch Việt Nam, phí xác nhận là người gốc Việt Nam, lệ phí quốc tịch; Sửa đổi, bổ sung một số điều của Thông tư số 02/2020/TT-BTP ngày 08/4/2020 của Bộ trưởng Bộ Tư pháp ban hành, hướng dẫn sử dụng, quản lý mẫu sổ quốc tịch và mẫu giấy tờ về quốc tịch và Thông tư số 04/2020/TT-BTP ngày 28/5/2020 của Bộ trưởng Bộ Tư pháp quy định chi tiết thi hành một số điều của Luật Hộ tịch và Nghị định số 123/2015/NĐ-CP ngày 15/11/2015 của Chính phủ quy định chi tiết một số điều và biện pháp thi hành Luật Hộ tịch; Thông tư số 03/2023/TT-BTP ngày 02/8/2023 của Bộ trưởng Bộ Tư pháp"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Hộ chiếu/Thẻ căn cước công dân/Thẻ căn cước/Căn cước điện tử/Giấy chứng nhận căn cước hoặc các giấy tờ khác có dán ảnh và thông tin cá nhân do cơ quan có thẩm quyền cấp, còn giá trị sử dụng (sau đây gọi tắt là giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Giấy tờ có giá trị chứng minh thông tin về cư trú trong trường hợp cơ quan đăng ký hộ tịch không thể khai thác được thông tin về nơi cư trú của công dân theo các phương thức quy định tại khoản 2 Điều 14 Nghị định số…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D3",
+        "name": "Bản sao Giấy chứng tử trước đây được cấp hợp lệ. Nếu không có bản sao Giấy chứng tử trước đây được cấp hợp lệ thì nộp bản sao hồ sơ, giấy tờ liên quan có nội dung chứng minh sự kiện chết.",
+        "originals": 0,
+        "copies": 1,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D4",
+        "name": "Văn bản ủy quyền theo quy định của pháp luật trong trường hợp ủy quyền thực hiện đăng ký lại khai tử. Trường hợp người được ủy quyền là ông, bà, cha, mẹ, con, vợ, chồng, anh, chị, em ruột của người ủy quyền thì văn bản…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D5",
+        "name": "Tờ khai đăng ký lại khai tử theo mẫu (nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tiếp hoặc gửi hồ sơ qua hệ thống bưu chính);",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D6",
+        "name": "Mẫu hộ tịch điện tử tương tác thực hiện đăng ký lại khai tử",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "2.000756",
+    "name": "Thủ tục đăng ký chấm dứt giám hộ có yếu tố nước ngoài",
+    "sector": "Giám hộ",
+    "agency": "Bộ Tư pháp",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-8e04-756b-bf4f-2a70964e4c40",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Nếu lựa chọn hình thức nộp hồ sơ trực tiếp, người yêu cầu đăng ký chấm dứt giám hộ nộp hồ sơ đăng ký chấm dứt giám hộ tại Trung tâm Phục vụ hành chính công có thẩm quyền; nộp lệ phí nếu thuộc trường hợp phải nộp lệ phí đăng ký chấm dứt giám hộ; nộp phí cấp bản sao Trích lục đăng ký chấm dứt giám hộ nếu có yêu cầu cấp bản sao Trích lục đăng ký chấm dứt giám hộ. - Nếu lựa chọn hình thức nộp hồ sơ trực tuyến, người yêu cầu đăng ký chấm dứt giám hộ truy cập Cổng dịch vụ công quốc gia hoặc Ứng…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 2 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Thông tư Hướng dẫn về phí và lệ phí thuộc thẩm quyền quyết định của Hội đồng nhân dân tỉnh, thành phố trực thuộc Trung ương; Nghị định sửa đổi, bổ sung một số điều của các Nghị định liên quan đến việc nộp xuất trình sổ hộ khẩu, sổ tạm trú giấy khi thực hiện thủ tục hành chính, cung cấp dịch vụ công; Nghị định số 123/2015/NĐ-CP ngày 15/11/2015 của Chính phủ quy định chi tiết một số điều và biện pháp thi hành Luật Hộ tịch"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Giấy tờ làm căn cứ chấm dứt giám hộ theo quy định của Bộ luật Dân sự.",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Văn bản ủy quyền (được chứng thực) theo quy định của pháp luật trong trường hợp ủy quyền thực hiện đăng ký chấm dứt giám hộ. Trường hợp người được ủy quyền là ông, bà, cha, mẹ, con, vợ, chồng, anh, chị, em ruột của…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Hộ chiếu/Thẻ căn cước công dân/Thẻ căn cước/Căn cước điện tử/Giấy chứng nhận căn cước hoặc các giấy tờ khác có dán ảnh và thông tin cá nhân do cơ quan có thẩm quyền cấp, còn giá trị sử dụng (sau đây gọi tắt là giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D4",
+        "name": "Giấy tờ có giá trị chứng minh thông tin về cư trú trong trường hợp cơ quan đăng ký hộ tịch không thể khai thác được thông tin về nơi cư trú của công dân theo các phương thức quy định tại khoản 2 Điều 14 Nghị định số…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D5",
+        "name": "Giấy tờ do cơ quan có thẩm quyền của nước ngoài cấp, công chứng hoặc xác nhận để sử dụng cho việc đăng ký hộ tịch tại Việt Nam phải được hợp pháp hóa lãnh sự theo quy định của pháp luật, trừ trường hợp được miễn theo…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D6",
+        "name": "Bản chụp các giấy tờ gửi kèm theo hồ sơ đăng ký chấm dứt giám hộ trực tuyến phải bảo đảm rõ nét, đầy đủ, toàn vẹn về nội dung, là bản chụp bằng máy ảnh, điện thoại hoặc được chụp, được quét bằng thiết bị điện tử, từ…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D7",
+        "name": "Tờ khai đăng ký chấm dứt giám hộ theo mẫu (nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tiếp);",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 7,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D8",
+        "name": "Mẫu hộ tịch điện tử tương tác đăng ký chấm dứt giám hộ (do người yêu cầu cung cấp thông tin theo hướng dẫn trên Cổng dịch vụ công, nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tuyến)",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 8,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "2.001016",
+    "name": "Chứng thực văn bản từ chối nhận di sản",
+    "sector": "Chứng thực",
+    "agency": "Bộ Tư pháp",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-95e6-7578-ba2d-d1b4373cd174",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Người yêu cầu chứng thực xuất trình một trong các giấy tờ sau: Căn cước điện tử; bản chính hoặc bản sao của Thẻ căn cước công dân hoặc Thẻ căn cước hoặc Giấy chứng nhận căn cước hoặc Hộ chiếu hoặc giấy tờ xuất nhập cảnh hoặc giấy tờ có giá trị đi lại quốc tế còn giá trị sử dụng và nộp 01 bộ hồ sơ yêu cầu chứng thực. + Người thực hiện chứng thực (hoặc người tiếp nhận hồ sơ) kiểm tra giấy tờ trong hồ sơ yêu cầu chứng thực, nếu đầy đủ, tại thời điểm chứng thực người từ chối nhận di sản tự nguyện,…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Theo quy định của cơ quan có thẩm quyền",
+      "feesText": "50.000 đồng",
+      "legalBasisText": "Nghị quyết số 66.7/2025/NQ-CP của Chính phủ: Quy định cắt giảm, đơn giản hóa thủ tục hành chính dựa trên dữ liệu; Về cấp bản sao từ sổ gốc, chứng thực bản sao từ bản chính, chứng thực chữ ký và chứng thực hợp đồng, giao dịch; Thông tư 226/2016/TT-BTC"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Bản chính hoặc bản sao có chứng thực hoặc bản sao điện tử được chứng thực từ bản chính của giấy chứng nhận quyền sở hữu, quyền sử dụng hoặc giấy tờ thay thế được pháp luật quy định đối với tài sản mà pháp luật quy định…",
+        "originals": 1,
+        "copies": 1,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      }
+    ]
+  },
+  {
+    "code": "2.001019",
+    "name": "Chứng thực di chúc",
+    "sector": "Chứng thực",
+    "agency": "Bộ Tư pháp",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-95f0-7610-845f-c097f144bd55",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Người yêu cầu chứng thực xuất trình một trong các giấy tờ sau: Căn cước điện tử; bản chính hoặc bản sao của Thẻ căn cước công dân hoặc Thẻ căn cước hoặc Giấy chứng nhận căn cước hoặc Hộ chiếu hoặc giấy tờ xuất nhập cảnh hoặc giấy tờ có giá trị đi lại quốc tế còn giá trị sử dụng và nộp 01 bộ hồ sơ yêu cầu chứng thực. + Người thực hiện chứng thực (hoặc người tiếp nhận hồ sơ) kiểm tra giấy tờ trong hồ sơ yêu cầu chứng thực, nếu đầy đủ, tại thời điểm chứng thực người lập di chúc tự nguyện, minh mẫn…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Theo quy định của cơ quan có thẩm quyền",
+      "feesText": "50.000 đồng",
+      "legalBasisText": "Nghị quyết số 66.7/2025/NQ-CP của Chính phủ: Quy định cắt giảm, đơn giản hóa thủ tục hành chính dựa trên dữ liệu; Nghị định số 280/2025/NĐ-CP sửa đổi, bổ sung một số điều của Nghị định số 23/2015/NĐ-CP về cấp bản sao từ sổ gốc, chứng thực bản sao từ bản chính, chứng thực chữ ký và chứng thực hợp đồng, giao dịch, được sửa đổi, bổ sung bởi Nghị định số 07/2025/NĐ-CP; Thông tư 226/2016/TT-BTC"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Bản chính hoặc bản sao có chứng thực hoặc bản sao điện tử được chứng thực từ bản chính của giấy chứng nhận quyền sở hữu, quyền sử dụng hoặc giấy tờ thay thế được pháp luật quy định đối với tài sản mà pháp…",
+        "originals": 1,
+        "copies": 1,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "2.001035",
+    "name": "Chứng thực giao dịch liên quan đến tài sản là động sản, quyền sử dụng đất, nhà ở",
+    "sector": "Chứng thực",
+    "agency": "Bộ Tư pháp",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-95fa-70ca-93fd-4cab11b87897",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Người yêu cầu chứng thực xuất trình một trong các giấy tờ sau: Căn cước điện tử; bản chính hoặc bản sao của Thẻ căn cước công dân hoặc Thẻ căn cước hoặc Giấy chứng nhận căn cước hoặc Hộ chiếu hoặc giấy tờ xuất nhập cảnh hoặc giấy tờ có giá trị đi lại quốc tế còn giá trị sử dụng và nộp 01 bộ hồ sơ yêu cầu chứng thực. + Người thực hiện chứng thực (hoặc người tiếp nhận hồ sơ) kiểm tra giấy tờ trong hồ sơ yêu cầu chứng thực, nếu đầy đủ, tại thời điểm chứng thực các bên tham gia giao dịch tự nguyện,…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Theo quy định của cơ quan có thẩm quyền",
+      "feesText": "50.000 đồng",
+      "legalBasisText": "Thông tư 226/2016/TT-BTC; Nghị định số 280/2025/NĐ-CP sửa đổi, bổ sung một số điều của Nghị định số 23/2015/NĐ-CP về cấp bản sao từ sổ gốc, chứng thực bản sao từ bản chính, chứng thực chữ ký và chứng thực hợp đồng, giao dịch, được sửa đổi, bổ sung bởi Nghị định số 07/2025/NĐ-CP; Nghị quyết số 66.7/2025/NQ-CP của Chính phủ: Quy định cắt giảm, đơn giản hóa thủ tục hành chính dựa trên dữ liệu"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Bản chính hoặc bản sao có chứng thực hoặc bản sao điện tử được chứng thực từ bản chính của giấy chứng nhận quyền sở hữu, quyền sử dụng hoặc giấy tờ thay thế được pháp luật quy định đối với tài sản mà pháp…",
+        "originals": 1,
+        "copies": 1,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "2.001406",
+    "name": "Chứng thực văn bản phân chia di sản mà di sản là động sản, quyền sử dụng đất, nhà ở",
+    "sector": "Chứng thực",
+    "agency": "Bộ Tư pháp",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-9daf-70da-8f48-223498332346",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Người yêu cầu chứng thực xuất trình một trong các giấy tờ sau: Căn cước điện tử; bản chính hoặc bản sao của Thẻ căn cước công dân hoặc Thẻ căn cước hoặc Giấy chứng nhận căn cước hoặc Hộ chiếu hoặc giấy tờ xuất nhập cảnh hoặc giấy tờ có giá trị đi lại quốc tế còn giá trị sử dụng và nộp 01 bộ hồ sơ yêu cầu chứng thực. + Người thực hiện chứng thực (hoặc người tiếp nhận hồ sơ) kiểm tra giấy tờ trong hồ sơ yêu cầu chứng thực, nếu đầy đủ, tại thời điểm chứng thực các bên tham gia phân chia di sản tự…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Theo quy định của cơ quan có thẩm quyền",
+      "feesText": "50.000 đồng",
+      "legalBasisText": "sửa đổi, bổ sung một số nghị định để cắt giảm, đơn giản hóa thủ tục hành chính, điều kiện kinh doanh thuộc phạm vi quản lý của Bộ Tư pháp.; Về cấp bản sao từ sổ gốc, chứng thực bản sao từ bản chính, chứng thực chữ ký và chứng thực hợp đồng, giao dịch; Nghị quyết số 66.7/2025/NQ-CP của Chính phủ: Quy định cắt giảm, đơn giản hóa thủ tục hành chính dựa trên dữ liệu"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Bản chính hoặc bản sao có chứng thực hoặc bản sao điện tử được chứng thực từ bản chính của giấy chứng nhận quyền sở hữu, quyền sử dụng hoặc giấy tờ thay thế được pháp luật quy định đối với tài sản mà pháp luật quy định…",
+        "originals": 1,
+        "copies": 1,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      }
+    ]
+  },
+  {
+    "code": "3.000323",
+    "name": "Đăng ký giám sát việc giám hộ",
+    "sector": "Hộ tịch",
+    "agency": "Bộ Tư pháp",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bfd-a5b3-74a8-b670-0ffe3cefb7e3",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Trình tự thực hiện",
+          "description": "Nếu lựa chọn hình thức nộp hồ sơ trực tiếp, người yêu cầu đăng ký giám sát việc giám hộ nộp hồ sơ đăng ký giám sát việc giám hộ tại Trung tâm Phục vụ hành chính công nơi cư trú của người được giám hộ; nộp lệ phí nếu thuộc trường hợp phải nộp lệ phí đăng ký giám sát việc giám hộ; nộp phí cấp bản sao Trích lục đăng ký giám sát việc giám hộ nếu có yêu cầu cấp bản sao Trích lục đăng ký giám sát việc giám hộ. - Nếu lựa chọn hình thức nộp hồ sơ trực tuyến, người yêu cầu đăng ký giám sát việc giám hộ…",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        }
+      ],
+      "durationText": "Khoảng 3 ngày kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Thông tư quy định chi tiết một số điều và biện pháp thi hành Nghị định số 87/2020/NĐ-CP ngày 28 tháng 7 năm 2020 của Chính phủ quy định về Cơ sở dữ liệu hộ tịch điện tử, đăng ký hộ tịch trực tuyến; Nghị định sửa đổi, bổ sung một số nghị định để cắt giảm, đơn giản hóa thủ tục hành chính, điều kiện kinh doanh thuộc phạm vi quản lý của Bộ Tư pháp; Nghị định quy định về Cơ sở dữ liệu hộ tịch điện tử, đăng ký hộ tịch trực tuyến"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Văn bản ủy quyền theo quy định của pháp luật trong trường hợp ủy quyền thực hiện việc đăng ký giám sát việc giám hộ. Trường hợp người được ủy quyền là ông, bà, cha, mẹ, con, vợ, chồng, anh, chị, em ruột của người ủy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Văn bản là căn cứ chứng minh việc thoả thuận cử/chọn người giám sát giám hộ theo quy định của Bộ luật Dân sự.",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Giấy tờ có giá trị chứng minh thông tin về cư trú trong trường hợp cơ quan đăng ký hộ tịch không thể khai thác được thông tin về nơi cư trú của công dân theo các phương thức quy định tại khoản 2 Điều 14 Nghị định số…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SYSTEM_LOOKUP"
+      },
+      {
+        "code": "D4",
+        "name": "Hộ chiếu/Thẻ căn cước công dân/Thẻ căn cước/Căn cước điện tử/Giấy chứng nhận căn cước hoặc các giấy tờ khác có dán ảnh và thông tin cá nhân do cơ quan có thẩm quyền cấp, còn giá trị sử dụng (sau đây gọi tắt là giấy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D5",
+        "name": "Giấy tờ do cơ quan có thẩm quyền của nước ngoài cấp, công chứng hoặc xác nhận để sử dụng cho việc đăng ký hộ tịch tại Việt Nam phải được hợp pháp hóa lãnh sự theo quy định của pháp luật, trừ trường hợp được miễn theo…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D6",
+        "name": "Bản chụp các giấy tờ gửi kèm theo hồ sơ đăng ký giám sát việc giám hộ trực tuyến phải bảo đảm rõ nét, đầy đủ, toàn vẹn về nội dung, là bản chụp bằng máy ảnh, điện thoại hoặc được chụp, được quét bằng thiết bị điện tử,…",
+        "originals": 0,
+        "copies": 0,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D7",
+        "name": "Tờ khai đăng ký giám sát việc giám hộ theo mẫu (nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tiếp hoặc gửi hồ sơ qua hệ thống bưu chính);",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 7,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D8",
+        "name": "Mẫu hộ tịch điện tử tương tác đăng ký giám sát việc giám hộ (do người yêu cầu cung cấp thông tin theo hướng dẫn trên Cổng dịch vụ công, nếu người có yêu cầu lựa chọn nộp hồ sơ theo hình thức trực tuyến);",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 8,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  },
+  {
+    "code": "3.000333",
+    "name": "Cấp Phiếu Lý lịch tư pháp cho công dân Việt Nam, người nước ngoài đang cư trú tại Việt Nam, người Việt Nam đang cư trú ở nước ngoài",
+    "sector": "Lý lịch tư pháp",
+    "agency": "Công an tỉnh",
+    "audience": "CITIZEN",
+    "sourceUrl": "https://dichvucong.gov.vn/tra-cuu-thu-tuc/019d2bf7-bd79-75fb-a4c6-ba1bf85d20ad",
+    "version": {
+      "version": "1.0",
+      "status": "ACTIVE",
+      "effectiveFrom": "2026-01-01T00:00:00+07:00",
+      "stepsJson": [
+        {
+          "order": 1,
+          "title": "Bước 1",
+          "description": "Người có yêu cầu cấp Phiếu Lý lịch tư pháp (sau đây gọi tắt là Người yêu cầu) đăng nhập bằng tài khoản định danh mức độ 2 trên cổng dịch vụ công hoặc Ứng dụng định danh quốc gia; chọn Cấp Phiếu Lý lịch tư pháp tại Nhóm dịch vụ Thủ tục hành chính và làm theo hướng dẫn. -",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        },
+        {
+          "order": 2,
+          "title": "Bước 2",
+          "description": "Người yêu cầu kê khai chính xác, đầy đủ, trung thực các nội dung trong mẫu tờ khai cấp Phiếu Lý lịch tư pháp điện tử tương tác. -",
+          "example": "Có thể nộp trực tuyến qua Cổng Dịch vụ công Quốc gia hoặc nộp trực tiếp tại cơ quan tiếp nhận."
+        },
+        {
+          "order": 3,
+          "title": "Bước 3",
+          "description": "Người yêu cầu chọn “Thông tin về thủ tục hành chính” và “Thông tin trả kết quả”. -",
+          "example": "Theo dõi tiến độ xử lý và nhận thông báo kết quả theo lịch hẹn."
+        },
+        {
+          "order": 4,
+          "title": "Bước 4",
+          "description": "Người yêu cầu xác nhận thông tin hồ sơ, chọn loại đối tượng nộp phí và cam đoan lời khai trước khi gửi yêu cầu. -",
+          "example": "Đối chiếu kỹ thông tin với cơ quan có thẩm quyền trước khi hoàn tất."
+        },
+        {
+          "order": 5,
+          "title": "Bước 5",
+          "description": "Cổng dịch vụ công, Ứng dụng định danh quốc gia thông báo mã số hồ sơ, ngày hẹn trả kết quả và hướng dẫn nộp lệ phí cấp Phiếu Lý lịch tư pháp qua tin nhắn điện thoại hoặc địa chỉ thư điện tử hoặc thông báo trên Ứng dụng định danh quốc gia để người có yêu cầu cấp Phiếu Lý lịch tư pháp nộp tiền lệ phí qua tiện ích thanh toán được tích hợp trên Cổng dịch vụ công, Ứng dụng định danh quốc gia. -",
+          "example": "Chuẩn bị đầy đủ giấy tờ theo danh mục hồ sơ bên dưới trước khi nộp."
+        },
+        {
+          "order": 6,
+          "title": "Bước 6",
+          "description": "Người yêu cầu theo dõi tình trạng giải quyết hồ sơ trên Cổng dịch vụ công, Ứng dụng định danh quốc gia tại mục Cấp Phiếu Lý lịch tư pháp.",
+          "example": "Có thể nộp trực tuyến qua Cổng Dịch vụ công Quốc gia hoặc nộp trực tiếp tại cơ quan tiếp nhận."
+        }
+      ],
+      "durationText": "Khoảng 10 ngày kể từ ngày nhận đủ hồ sơ hợp lệ",
+      "feesText": "Không quy định thu phí hoặc theo mức phí công bố tại cổng DVCQG",
+      "legalBasisText": "Luật 28/2009/QH12"
+    },
+    "questions": [
+      {
+        "code": "province",
+        "orderNumber": 1,
+        "fieldType": "province",
+        "optionsJson": null,
+        "conditionJson": null,
+        "questionText": "Bạn thực hiện thủ tục tại tỉnh/thành phố nào?"
+      }
+    ],
+    "documents": [
+      {
+        "code": "D1",
+        "name": "Tờ khai yêu cầu cấp Phiếu Lý lịch tư pháp (Dùng cho cá nhân trong trường hợp ủy quyền yêu cầu cấp Phiếu Lý lịch tư pháp số 1 và cá nhân là cha, mẹ của người chưa thành niên yêu cầu cấp Phiếu Lý lịch tư pháp số 1, số 2),…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 1,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D2",
+        "name": "Tờ khai yêu cầu cấp Phiếu Lý lịch tư pháp điện tử tương tác (Dùng cho cá nhân trong trường hợp ủy quyền yêu cầu cấp Phiếu Lý lịch tư pháp số 1 và cá nhân là cha, mẹ của người chưa thành niên yêu cầu cấp Phiếu Lý lịch tư…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 2,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D3",
+        "name": "Bản sao Thẻ Căn cước hoặc thẻ Căn cước công dân hoặc Giấy xác nhận căn cước hoặc Hộ chiếu của người được cấp Phiếu (Xuất trình bản chính để đối chiếu. Trường hợp không có bản chính thì nộp bản sao có chứng thực theo quy…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 3,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D4",
+        "name": "Tờ khai yêu cầu cấp Phiếu Lý lịch tư pháp (Dùng cho cá nhân có yêu cầu cấp Phiếu Lý lịch tư pháp), Mẫu số 01/2025/LLTP;",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 4,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D5",
+        "name": "Văn bản ủy quyền yêu cầu cấp Phiếu Lý lịch tư pháp số 1 (người được ủy quyền phải xuất trình Thẻ Căn cước hoặc Thẻ Căn cước công dân hoặc Giấy chứng nhận căn cước hoặc Hộ chiếu khi thực hiện thủ tục yêu cầu cấp Phiếu Lý…",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 5,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      },
+      {
+        "code": "D6",
+        "name": "Tờ khai yêu cầu cấp Phiếu Lý lịch tư pháp điện tử tương tác (Dùng cho cá nhân có yêu cầu cấp Phiếu Lý lịch tư pháp), Mẫu số 04/2025/LLTP;",
+        "originals": 1,
+        "copies": 0,
+        "orderNumber": 6,
+        "conditionJson": null,
+        "reasonText": null,
+        "submissionType": "SUBMIT"
+      }
+    ]
+  }
+]

@@ -39,9 +39,9 @@ export default function ValidationReport({
 
   if (valid) {
     return (
-      <div className="w-full max-w-3xl mx-auto p-4 space-y-6">
+      <div className="validation-result-enter w-full max-w-3xl mx-auto p-4 space-y-6">
         <div className="card border border-emerald-200 bg-emerald-50 p-6 rounded-xl shadow-sm text-center space-y-4">
-          <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+          <div className="validation-success-icon w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
             <svg
               className="w-6 h-6"
               fill="none"
@@ -69,7 +69,7 @@ export default function ValidationReport({
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto p-4 space-y-6">
+    <div className="validation-result-enter w-full max-w-3xl mx-auto p-4 space-y-6">
       {/* Header and Saving mode Badge */}
       <div className="flex items-center justify-between border-b border-slate-200 pb-4">
         <div>
@@ -127,11 +127,12 @@ export default function ValidationReport({
           return (
             <div
               key={index}
-              className={`p-4 rounded-xl border-l-4 shadow-sm transition duration-150 ${
+              className={`validation-result-item p-4 rounded-xl border-l-4 shadow-sm transition duration-150 ${
                 isWarning
                   ? 'bg-amber-50/70 border-amber-500 text-amber-950 hover:bg-amber-50'
                   : 'bg-red-50/70 border-red-500 text-red-950 hover:bg-red-50'
               }`}
+              style={{ animationDelay: `${Math.min(index, 5) * 70}ms` }}
             >
               <div className="flex flex-col space-y-2">
                 <div className="flex items-center flex-wrap gap-2">
