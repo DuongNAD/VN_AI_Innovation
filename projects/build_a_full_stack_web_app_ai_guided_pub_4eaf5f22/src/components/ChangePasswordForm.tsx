@@ -25,15 +25,22 @@ export default function ChangePasswordForm() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
 
-  const strengthError = next.length > 0 ? passwordStrengthError(next) : null;
-  const mismatch = confirm.length > 0 && next !== confirm;
-  const sameAsCurrent = next.length > 0 && next === current;
+  // The server trims both fields via requireString before validating, so mirror
+  // that here — validate and submit the trimmed values so the client's instant
+  // feedback matches what the server will actually accept.
+  const trimmedCurrent = current.trim();
+  const trimmedNext = next.trim();
+  const trimmedConfirm = confirm.trim();
+
+  const strengthError = trimmedNext.length > 0 ? passwordStrengthError(trimmedNext) : null;
+  const mismatch = trimmedConfirm.length > 0 && trimmedNext !== trimmedConfirm;
+  const sameAsCurrent = trimmedNext.length > 0 && trimmedNext === trimmedCurrent;
 
   const canSubmit =
     !busy &&
-    current.length > 0 &&
-    next.length > 0 &&
-    confirm.length > 0 &&
+    trimmedCurrent.length > 0 &&
+    trimmedNext.length > 0 &&
+    trimmedConfirm.length > 0 &&
     !strengthError &&
     !mismatch &&
     !sameAsCurrent;
@@ -42,16 +49,16 @@ export default function ChangePasswordForm() {
     event.preventDefault();
     setNotice(null);
 
-    const strength = passwordStrengthError(next);
+    const strength = passwordStrengthError(trimmedNext);
     if (strength) {
       setNotice({ type: 'error', message: strength });
       return;
     }
-    if (next !== confirm) {
+    if (trimmedNext !== trimmedConfirm) {
       setNotice({ type: 'error', message: 'Xác nhận mật khẩu không khớp.' });
       return;
     }
-    if (next === current) {
+    if (trimmedNext === trimmedCurrent) {
       setNotice({ type: 'error', message: 'Mật khẩu mới phải khác mật khẩu hiện tại.' });
       return;
     }
@@ -62,7 +69,7 @@ export default function ChangePasswordForm() {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentPassword: current, newPassword: next }),
+        body: JSON.stringify({ currentPassword: trimmedCurrent, newPassword: trimmedNext }),
       });
       const result = (await response.json()) as {
         message?: string;

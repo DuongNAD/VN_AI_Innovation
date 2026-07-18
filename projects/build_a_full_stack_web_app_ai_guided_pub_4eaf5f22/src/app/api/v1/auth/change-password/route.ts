@@ -59,7 +59,9 @@ export const POST = handleRoute(async (req: Request) => {
 
   const currentOk = await verifyPassword(currentPassword, user.passwordHash);
   if (!currentOk) {
-    rateLimitConsume('auth-change-password-fail', req);
+    // Consume with the SAME 15-min window as the check above — otherwise the
+    // shared bucket entry resets every 60s and the lockout never accumulates.
+    rateLimitConsume('auth-change-password-fail', req, 900000);
     throw new AppError(401, 'INVALID_CURRENT_PASSWORD', 'Mật khẩu hiện tại không đúng.', {
       field: 'currentPassword',
     });
