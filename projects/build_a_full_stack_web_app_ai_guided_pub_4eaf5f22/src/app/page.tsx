@@ -1,248 +1,265 @@
-import React from 'react';
 import Link from 'next/link';
 import SourceFooter from '@/components/SourceFooter';
 
+const benefits = [
+  {
+    title: 'Nhanh chóng',
+    description: 'Chỉ 5–10 phút',
+    tone: 'green',
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m5 12.5 4.2 4.2L19 7" />
+      </svg>
+    ),
+  },
+  {
+    title: 'Chính xác',
+    description: 'Theo quy định mới nhất',
+    tone: 'blue',
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="8.5" />
+        <circle cx="12" cy="12" r="3.5" />
+      </svg>
+    ),
+  },
+  {
+    title: 'Dễ hiểu',
+    description: 'Hướng dẫn từng bước',
+    tone: 'purple',
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 5.8c2.7-.9 5.3-.2 8 1.5v11c-2.7-1.7-5.3-2.4-8-1.5v-11Zm16 0c-2.7-.9-5.3-.2-8 1.5v11c2.7-1.7 5.3-2.4 8-1.5v-11Z" />
+      </svg>
+    ),
+  },
+];
+
+const steps = [
+  { number: '1', title: 'Nhập câu hỏi', description: 'Mô tả thủ tục bạn cần', tone: 'blue' },
+  { number: '2', title: 'AI phân tích', description: 'Tìm thông tin chính xác', tone: 'indigo' },
+  { number: '3', title: 'Nhận hướng dẫn', description: 'Xem chi tiết từng bước', tone: 'purple' },
+];
+
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 text-slate-900 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto w-full space-y-12 my-auto">
-        {/* Hero Section */}
-        <div className="text-center space-y-6">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold mb-4">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/>
-            </svg>
-            Phiên bản Beta - Miễn phí hoàn toàn
-          </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 leading-tight">
-            Trợ lý AI hướng dẫn<br />thủ tục hành chính
-          </h1>
-          <p className="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
-            Hỗ trợ giải đáp thắc mắc, chuẩn bị hồ sơ và hướng dẫn chi tiết các thủ tục hành chính công trực tuyến một cách dễ dàng và chính xác.
-          </p>
-          
-          {/* Value Props */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto pt-4">
-            <div className="flex items-center gap-3 text-left">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <div>
-                <p className="font-semibold text-slate-900">Nhanh chóng</p>
-                <p className="text-sm text-slate-500">Chỉ 5-10 phút</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 text-left">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <p className="font-semibold text-slate-900">Chính xác</p>
-                <p className="text-sm text-slate-500">Theo quy định mới nhất</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 text-left">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-              </div>
-              <div>
-                <p className="font-semibold text-slate-900">Dễ hiểu</p>
-                <p className="text-sm text-slate-500">Hướng dẫn từng bước</p>
-              </div>
-            </div>
-          </div>
+    <main className="home-page">
+      <section className="home-hero" aria-labelledby="home-title">
+        <div className="home-hero__veil" aria-hidden="true" />
+
+        <div className="scene-life" aria-hidden="true">
+          <svg className="scene-birds scene-birds--left" viewBox="0 0 140 64">
+            <g className="scene-bird scene-bird--one">
+              <path d="M5 25c9-10 18-10 27 0 9-10 18-10 27 0" />
+            </g>
+            <g className="scene-bird scene-bird--two">
+              <path d="M78 12c7-8 14-8 21 0 7-8 14-8 21 0" />
+            </g>
+            <g className="scene-bird scene-bird--three">
+              <path d="M90 48c6-7 12-7 18 0 6-7 12-7 18 0" />
+            </g>
+          </svg>
+
+          <svg className="scene-birds scene-birds--right" viewBox="0 0 105 52">
+            <g className="scene-bird scene-bird--one">
+              <path d="M4 22c8-9 16-9 24 0 8-9 16-9 24 0" />
+            </g>
+            <g className="scene-bird scene-bird--two">
+              <path d="M58 38c6-7 12-7 18 0 6-7 12-7 18 0" />
+            </g>
+          </svg>
+
+          <svg className="scene-dragonfly scene-dragonfly--left" viewBox="0 0 66 48">
+            <g className="dragonfly-wings">
+              <ellipse cx="25" cy="16" rx="15" ry="7" transform="rotate(-25 25 16)" />
+              <ellipse cx="41" cy="16" rx="15" ry="7" transform="rotate(25 41 16)" />
+              <ellipse cx="25" cy="31" rx="13" ry="6" transform="rotate(24 25 31)" />
+              <ellipse cx="41" cy="31" rx="13" ry="6" transform="rotate(-24 41 31)" />
+            </g>
+            <path className="dragonfly-body" d="M33 8v31m0-31-4-5m4 5 4-5" />
+          </svg>
+
+          <svg className="scene-dragonfly scene-dragonfly--right" viewBox="0 0 66 48">
+            <g className="dragonfly-wings">
+              <ellipse cx="25" cy="16" rx="15" ry="7" transform="rotate(-25 25 16)" />
+              <ellipse cx="41" cy="16" rx="15" ry="7" transform="rotate(25 41 16)" />
+              <ellipse cx="25" cy="31" rx="13" ry="6" transform="rotate(24 25 31)" />
+              <ellipse cx="41" cy="31" rx="13" ry="6" transform="rotate(-24 41 31)" />
+            </g>
+            <path className="dragonfly-body" d="M33 8v31m0-31-4-5m4 5 4-5" />
+          </svg>
+
+          <svg className="scene-cloud scene-cloud--left" viewBox="0 0 190 72">
+            <path d="M8 52c16 0 21-12 20-21 16 5 21-9 21-17 18 2 25 13 23 24 15-4 25 4 25 14h85" />
+          </svg>
+
+          <div className="scene-petals scene-petals--one"><span /></div>
+          <div className="scene-petals scene-petals--two"><span /></div>
+          <div className="scene-petals scene-petals--three"><span /></div>
+
+          <div className="scene-ripple scene-ripple--one"><span /><span /></div>
+          <div className="scene-ripple scene-ripple--two"><span /><span /></div>
+          <div className="scene-water-shimmer" />
         </div>
 
-        {/* Search Form */}
-        <form method="GET" action="/chat" className="max-w-2xl mx-auto">
-          <div className="relative flex items-center bg-white rounded-2xl shadow-lg border-2 border-slate-200 p-2 focus-within:ring-4 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
+        <div className="home-hero__content">
+          <div className="beta-badge">
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M10 2.2a5.2 5.2 0 0 0-5.2 5.2v3.1l-1.2 1.2c-.6.6-.2 1.6.7 1.6h11.4c.9 0 1.3-1 .7-1.6l-1.2-1.2V7.4A5.2 5.2 0 0 0 10 2.2Zm0 15.6a2.7 2.7 0 0 0 2.6-2H7.4a2.7 2.7 0 0 0 2.6 2Z" />
+            </svg>
+            Phiên bản Beta – Miễn phí hoàn toàn
+          </div>
+
+          <h1 id="home-title" className="home-title">
+            Trợ lý AI hướng dẫn
+            <span>thủ tục hành chính</span>
+          </h1>
+
+          <p className="home-subtitle">
+            Hỗ trợ giải đáp thắc mắc, chuẩn bị hồ sơ và hướng dẫn chi tiết các thủ tục
+            hành chính công trực tuyến một cách dễ dàng và chính xác.
+          </p>
+
+          <div className="benefit-row" aria-label="Lợi ích">
+            {benefits.map((benefit) => (
+              <div className="benefit" key={benefit.title}>
+                <div className={`benefit__icon benefit__icon--${benefit.tone}`}>{benefit.icon}</div>
+                <div>
+                  <strong>{benefit.title}</strong>
+                  <span>{benefit.description}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <form method="GET" action="/chat" className="hero-search">
+            <label className="sr-only" htmlFor="procedure-search">
+              Mô tả thủ tục bạn muốn thực hiện
+            </label>
             <input
+              id="procedure-search"
               type="text"
               name="q"
               placeholder="Ví dụ: Tôi muốn đăng ký kết hôn"
-              className="w-full pl-4 pr-12 py-4 bg-transparent border-none text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-0 text-base md:text-lg min-h-[56px]"
+              autoComplete="off"
               required
             />
-            <button
-              type="submit"
-              className="absolute right-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl p-4 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition-all min-h-[56px] flex items-center justify-center shadow-lg"
-              aria-label="Tìm kiếm"
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
+            <button type="submit" aria-label="Tìm kiếm">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="10.8" cy="10.8" r="6.8" />
+                <path d="m16 16 4.2 4.2" />
               </svg>
             </button>
-          </div>
-          <p className="text-center text-sm text-slate-500 mt-3">
-            💡 Bạn có thể mô tả bằng lời hoặc hỏi trực tiếp về thủ tục cần làm
+          </form>
+
+          <p className="search-hint">
+            <span aria-hidden="true">💡</span>
+            Bạn có thể mô tả bằng lời hoặc hỏi trực tiếp về thủ tục cần làm
           </p>
-        </form>
-
-        {/* How it works section */}
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-center text-slate-900 mb-8">Quy trình 3 bước đơn giản</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="relative text-center">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl flex items-center justify-center text-2xl font-bold shadow-lg mb-4">
-                1
-              </div>
-              <h3 className="font-bold text-lg text-slate-900 mb-2">Mô tả nhu cầu</h3>
-              <p className="text-sm text-slate-600">Nói cho AI biết bạn cần làm thủ tục gì</p>
-            </div>
-            <div className="relative text-center">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center text-2xl font-bold shadow-lg mb-4">
-                2
-              </div>
-              <h3 className="font-bold text-lg text-slate-900 mb-2">Trả lời câu hỏi</h3>
-              <p className="text-sm text-slate-600">AI sẽ hỏi thêm để hiểu rõ tình huống của bạn</p>
-            </div>
-            <div className="relative text-center">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl flex items-center justify-center text-2xl font-bold shadow-lg mb-4">
-                3
-              </div>
-              <h3 className="font-bold text-lg text-slate-900 mb-2">Nhận hướng dẫn</h3>
-              <p className="text-sm text-slate-600">Xem danh sách giấy tờ và điền biểu mẫu</p>
-            </div>
-          </div>
         </div>
 
-        {/* Popular procedures cards */}
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-center text-slate-900 mb-6">Thủ tục phổ biến</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Link
-              href="/chat?procedure=MARRIAGE_REGISTRATION"
-              className="group flex flex-col justify-between p-8 bg-white rounded-2xl shadow-lg border-2 border-slate-100 hover:border-blue-300 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
-            >
-              <div className="space-y-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-blue-200 text-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <svg
-                    className="w-7 h-7"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                    />
-                  </svg>
+        <div className="process-wrap">
+          <h2>Quy trình 3 bước đơn giản</h2>
+          <div className="process-bar">
+            {steps.map((step, index) => (
+              <div className="process-segment" key={step.number}>
+                <div className={`step-number step-number--${step.tone}`}>{step.number}</div>
+                <div className="step-copy">
+                  <strong>{step.title}</strong>
+                  <span>{step.description}</span>
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                  Đăng ký kết hôn
-                </h3>
-                <p className="text-base text-slate-600 leading-relaxed">
-                  Hướng dẫn chi tiết thủ tục đăng ký kết hôn trong nước, bao gồm chuẩn bị giấy tờ, điền tờ khai và nộp hồ sơ.
-                </p>
+                {index < steps.length - 1 && (
+                  <svg className="step-arrow" viewBox="0 0 42 18" aria-hidden="true">
+                    <path d="M1 9h34m-6-6 6 6-6 6" />
+                  </svg>
+                )}
               </div>
-              <div className="mt-6 flex items-center text-base font-semibold text-blue-600 group-hover:text-blue-700 group-hover:gap-2 transition-all">
-                Bắt đầu ngay
-                <svg
-                  className="w-5 h-5 ml-1 transform group-hover:translate-x-1 transition-transform"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 5l7 7-7 7"
-                  />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="popular-section" aria-labelledby="popular-title">
+        <div className="popular-section__inner">
+          <p className="section-eyebrow">Bắt đầu nhanh</p>
+          <h2 id="popular-title">Thủ tục phổ biến</h2>
+          <p className="section-lead">Chọn một thủ tục thường gặp để nhận hướng dẫn ngay.</p>
+
+          <div className="procedure-grid">
+            <Link href="/chat?procedure=MARRIAGE_REGISTRATION" className="procedure-card">
+              <div className="procedure-card__icon procedure-card__icon--blue">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4.3 6.3a4.5 4.5 0 0 0 0 6.4L12 20.4l7.7-7.7a4.5 4.5 0 0 0-6.4-6.4L12 7.6l-1.3-1.3a4.5 4.5 0 0 0-6.4 0Z" />
                 </svg>
+              </div>
+              <div>
+                <h3>Đăng ký kết hôn</h3>
+                <p>Chuẩn bị giấy tờ, điền tờ khai và nộp hồ sơ đăng ký kết hôn trong nước.</p>
+                <span className="procedure-card__link">Bắt đầu ngay →</span>
               </div>
             </Link>
 
-            <Link
-              href="/chat?procedure=BIRTH_REGISTRATION"
-              className="group flex flex-col justify-between p-8 bg-white rounded-2xl shadow-lg border-2 border-slate-100 hover:border-indigo-300 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
-            >
-              <div className="space-y-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <svg
-                    className="w-7 h-7"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                  Đăng ký khai sinh
-                </h3>
-                <p className="text-base text-slate-600 leading-relaxed">
-                  Tìm hiểu các bước đăng ký khai sinh cho trẻ mới sinh, các giấy tờ cần chuẩn bị từ bệnh viện và gia đình.
-                </p>
-              </div>
-              <div className="mt-6 flex items-center text-base font-semibold text-indigo-600 group-hover:text-indigo-700 group-hover:gap-2 transition-all">
-                Bắt đầu ngay
-                <svg
-                  className="w-5 h-5 ml-1 transform group-hover:translate-x-1 transition-transform"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 5l7 7-7 7"
-                  />
+            <Link href="/chat?procedure=BIRTH_REGISTRATION" className="procedure-card">
+              <div className="procedure-card__icon procedure-card__icon--purple">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="8.5" />
+                  <path d="M12 7.5v9M7.5 12h9" />
                 </svg>
+              </div>
+              <div>
+                <h3>Đăng ký khai sinh</h3>
+                <p>Tìm hiểu các bước và giấy tờ cần chuẩn bị để đăng ký khai sinh cho trẻ.</p>
+                <span className="procedure-card__link">Bắt đầu ngay →</span>
+              </div>
+            </Link>
+
+            <Link href="/chat?q=đăng%20ký%20thường%20trú" className="procedure-card">
+              <div className="procedure-card__icon procedure-card__icon--orange">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m3.5 10 8.5-7 8.5 7" />
+                  <path d="M5.5 9v11h13V9M9.5 20v-6h5v6" />
+                </svg>
+              </div>
+              <div>
+                <h3>Đăng ký thường trú</h3>
+                <p>Hướng dẫn thủ tục đăng ký thường trú cho cá nhân và hộ gia đình.</p>
+                <span className="procedure-card__link">Bắt đầu ngay →</span>
+              </div>
+            </Link>
+
+            <Link href="/chat?q=cấp%20lại%20CCCD" className="procedure-card">
+              <div className="procedure-card__icon procedure-card__icon--cyan">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="5" width="18" height="14" rx="2" />
+                  <circle cx="9" cy="11" r="2.2" />
+                  <path d="M5.8 16c.7-1.7 1.8-2.5 3.2-2.5s2.5.8 3.2 2.5M15 10h3.5M15 14h3.5" />
+                </svg>
+              </div>
+              <div>
+                <h3>Cấp lại CCCD</h3>
+                <p>Hướng dẫn cấp lại Căn cước công dân khi bị mất hoặc hư hỏng.</p>
+                <span className="procedure-card__link">Bắt đầu ngay →</span>
               </div>
             </Link>
           </div>
-        </div>
-      </div>
 
-      {/* Footer */}
-      <footer className="mt-16 w-full max-w-3xl mx-auto space-y-6 text-center">
-        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm font-medium text-slate-500">
-          <Link href="/sources" className="hover:text-blue-600 transition-colors min-h-[44px] flex items-center">
-            Nguồn dữ liệu & Phiên bản
-          </Link>
-          <span className="text-slate-300 self-center">|</span>
-          <Link href="/widget-demo" className="hover:text-blue-600 transition-colors min-h-[44px] flex items-center">
-            Bản thử nghiệm Widget
-          </Link>
-          <span className="text-slate-300 self-center">|</span>
-          <Link href="/admin" className="hover:text-blue-600 transition-colors min-h-[44px] flex items-center">
-            Trang quản trị
+          <Link href="/chat" className="all-procedures-link">
+            Xem tất cả thủ tục
+            <span aria-hidden="true">→</span>
           </Link>
         </div>
-        <div className="border-t border-slate-200 pt-6">
+
+        <footer className="home-footer">
+          <nav aria-label="Liên kết bổ sung">
+            <Link href="/sources">Nguồn dữ liệu &amp; Phiên bản</Link>
+            <span aria-hidden="true">•</span>
+            <Link href="/widget-demo">Bản thử nghiệm Widget</Link>
+            <span aria-hidden="true">•</span>
+            <Link href="/admin">Trang quản trị</Link>
+          </nav>
           <SourceFooter showDisclaimer />
-        </div>
-      </footer>
-    </div>
+        </footer>
+      </section>
+    </main>
   );
 }

@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 export default function WidgetDemoPage() {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
+    <div className="min-h-screen  text-slate-800 flex flex-col font-sans">
       {/* Top Banner */}
       <div className="bg-amber-500 text-white text-center py-2.5 px-4 font-semibold text-sm shadow-inner flex items-center justify-center gap-2">
         <svg

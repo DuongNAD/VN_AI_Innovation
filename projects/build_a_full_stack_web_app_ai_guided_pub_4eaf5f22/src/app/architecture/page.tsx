@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export default function ArchitecturePage() {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen  text-slate-900 font-sans py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto space-y-12">
         {/* Header Section */}
         <div className="text-center space-y-4">
@@ -40,7 +40,7 @@ export default function ArchitecturePage() {
           {/* 3-lane Diagram Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
             {/* Lane 1: User & Business Flow */}
-            <div className="bg-slate-50 rounded-xl p-6 border border-slate-200/80 flex flex-col space-y-4 shadow-sm">
+            <div className=" rounded-xl p-6 border border-slate-200/80 flex flex-col space-y-4 shadow-sm">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold">1</span>
                 <h3 className="font-bold text-slate-800 text-base">Luồng Nghiệp vụ & Người dùng</h3>
@@ -107,7 +107,7 @@ export default function ArchitecturePage() {
             </div>
 
             {/* Lane 2: AI Seams with Fallbacks */}
-            <div className="bg-slate-50 rounded-xl p-6 border border-slate-200/80 flex flex-col space-y-4 shadow-sm">
+            <div className=" rounded-xl p-6 border border-slate-200/80 flex flex-col space-y-4 shadow-sm">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-slate-950 text-xs font-bold">2</span>
                 <h3 className="font-bold text-slate-800 text-base">Tích hợp AI & Fallback</h3>
@@ -159,7 +159,7 @@ export default function ArchitecturePage() {
             </div>
 
             {/* Lane 3: Data Layer */}
-            <div className="bg-slate-50 rounded-xl p-6 border border-slate-200/80 flex flex-col space-y-4 shadow-sm">
+            <div className=" rounded-xl p-6 border border-slate-200/80 flex flex-col space-y-4 shadow-sm">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white text-xs font-bold">3</span>
                 <h3 className="font-bold text-slate-800 text-base">Lớp dữ liệu (Data Layer)</h3>
@@ -239,7 +239,7 @@ export default function ArchitecturePage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <tr className="border-b border-slate-200  text-xs font-semibold uppercase tracking-wider text-slate-500">
                   <th className="px-4 py-3 font-semibold">Mô hình (Model)</th>
                   <th className="px-4 py-3 font-semibold">Thành phần code</th>
                   <th className="px-4 py-3 font-semibold">Vai trò chức năng (Role)</th>
@@ -247,7 +247,7 @@ export default function ArchitecturePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
-                <tr className="hover:bg-slate-50/50 transition-colors">
+                <tr className="hover:/50 transition-colors">
                   <td className="px-4 py-4 font-bold text-slate-900">gpt-4o-mini</td>
                   <td className="px-4 py-4 font-mono text-xs text-slate-550">llm.ts</td>
                   <td className="px-4 py-4 text-slate-600 leading-relaxed">
@@ -257,7 +257,7 @@ export default function ArchitecturePage() {
                     Chạy qua endpoint tương thích <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">OPENAI_BASE_URL</code>. Nếu lỗi, tự động hạ cấp xuống <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">mockLlm</code> với cờ <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">degraded=true</code>.
                   </td>
                 </tr>
-                <tr className="hover:bg-slate-50/50 transition-colors">
+                <tr className="hover:/50 transition-colors">
                   <td className="px-4 py-4 font-bold text-slate-900">whisper-1</td>
                   <td className="px-4 py-4 font-mono text-xs text-slate-550">stt.ts</td>
                   <td className="px-4 py-4 text-slate-600 leading-relaxed">
@@ -267,7 +267,7 @@ export default function ArchitecturePage() {
                     Nhận file âm thanh đã qua kiểm tra định dạng và thời lượng. Fallback tự động xuống <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">mockStt</code> với kết quả mặc định.
                   </td>
                 </tr>
-                <tr className="hover:bg-slate-50/50 transition-colors">
+                <tr className="hover:/50 transition-colors">
                   <td className="px-4 py-4 font-bold text-slate-900">tts-1</td>
                   <td className="px-4 py-4 font-mono text-xs text-slate-550">tts.ts</td>
                   <td className="px-4 py-4 text-slate-600 leading-relaxed">
@@ -293,7 +293,7 @@ export default function ArchitecturePage() {
             </p>
           </div>
 
-          <div className="bg-slate-50 rounded-xl border border-slate-150 p-4">
+          <div className=" rounded-xl border border-slate-150 p-4">
             <div className="divide-y divide-slate-200/60 font-mono text-xs">
               <div className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <span className="font-bold text-blue-600">POST /api/v1/procedures/search</span>

@@ -13,7 +13,7 @@ export default async function ChatPage({
   const embed = params.embed === '1';
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
+    <div className="flex flex-col min-h-screen ">
       {!embed && (
         <header className="sticky top-0 z-10 p-4 bg-white border-b shadow-sm">
           <div className="max-w-4xl mx-auto space-y-3">
