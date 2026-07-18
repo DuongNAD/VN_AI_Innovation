@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import Link from 'next/link';
 import SourceFooter from '@/components/SourceFooter';
 
@@ -123,7 +123,7 @@ const BUSINESS_CARDS: ProcedureCardDef[] = [
     description:
       'Chưa thấy thủ tục bạn cần? Hỏi trực tiếp trợ lý — hệ thống sẽ hướng dẫn hoặc chỉ ra danh mục đang hỗ trợ.',
     tone: 'purple',
-    cta: 'Hỏi trợ lý →',
+    cta: 'Hỏi trợ lý',
     icon: (
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M8.2 9c.5-1.2 2-2 3.8-2 2.2 0 4 1.3 4 3 0 1.4-1.3 2.6-3 2.9-.5.1-1 .5-1 1.1m0 3h.01" />
@@ -137,10 +137,17 @@ function ProcedureCard({ card }: { card: ProcedureCardDef }) {
   return (
     <Link href={card.href} className="procedure-card">
       <div className={`procedure-card__icon procedure-card__icon--${card.tone}`}>{card.icon}</div>
-      <div>
-        <h3>{card.title}</h3>
+      <div className="procedure-card__body">
+        <div className="procedure-card__heading">
+          <h4>{card.title}</h4>
+          <span className="procedure-card__arrow" aria-hidden="true">
+            <svg viewBox="0 0 20 20">
+              <path d="M4 10h11m-4-4 4 4-4 4" />
+            </svg>
+          </span>
+        </div>
         <p>{card.description}</p>
-        <span className="procedure-card__link">{card.cta ?? 'Bắt đầu ngay →'}</span>
+        <span className="procedure-card__link">{card.cta ?? 'Xem hướng dẫn'}</span>
       </div>
     </Link>
   );
@@ -208,13 +215,6 @@ export default function Home() {
         </div>
 
         <div className="home-hero__content">
-          <div className="beta-badge">
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M10 2.2a5.2 5.2 0 0 0-5.2 5.2v3.1l-1.2 1.2c-.6.6-.2 1.6.7 1.6h11.4c.9 0 1.3-1 .7-1.6l-1.2-1.2V7.4A5.2 5.2 0 0 0 10 2.2Zm0 15.6a2.7 2.7 0 0 0 2.6-2H7.4a2.7 2.7 0 0 0 2.6 2Z" />
-            </svg>
-            Phiên bản Beta – Miễn phí hoàn toàn
-          </div>
-
           <h1 id="home-title" className="home-title">
             Trợ lý AI hướng dẫn
             <span>thủ tục hành chính</span>
@@ -267,18 +267,20 @@ export default function Home() {
           <h2>Quy trình 3 bước đơn giản</h2>
           <div className="process-bar">
             {steps.map((step, index) => (
-              <div className="process-segment" key={step.number}>
-                <div className={`step-number step-number--${step.tone}`}>{step.number}</div>
-                <div className="step-copy">
-                  <strong>{step.title}</strong>
-                  <span>{step.description}</span>
+              <Fragment key={step.number}>
+                <div className="process-segment">
+                  <div className={`step-number step-number--${step.tone}`}>{step.number}</div>
+                  <div className="step-copy">
+                    <strong>{step.title}</strong>
+                    <span>{step.description}</span>
+                  </div>
                 </div>
                 {index < steps.length - 1 && (
                   <svg className="step-arrow" viewBox="0 0 42 18" aria-hidden="true">
                     <path d="M1 9h34m-6-6 6 6-6 6" />
                   </svg>
                 )}
-              </div>
+              </Fragment>
             ))}
           </div>
         </div>
@@ -286,39 +288,73 @@ export default function Home() {
 
       <section className="popular-section" aria-labelledby="popular-title">
         <div className="popular-section__inner">
-          <p className="section-eyebrow">Bắt đầu nhanh</p>
-          <h2 id="popular-title">Thủ tục phổ biến</h2>
-          <p className="section-lead">Chọn một thủ tục thường gặp để nhận hướng dẫn ngay.</p>
+          <header className="popular-heading">
+            <div>
+              <p className="section-eyebrow">Bắt đầu nhanh</p>
+              <h2 id="popular-title">Thủ tục phổ biến</h2>
+              <p className="section-lead">Chọn nhu cầu phù hợp để nhận hướng dẫn từng bước.</p>
+            </div>
+            <Link href="/user/procedures" className="all-procedures-link">
+              Xem tất cả thủ tục
+              <span aria-hidden="true">→</span>
+            </Link>
+          </header>
 
-          <p className="section-eyebrow" id="citizen-procedures">
-            Dành cho Công dân
-          </p>
-          <div className="procedure-grid" aria-labelledby="citizen-procedures">
-            {CITIZEN_CARDS.map((card) => (
-              <ProcedureCard key={card.href} card={card} />
-            ))}
+          <div className="procedure-groups">
+            <section className="procedure-group procedure-group--citizen" aria-labelledby="citizen-procedures">
+              <header className="procedure-group__header">
+                <div className="procedure-group__identity">
+                  <span className="procedure-group__mark procedure-group__mark--citizen" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <circle cx="12" cy="8" r="3.5" />
+                      <path d="M5.5 20c.6-4.3 2.8-6.5 6.5-6.5s5.9 2.2 6.5 6.5" />
+                    </svg>
+                  </span>
+                  <div>
+                    <p>Dành cho cá nhân</p>
+                    <h3 id="citizen-procedures">Thủ tục công dân</h3>
+                  </div>
+                </div>
+                <span className="procedure-group__count">{CITIZEN_CARDS.length} lựa chọn</span>
+              </header>
+              <div className="procedure-grid procedure-grid--citizen">
+                {CITIZEN_CARDS.map((card) => (
+                  <ProcedureCard key={card.href} card={card} />
+                ))}
+              </div>
+            </section>
+
+            <section className="procedure-group procedure-group--business" aria-labelledby="business-procedures">
+              <header className="procedure-group__header">
+                <div className="procedure-group__identity">
+                  <span className="procedure-group__mark procedure-group__mark--business" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7" />
+                      <rect x="3" y="7" width="18" height="13" rx="2.5" />
+                      <path d="M3 12h18M10 12v2h4v-2" />
+                    </svg>
+                  </span>
+                  <div>
+                    <p>Dành cho tổ chức</p>
+                    <h3 id="business-procedures">Thủ tục doanh nghiệp</h3>
+                  </div>
+                </div>
+                <span className="procedure-group__count">{BUSINESS_CARDS.length} lựa chọn</span>
+              </header>
+              <div className="procedure-grid procedure-grid--business">
+                {BUSINESS_CARDS.map((card) => (
+                  <ProcedureCard key={card.href} card={card} />
+                ))}
+              </div>
+            </section>
           </div>
-
-          <p className="section-eyebrow" id="business-procedures">
-            Dành cho Doanh nghiệp
-          </p>
-          <div className="procedure-grid" aria-labelledby="business-procedures">
-            {BUSINESS_CARDS.map((card) => (
-              <ProcedureCard key={card.href} card={card} />
-            ))}
-          </div>
-
-          <Link href="/user/chat" className="all-procedures-link">
-            Xem tất cả thủ tục
-            <span aria-hidden="true">→</span>
-          </Link>
         </div>
 
         <footer className="home-footer">
           <nav aria-label="Liên kết bổ sung">
             <Link href="/sources">Nguồn dữ liệu &amp; Phiên bản</Link>
             <span aria-hidden="true">•</span>
-            <Link href="/widget-demo">Bản thử nghiệm Widget</Link>
+            <a href="https://dichvucong.gov.vn">Cổng Dịch vụ công Quốc gia</a>
           </nav>
           <SourceFooter showDisclaimer />
         </footer>

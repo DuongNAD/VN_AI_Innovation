@@ -1,4 +1,5 @@
-import { requireStaffAuth } from '@/lib/login-auth';
+import { requireStaffRole } from '@/lib/login-auth';
+import { STAFF_PERMISSIONS } from '@/lib/roles';
 import { prisma } from '@/lib/db';
 import { getProvider } from '@/lib/data-provider';
 import { AppError, handleRoute, jsonOk } from '@/lib/errors';
@@ -14,9 +15,13 @@ const MAX_NOTE_LENGTH = 1000;
  * approved, even if the queue data changed since it was listed.
  */
 export const POST = handleRoute(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
-  // Reviewing citizen applications is day-to-day staff work — managers may
-  // decide too. Form-version change requests stay admin-only.
-  const { user } = await requireStaffAuth(req, 'manager');
+  // Reviewing citizen applications is the manager's exclusive duty — admins
+  // manage accounts and technical config and may not decide here.
+  const { user } = await requireStaffRole(
+    req,
+    STAFF_PERMISSIONS.reviewCitizenApplications,
+    'Xét duyệt hồ sơ công dân thuộc thẩm quyền của cán bộ quản lý.'
+  );
 
   const { id } = await params;
   const body = await readJsonBody(req);

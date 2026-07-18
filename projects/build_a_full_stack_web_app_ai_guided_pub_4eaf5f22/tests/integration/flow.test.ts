@@ -93,6 +93,54 @@ describe.skipIf(!RUN)('integration · citizen flow (needs seeded DB)', () => {
     );
   });
 
+  it('refuses the admin credential on the citizen review queue (manager-only)', async () => {
+    const { GET } = await import('@/app/api/v1/admin/applications/route');
+    const response = await GET(
+      new Request('http://localhost/api/v1/admin/applications', {
+        headers: { 'X-Admin-Token': process.env.ADMIN_TOKEN ?? '' },
+      }),
+      undefined as never
+    );
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error.code).toBe('FORBIDDEN');
+  });
+
+  it('serves the account list to the admin credential', async () => {
+    const { GET } = await import('@/app/api/v1/admin/users/route');
+    const response = await GET(
+      new Request('http://localhost/api/v1/admin/users', {
+        headers: { 'X-Admin-Token': process.env.ADMIN_TOKEN ?? '' },
+      }),
+      undefined as never
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(Array.isArray(body.users)).toBe(true);
+    expect(body.users.length).toBeGreaterThan(0);
+    expect(body.users[0]).not.toHaveProperty('passwordHash');
+  });
+
+  it('refuses public self-registration for staff portals', async () => {
+    const { POST } = await import('@/app/api/v1/auth/register/route');
+    const response = await POST(
+      new Request('http://localhost/api/v1/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: `intru${Date.now() % 100000}`,
+          password: 'Password123',
+          displayName: 'Intruder Test',
+          portal: 'admin',
+        }),
+      }),
+      undefined as never
+    );
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error.code).toBe('STAFF_REGISTRATION_CLOSED');
+  });
+
   it('builds guidance for a new session before conditional questions are answered', async () => {
     const { prisma } = await import('@/lib/db');
     const { generateAccessToken, hashToken } = await import('@/lib/auth');

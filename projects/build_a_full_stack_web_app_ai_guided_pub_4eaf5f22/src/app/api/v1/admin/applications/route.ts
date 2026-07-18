@@ -1,4 +1,5 @@
-import { requireStaffAuth } from '@/lib/login-auth';
+import { requireStaffRole } from '@/lib/login-auth';
+import { STAFF_PERMISSIONS } from '@/lib/roles';
 import { prisma } from '@/lib/db';
 import { getProvider, type FormVersionDto } from '@/lib/data-provider';
 import { handleRoute, jsonOk } from '@/lib/errors';
@@ -9,8 +10,13 @@ import { handleRoute, jsonOk } from '@/lib/errors';
  * stay private to the citizen and are never listed here.
  */
 export const GET = handleRoute(async (req: Request) => {
-  // Managers work the citizen queue too; only form-version changes are admin-only.
-  await requireStaffAuth(req, 'manager');
+  // The citizen queue belongs to managers exclusively — admins run accounts
+  // and technical config and are refused here even though they outrank.
+  await requireStaffRole(
+    req,
+    STAFF_PERMISSIONS.reviewCitizenApplications,
+    'Xét duyệt hồ sơ công dân thuộc thẩm quyền của cán bộ quản lý.'
+  );
 
   const rows = await prisma.application.findMany({
     where: { status: { in: ['SUBMITTED', 'APPROVED', 'RETURNED'] } },

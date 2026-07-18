@@ -19,7 +19,7 @@ const INPUT_CLASS =
 const INPUT_ERROR_CLASS = ' border-red-600 focus:border-red-600 focus:ring-red-600/20';
 
 /** Nhóm field theo id prefix / heuristic UI — không đụng schema backend. */
-function getFieldSection(field: FieldDef): { key: string; title: string } {
+function getFieldSection(field: FieldDef, hasChildFields: boolean): { key: string; title: string } {
   const id = field.id.toLowerCase();
   if (id.startsWith('male_') || id.includes('groom')) {
     return { key: 'male', title: 'Thông tin bên nam' };
@@ -27,7 +27,10 @@ function getFieldSection(field: FieldDef): { key: string; title: string } {
   if (id.startsWith('female_') || id.includes('bride')) {
     return { key: 'female', title: 'Thông tin bên nữ' };
   }
-  if (id.startsWith('child_') || id === 'birth_date') {
+  // "birth_date" chỉ là ngày sinh của trẻ khi form thực sự có các trường child_*
+  // (khai sinh); ở các tờ khai khác (tạm trú, căn cước, hộ chiếu) nó là ngày sinh
+  // của người khai và thuộc nhóm thông tin chung.
+  if (id.startsWith('child_') || (hasChildFields && id === 'birth_date')) {
     return { key: 'child', title: 'Thông tin trẻ' };
   }
   if (id.startsWith('requester_') || id === 'relationship') {
@@ -61,8 +64,9 @@ function groupFieldsInOrder(
 ): { key: string; title: string; fields: FieldDef[] }[] {
   const groups: { key: string; title: string; fields: FieldDef[] }[] = [];
   const indexByKey = new Map<string, number>();
+  const hasChildFields = fields.some((f) => f.id.toLowerCase().startsWith('child_'));
   for (const field of fields) {
-    const sec = getFieldSection(field);
+    const sec = getFieldSection(field, hasChildFields);
     const existing = indexByKey.get(sec.key);
     if (existing === undefined) {
       indexByKey.set(sec.key, groups.length);

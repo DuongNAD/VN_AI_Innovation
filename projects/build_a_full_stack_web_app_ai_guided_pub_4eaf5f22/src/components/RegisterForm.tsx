@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { AppRole } from '@/lib/roles';
 import type { LoginPortal } from '@/components/login/portal';
 import { portalHome, portalAccent, safeReturnPath } from '@/components/login/portal';
+import BrandLogo from '@/components/BrandLogo';
 
 export type { LoginPortal } from '@/components/login/portal';
 
@@ -114,14 +115,19 @@ export default function RegisterForm({ portal, title, subtitle }: Props) {
 
   return (
     <div className="mx-auto w-full max-w-md space-y-6">
-      <div className="space-y-2 text-center">
-        <div
-          className={`mx-auto inline-flex rounded-full bg-gradient-to-r ${portalAccent(portal)} px-3 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-sm`}
-        >
-          {portal === 'user' ? 'Công dân' : portal === 'manager' ? 'Manager' : 'Admin'}
+      <div className="space-y-4 text-center">
+        <div className="flex justify-center">
+          <BrandLogo size="lg" href={null} />
         </div>
-        <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
-        <p className="text-sm text-slate-600">{subtitle}</p>
+        <div className="space-y-2">
+          <div
+            className={`mx-auto inline-flex rounded-full bg-gradient-to-r ${portalAccent(portal)} px-3 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-sm`}
+          >
+            {portal === 'user' ? 'Công dân' : portal === 'manager' ? 'Quản lý' : 'Quản trị'}
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
+          <p className="text-sm text-slate-600">{subtitle}</p>
+        </div>
       </div>
 
       <form

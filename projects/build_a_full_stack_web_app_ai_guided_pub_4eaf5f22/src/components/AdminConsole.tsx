@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { visibleFieldsFor } from '@/components/DynamicForm';
 import type { FieldDef } from '@/lib/schema-guards';
 import { DEFAULT_TTS_MODE, isTtsMode, type TtsMode } from '@/lib/tts-mode';
@@ -97,6 +97,30 @@ interface CitizenApplication {
   data: Record<string, unknown>;
   fields: FieldDef[];
 }
+
+type AccountRole = 'user' | 'manager' | 'admin';
+
+interface AccountUser {
+  id: string;
+  username: string;
+  displayName: string;
+  email: string | null;
+  role: AccountRole;
+  createdAt: string;
+  hasPassword: boolean;
+}
+
+const ROLE_LABELS: Record<AccountRole, string> = {
+  user: 'Công dân',
+  manager: 'Cán bộ quản lý',
+  admin: 'Quản trị viên',
+};
+
+const ROLE_BADGE_CLASS: Record<AccountRole, string> = {
+  user: 'bg-slate-100 text-slate-700 border-slate-200',
+  manager: 'bg-sky-100 text-sky-800 border-sky-200',
+  admin: 'bg-amber-100 text-amber-800 border-amber-200',
+};
 
 // Module-private pure helpers
 function safeHttpsUrl(value: unknown): string | null {
@@ -471,6 +495,49 @@ function parseCitizenApplications(body: unknown): CitizenApplication[] | null {
   return parsed;
 }
 
+/** Account list from the admin-only users API — strictly bounded like the other parsers. */
+function parseAccounts(body: unknown): AccountUser[] | null {
+  if (!body || typeof body !== 'object') {
+    return null;
+  }
+  const obj = body as Record<string, unknown>;
+  if (!Array.isArray(obj.users) || obj.users.length > 500) {
+    return null;
+  }
+  const parsed: AccountUser[] = [];
+  for (const raw of obj.users) {
+    if (!raw || typeof raw !== 'object') {
+      continue;
+    }
+    const u = raw as Record<string, unknown>;
+    if (!isSafeId(u.id)) {
+      continue;
+    }
+    if (!isBoundedString(u.username, 100) || !isBoundedString(u.displayName, 200)) {
+      continue;
+    }
+    if (!isNullableBoundedString(u.email, 200)) {
+      continue;
+    }
+    if (u.role !== 'user' && u.role !== 'manager' && u.role !== 'admin') {
+      continue;
+    }
+    if (!isBoundedString(u.createdAt, 500)) {
+      continue;
+    }
+    parsed.push({
+      id: u.id,
+      username: u.username,
+      displayName: u.displayName,
+      email: u.email ?? null,
+      role: u.role,
+      createdAt: u.createdAt,
+      hasPassword: u.hasPassword === true,
+    });
+  }
+  return parsed;
+}
+
 /** Human-readable value for the officer's review table (option labels, Có/Không, dd/mm/yyyy). */
 function fmtFieldValue(field: FieldDef, value: unknown): string {
   if (value === undefined || value === null || value === '') {
@@ -495,7 +562,7 @@ function fmtFieldValue(field: FieldDef, value: unknown): string {
   return String(value);
 }
 
-function errorMessageFor(status: number, code: string | null): string {
+function errorMessageFor(status: number, code: string | null, serverMessage?: string | null): string {
   if (status === 401) {
     return 'Sai mã quản trị';
   }
@@ -506,6 +573,9 @@ function errorMessageFor(status: number, code: string | null): string {
     if (code === 'CONCURRENT_UPDATE') {
       return 'Đang có thao tác khác, thử lại';
     }
+    if (code === 'CONFLICT') {
+      return 'Tên tài khoản hoặc email đã được sử dụng';
+    }
   }
   if (status === 400) {
     if (code === 'INVALID_TARGET_VERSION') {
@@ -514,6 +584,9 @@ function errorMessageFor(status: number, code: string | null): string {
     if (code === 'NOTE_REQUIRED') {
       return 'Vui lòng nhập lý do trả lại để người dân biết cần bổ sung gì';
     }
+    if (code === 'SELF_ROLE_FORBIDDEN') {
+      return 'Không thể tự thay đổi vai trò của chính mình';
+    }
   }
   if (status === 422 && code === 'VALIDATION_FAILED') {
     return 'Hồ sơ còn lỗi theo quy định nên không thể phê duyệt';
@@ -521,29 +594,41 @@ function errorMessageFor(status: number, code: string | null): string {
   if (status === 429) {
     return 'Quá nhiều lần thử, chờ ít phút';
   }
+  // Our own API sends short Vietnamese messages — surface them when we have
+  // no specific mapping (e.g. 403 "thuộc thẩm quyền của cán bộ quản lý").
+  if (typeof serverMessage === 'string' && serverMessage.length > 0 && serverMessage.length <= 300) {
+    return serverMessage;
+  }
   return 'Có lỗi xảy ra, vui lòng thử lại';
 }
 
-const getErrorFromResponse = async (res: Response): Promise<{ status: number; code: string | null }> => {
+const getErrorFromResponse = async (
+  res: Response
+): Promise<{ status: number; code: string | null; message: string | null }> => {
   let code: string | null = null;
+  let message: string | null = null;
   try {
     const data = await res.json();
     if (data && data.error && typeof data.error.code === 'string') {
       code = data.error.code;
     }
+    if (data && data.error && typeof data.error.message === 'string') {
+      message = data.error.message;
+    }
   } catch (_) {
     // ignore
   }
-  return { status: res.status, code };
+  return { status: res.status, code, message };
 };
 
 export type StaffConsoleRole = 'manager' | 'admin';
 
 export interface StaffConsoleProps {
   /**
-   * manager — xem overview + change requests, xét duyệt hồ sơ công dân
+   * manager — xét duyệt hồ sơ công dân + xem overview/change requests
    *           (không phê duyệt phiên bản biểu mẫu, không đổi cài đặt)
-   * admin — đầy đủ quyền, gồm phê duyệt & kích hoạt phiên bản
+   * admin — quản lý tài khoản, cài đặt hệ thống, phê duyệt & kích hoạt
+   *         phiên bản biểu mẫu (KHÔNG xét duyệt hồ sơ công dân)
    */
   role?: StaffConsoleRole;
 }
@@ -566,6 +651,19 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [ttsMode, setTtsMode] = useState<TtsMode>(DEFAULT_TTS_MODE);
   const [savingTtsMode, setSavingTtsMode] = useState<boolean>(false);
+  const [accounts, setAccounts] = useState<AccountUser[]>([]);
+  const [actorId, setActorId] = useState<string | null>(null);
+  const [roleDrafts, setRoleDrafts] = useState<Record<string, AccountRole>>({});
+  const [pwDrafts, setPwDrafts] = useState<Record<string, string>>({});
+  const [accountBusyId, setAccountBusyId] = useState<string | null>(null);
+  const [newAccount, setNewAccount] = useState({
+    username: '',
+    displayName: '',
+    email: '',
+    password: '',
+    role: 'manager' as AccountRole,
+  });
+  const [creatingAccount, setCreatingAccount] = useState<boolean>(false);
 
   const handleFetchData = async (opts?: { silent?: boolean }) => {
     setLoading(true);
@@ -575,55 +673,70 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
     }
 
     try {
-      // Citizen queue is staff-wide (manager + admin) — only form-version
-      // change requests and settings stay admin-only.
-      const [overviewRes, crRes, appsRes] = await Promise.all([
+      // The third dataset is role-specific: managers work the citizen queue,
+      // admins manage accounts. Neither may fetch the other's (API enforces it).
+      const extraUrl = role === 'manager' ? '/api/v1/admin/applications' : '/api/v1/admin/users';
+      const [overviewRes, crRes, extraRes] = await Promise.all([
         fetch('/api/v1/admin/overview', {
           credentials: 'include',
         }),
         fetch('/api/v1/admin/change-requests', {
           credentials: 'include',
         }),
-        fetch('/api/v1/admin/applications', {
+        fetch(extraUrl, {
           credentials: 'include',
         }),
       ]);
 
       if (!overviewRes.ok) {
-        const { status, code } = await getErrorFromResponse(overviewRes);
-        throw new Error(errorMessageFor(status, code));
+        const { status, code, message } = await getErrorFromResponse(overviewRes);
+        throw new Error(errorMessageFor(status, code, message));
       }
       if (!crRes.ok) {
-        const { status, code } = await getErrorFromResponse(crRes);
-        throw new Error(errorMessageFor(status, code));
+        const { status, code, message } = await getErrorFromResponse(crRes);
+        throw new Error(errorMessageFor(status, code, message));
       }
-      if (!appsRes.ok) {
-        const { status, code } = await getErrorFromResponse(appsRes);
-        throw new Error(errorMessageFor(status, code));
+      if (!extraRes.ok) {
+        const { status, code, message } = await getErrorFromResponse(extraRes);
+        throw new Error(errorMessageFor(status, code, message));
       }
 
       let rawOverview: unknown;
       let rawCRs: unknown;
-      let rawApps: unknown;
+      let rawExtra: unknown;
       try {
         rawOverview = await overviewRes.json();
         rawCRs = await crRes.json();
-        rawApps = await appsRes.json();
+        rawExtra = await extraRes.json();
       } catch (_) {
         throw new Error(errorMessageFor(500, 'JSON_PARSE_FAILURE'));
       }
 
       const parsedOverview = parseOverview(rawOverview);
       const parsedCRs = parseChangeRequests(rawCRs);
-      const parsedApps = parseCitizenApplications(rawApps);
 
-      if (parsedOverview === null || parsedCRs === null || parsedApps === null) {
+      if (parsedOverview === null || parsedCRs === null) {
         throw new Error(errorMessageFor(500, 'PARSER_FAILURE'));
+      }
+
+      if (role === 'manager') {
+        const parsedApps = parseCitizenApplications(rawExtra);
+        if (parsedApps === null) {
+          throw new Error(errorMessageFor(500, 'PARSER_FAILURE'));
+        }
+        setCitizenApps(parsedApps);
+        setAccounts([]);
+      } else {
+        const parsedAccounts = parseAccounts(rawExtra);
+        if (parsedAccounts === null) {
+          throw new Error(errorMessageFor(500, 'PARSER_FAILURE'));
+        }
+        setAccounts(parsedAccounts);
+        setCitizenApps([]);
       }
 
       setOverview(parsedOverview);
       setChangeRequests(parsedCRs);
-      setCitizenApps(parsedApps);
       setTtsMode(parsedOverview.ttsMode);
 
       if (rawOverview && typeof rawOverview === 'object') {
@@ -631,6 +744,8 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
         if (actor && typeof actor === 'object') {
           const dn = (actor as Record<string, unknown>).displayName;
           if (typeof dn === 'string') setActorName(dn);
+          const aid = (actor as Record<string, unknown>).id;
+          if (isSafeId(aid)) setActorId(aid);
         }
       }
 
@@ -723,6 +838,110 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
       setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
     } finally {
       setReviewingId(null);
+    }
+  };
+
+  const handleCreateAccount = async (e: FormEvent) => {
+    e.preventDefault();
+    if (creatingAccount) return;
+    setCreatingAccount(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const payload: Record<string, string> = {
+        username: newAccount.username.trim(),
+        displayName: newAccount.displayName.trim(),
+        password: newAccount.password,
+        role: newAccount.role,
+      };
+      if (newAccount.email.trim() !== '') {
+        payload.email = newAccount.email.trim();
+      }
+      const res = await fetch('/api/v1/admin/users', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const { status, code, message } = await getErrorFromResponse(res);
+        throw new Error(errorMessageFor(status, code, message));
+      }
+      setSuccess(`Đã tạo tài khoản ${payload.username} (${ROLE_LABELS[newAccount.role]}).`);
+      setNewAccount({ username: '', displayName: '', email: '', password: '', role: 'manager' });
+      await handleFetchData({ silent: true });
+    } catch (err: any) {
+      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
+    } finally {
+      setCreatingAccount(false);
+    }
+  };
+
+  const handleAccountRoleChange = async (id: string) => {
+    if (!isSafeId(id)) {
+      setError('Mã tài khoản không hợp lệ.');
+      return;
+    }
+    const nextRole = roleDrafts[id];
+    if (!nextRole) return;
+    setAccountBusyId(id);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch(`/api/v1/admin/users/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: nextRole }),
+      });
+      if (!res.ok) {
+        const { status, code, message } = await getErrorFromResponse(res);
+        throw new Error(errorMessageFor(status, code, message));
+      }
+      setSuccess(`Đã đổi vai trò tài khoản sang ${ROLE_LABELS[nextRole]}.`);
+      setRoleDrafts((prev) => {
+        const { [id]: _removed, ...rest } = prev;
+        return rest;
+      });
+      await handleFetchData({ silent: true });
+    } catch (err: any) {
+      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
+    } finally {
+      setAccountBusyId(null);
+    }
+  };
+
+  const handleAccountPasswordReset = async (id: string) => {
+    if (!isSafeId(id)) {
+      setError('Mã tài khoản không hợp lệ.');
+      return;
+    }
+    const nextPassword = (pwDrafts[id] ?? '').trim();
+    if (nextPassword === '') return;
+    setAccountBusyId(id);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch(`/api/v1/admin/users/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: nextPassword }),
+      });
+      if (!res.ok) {
+        const { status, code, message } = await getErrorFromResponse(res);
+        throw new Error(errorMessageFor(status, code, message));
+      }
+      setSuccess('Đã đặt lại mật khẩu — mọi phiên đăng nhập cũ của tài khoản đã bị thu hồi.');
+      setPwDrafts((prev) => {
+        const { [id]: _removed, ...rest } = prev;
+        return rest;
+      });
+      await handleFetchData({ silent: true });
+    } catch (err: any) {
+      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
+    } finally {
+      setAccountBusyId(null);
     }
   };
 
@@ -843,36 +1062,52 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-slate-800">
-      <div className="card border border-slate-100 bg-slate-900 text-white shadow-lg p-6">
+      <div className="card border border-slate-200/80 bg-white p-6 shadow-shell">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="space-y-1">
-            <h2 className="text-xl font-bold tracking-tight text-amber-400">
+          <div className="min-w-0 space-y-2">
+            <h2 className="text-xl font-bold tracking-tight text-slate-900">
               Bảng điều khiển {roleLabel}
             </h2>
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-slate-600">
               {canApproveActions
-                ? 'Phiên đăng nhập cookie — xem dữ liệu hệ thống, quan trắc AI và phê duyệt thay đổi biểu mẫu.'
+                ? 'Phiên đăng nhập cookie — quản lý tài khoản, cài đặt hệ thống và phê duyệt thay đổi biểu mẫu.'
                 : 'Phiên đăng nhập cookie — xét duyệt hồ sơ công dân, xem danh mục thủ tục, quan trắc AI và yêu cầu thay đổi.'}
             </p>
-            <p className="text-xs text-slate-400">
-              Vai trò: <span className="font-semibold text-amber-300">{role}</span>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span
+                className={`inline-flex items-center rounded-full border px-2.5 py-1 font-semibold ${
+                  role === 'admin'
+                    ? 'border-amber-200/70 bg-amber-50 text-amber-800'
+                    : 'border-sky-200/70 bg-sky-50 text-sky-700'
+                }`}
+              >
+                Vai trò: {role}
+              </span>
               {actorName ? (
-                <>
-                  {' '}
-                  · Phiên: <span className="text-slate-200">{actorName}</span>
-                </>
+                <span className="inline-flex max-w-[16rem] items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-semibold text-slate-600">
+                  <span className="truncate">Phiên: {actorName}</span>
+                </span>
               ) : null}
-              {!canApproveActions && ' · không phê duyệt phiên bản biểu mẫu'}
-            </p>
+              {!canApproveActions && (
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium text-slate-500">
+                  Không phê duyệt phiên bản biểu mẫu
+                </span>
+              )}
+              {canApproveActions && (
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium text-slate-500">
+                  Hồ sơ công dân do cán bộ quản lý xét duyệt
+                </span>
+              )}
+            </div>
           </div>
           <button
             onClick={() => handleFetchData()}
             disabled={loading}
-            className="btn bg-amber-500 text-slate-950 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 font-semibold"
+            className="btn shrink-0 bg-brand-600 font-semibold text-white hover:bg-brand-700 disabled:bg-slate-300 disabled:text-slate-500"
           >
             {loading ? (
               <div className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                 Đang tải...
               </div>
             ) : (
@@ -1099,7 +1334,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
         </div>
       )}
 
-      {overview && (
+      {overview && role === 'manager' && (
         <div className="space-y-6">
           <div className="border-b pb-4">
             <h3 className="text-xl font-bold text-slate-900">Hồ sơ công dân chờ xét duyệt</h3>
@@ -1232,7 +1467,211 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
               })}
             </div>
           )}
+        </div>
+      )}
 
+      {overview && canApproveActions && (
+        <div className="space-y-6">
+          <div className="border-b pb-4">
+            <h3 className="text-xl font-bold text-slate-900">Quản lý tài khoản</h3>
+            <p className="text-sm text-slate-500">
+              Cấp tài khoản cán bộ, đổi vai trò và đặt lại mật khẩu. Tài khoản quản lý/quản trị
+              chỉ được cấp tại đây — không thể tự đăng ký. Việc xét duyệt hồ sơ công dân thuộc
+              cổng người quản lý.
+            </p>
+          </div>
+
+          <form
+            onSubmit={handleCreateAccount}
+            className="card border border-slate-100 shadow-sm space-y-4 p-6"
+          >
+            <h4 className="text-sm font-bold text-slate-700">Tạo tài khoản mới</h4>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <input
+                value={newAccount.username}
+                onChange={(e) => setNewAccount((p) => ({ ...p, username: e.target.value }))}
+                placeholder="Tên đăng nhập (a-z, 0-9, . _)"
+                required
+                minLength={3}
+                maxLength={50}
+                disabled={creatingAccount}
+                autoComplete="off"
+                aria-label="Tên đăng nhập"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+              />
+              <input
+                value={newAccount.displayName}
+                onChange={(e) => setNewAccount((p) => ({ ...p, displayName: e.target.value }))}
+                placeholder="Họ và tên hiển thị"
+                required
+                maxLength={100}
+                disabled={creatingAccount}
+                aria-label="Họ và tên hiển thị"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+              />
+              <input
+                type="email"
+                value={newAccount.email}
+                onChange={(e) => setNewAccount((p) => ({ ...p, email: e.target.value }))}
+                placeholder="Email (không bắt buộc)"
+                maxLength={200}
+                disabled={creatingAccount}
+                autoComplete="off"
+                aria-label="Email"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+              />
+              <input
+                type="password"
+                value={newAccount.password}
+                onChange={(e) => setNewAccount((p) => ({ ...p, password: e.target.value }))}
+                placeholder="Mật khẩu tạm (≥8, có chữ và số)"
+                required
+                minLength={8}
+                maxLength={128}
+                disabled={creatingAccount}
+                autoComplete="new-password"
+                aria-label="Mật khẩu tạm"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+              />
+              <select
+                value={newAccount.role}
+                onChange={(e) => setNewAccount((p) => ({ ...p, role: e.target.value as AccountRole }))}
+                disabled={creatingAccount}
+                aria-label="Vai trò"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+              >
+                {(['user', 'manager', 'admin'] as const).map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="submit"
+              disabled={creatingAccount}
+              className="btn bg-slate-900 hover:bg-slate-700 text-white text-sm py-2 px-4 disabled:bg-slate-200 disabled:text-slate-400"
+            >
+              {creatingAccount ? 'Đang tạo...' : '➕ Tạo tài khoản'}
+            </button>
+          </form>
+
+          <div className="card border border-slate-100 shadow-sm p-0 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-600">Tài khoản</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-600">Email</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-600">Vai trò</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-600">Ngày tạo</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-600">Đặt lại mật khẩu</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {accounts.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-slate-400 italic">
+                        Chưa có tài khoản nào.
+                      </td>
+                    </tr>
+                  ) : (
+                    accounts.map((acc) => {
+                      const isSelf = actorId !== null && acc.id === actorId;
+                      const busy = accountBusyId !== null;
+                      const draftRole = roleDrafts[acc.id] ?? acc.role;
+                      return (
+                        <tr key={acc.id} className="hover:bg-slate-50 align-top">
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-slate-900">{acc.displayName}</div>
+                            <div className="text-xs text-slate-400 font-mono">
+                              {acc.username}
+                              {isSelf && (
+                                <span className="ml-1 font-sans font-semibold text-amber-600">(bạn)</span>
+                              )}
+                              {!acc.hasPassword && (
+                                <span className="ml-1 font-sans text-sky-600">· OAuth</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">{acc.email ?? '—'}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span
+                                className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full border ${ROLE_BADGE_CLASS[acc.role]}`}
+                              >
+                                {ROLE_LABELS[acc.role]}
+                              </span>
+                              {!isSelf && (
+                                <>
+                                  <select
+                                    value={draftRole}
+                                    onChange={(e) =>
+                                      setRoleDrafts((prev) => ({
+                                        ...prev,
+                                        [acc.id]: e.target.value as AccountRole,
+                                      }))
+                                    }
+                                    disabled={busy}
+                                    aria-label={`Vai trò mới cho ${acc.username}`}
+                                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                                  >
+                                    {(['user', 'manager', 'admin'] as const).map((r) => (
+                                      <option key={r} value={r}>
+                                        {ROLE_LABELS[r]}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <button
+                                    onClick={() => handleAccountRoleChange(acc.id)}
+                                    disabled={busy || draftRole === acc.role}
+                                    className="btn bg-slate-700 hover:bg-slate-600 text-white text-xs py-1 px-2.5 disabled:bg-slate-200 disabled:text-slate-400"
+                                  >
+                                    {accountBusyId === acc.id ? 'Đang lưu...' : 'Đổi vai trò'}
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-slate-500 font-mono text-xs">
+                            {formatDate(acc.createdAt)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <input
+                                type="password"
+                                value={pwDrafts[acc.id] ?? ''}
+                                onChange={(e) =>
+                                  setPwDrafts((prev) => ({ ...prev, [acc.id]: e.target.value }))
+                                }
+                                placeholder="Mật khẩu mới"
+                                disabled={busy}
+                                autoComplete="new-password"
+                                aria-label={`Mật khẩu mới cho ${acc.username}`}
+                                className="w-40 rounded-lg border border-slate-300 px-2 py-1 text-xs focus:border-amber-500 focus:outline-none"
+                              />
+                              <button
+                                onClick={() => handleAccountPasswordReset(acc.id)}
+                                disabled={busy || (pwDrafts[acc.id] ?? '').trim() === ''}
+                                className="btn bg-amber-600 hover:bg-amber-500 text-white text-xs py-1 px-2.5 disabled:bg-slate-200 disabled:text-slate-400"
+                              >
+                                {accountBusyId === acc.id ? 'Đang lưu...' : 'Đặt lại'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {overview && (
+        <div className="space-y-6">
           <div className="border-b pb-4">
             <h3 className="text-xl font-bold text-slate-900">Yêu cầu Thay đổi quy định & Biểu mẫu (Change Requests)</h3>
             <p className="text-sm text-slate-500">

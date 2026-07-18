@@ -73,6 +73,7 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
   const pathMap: Record<string, string> = {
     user: 'Người dùng',
     chat: 'Trò chuyện',
+    procedures: 'Danh mục thủ tục',
     checklist: 'Danh sách giấy tờ',
     form: 'Biểu mẫu',
     result: 'Kết quả',

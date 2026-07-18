@@ -1,6 +1,7 @@
-﻿'use client';
+'use client';
 
-// Progress Indicator Component
+// Stepper ngang một hàng: số/tick + nhãn nằm cạnh nhau, nối bằng vạch mảnh.
+// Dưới lg chỉ hiện nhãn của bước hiện tại để không tràn dòng.
 interface ProgressStep {
   label: string;
   status: 'completed' | 'current' | 'upcoming';
@@ -13,71 +14,71 @@ interface ProgressIndicatorProps {
 
 export function ProgressIndicator({ steps, className = '' }: ProgressIndicatorProps) {
   return (
-    <div className={`w-full ${className}`}>
-      <ol
-        className="flex items-center justify-between"
-        role="list"
-        aria-label="Tiến trình hồ sơ"
-      >
-        {steps.map((step, index) => {
-          const isLast = index === steps.length - 1;
-          const statusLabel =
-            step.status === 'completed'
-              ? 'đã hoàn thành'
-              : step.status === 'current'
-              ? 'đang thực hiện'
-              : 'chưa tới';
+    <ol
+      className={`flex w-full items-center ${className}`}
+      role="list"
+      aria-label="Tiến trình hồ sơ"
+    >
+      {steps.map((step, index) => {
+        const isLast = index === steps.length - 1;
+        const statusLabel =
+          step.status === 'completed'
+            ? 'đã hoàn thành'
+            : step.status === 'current'
+            ? 'đang thực hiện'
+            : 'chưa tới';
 
-          return (
-            <li
-              key={index}
-              className="flex items-center flex-1 min-w-0"
-              aria-current={step.status === 'current' ? 'step' : undefined}
-            >
-              <div className="flex flex-col items-center min-w-0">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
-                    step.status === 'completed'
-                      ? 'bg-green-600 text-white'
-                      : step.status === 'current'
-                      ? 'bg-blue-700 text-white ring-4 ring-blue-200'
-                      : 'bg-slate-200 text-slate-600'
-                  }`}
-                  aria-hidden="true"
-                >
-                  {step.status === 'completed' ? (
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  ) : (
-                    index + 1
-                  )}
-                </div>
-                <span
-                  className={`mt-2 text-xs font-medium text-center truncate max-w-[5.5rem] sm:max-w-none ${
-                    step.status === 'current' ? 'text-blue-700' : 'text-slate-600'
-                  }`}
-                >
-                  {step.label}
-                  <span className="sr-only"> ({statusLabel})</span>
-                </span>
-              </div>
-              {!isLast && (
-                <div
-                  className={`flex-1 h-1 mx-2 rounded transition-all ${
-                    step.status === 'completed' ? 'bg-green-600' : 'bg-slate-200'
-                  }`}
-                  aria-hidden="true"
-                />
-              )}
-            </li>
-          );
-        })}
-      </ol>
-    </div>
+        return (
+          <li
+            key={index}
+            className={`flex items-center ${isLast ? 'shrink-0' : 'min-w-0 flex-1'}`}
+            aria-current={step.status === 'current' ? 'step' : undefined}
+          >
+            <span className="flex shrink-0 items-center gap-2">
+              <span
+                aria-hidden="true"
+                className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold transition-all duration-300 ${
+                  step.status === 'completed'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : step.status === 'current'
+                    ? 'bg-white text-brand-700 ring-2 ring-brand-600 shadow-[0_0_0_4px_rgba(37,99,235,0.12)]'
+                    : 'bg-white text-slate-400 ring-1 ring-slate-300'
+                }`}
+              >
+                {step.status === 'completed' ? (
+                  <svg className="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  index + 1
+                )}
+              </span>
+
+              <span
+                className={`whitespace-nowrap text-[13px] transition-colors duration-300 ${
+                  step.status === 'current'
+                    ? 'font-semibold text-slate-900'
+                    : step.status === 'completed'
+                    ? 'hidden font-medium text-slate-600 lg:inline'
+                    : 'hidden font-medium text-slate-400 lg:inline'
+                }`}
+              >
+                {step.label}
+                <span className="sr-only"> ({statusLabel})</span>
+              </span>
+            </span>
+
+            {!isLast && (
+              <span
+                aria-hidden="true"
+                className={`mx-2 h-0.5 min-w-4 flex-1 rounded-full transition-colors duration-500 lg:mx-3 ${
+                  step.status === 'completed' ? 'bg-brand-500' : 'bg-slate-200'
+                }`}
+              />
+            )}
+          </li>
+        );
+      })}
+    </ol>
   );
 }

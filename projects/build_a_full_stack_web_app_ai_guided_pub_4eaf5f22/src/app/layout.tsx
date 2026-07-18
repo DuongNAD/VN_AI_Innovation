@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import ChatWidget from '@/components/ChatWidget';
 
 export const metadata: Metadata = {
   title: 'VN AI Innovation — Trợ lý Thủ tục Hành chính',
@@ -33,7 +32,6 @@ export default function RootLayout({
       <body className="relative min-h-screen overflow-x-hidden bg-gradient-to-b from-brand-50 via-surface-muted to-slate-100 font-sans text-body text-slate-900 antialiased">
         <AmbientMesh />
         <div className="relative z-10 flex min-h-screen flex-col">{children}</div>
-        <ChatWidget />
       </body>
     </html>
   );

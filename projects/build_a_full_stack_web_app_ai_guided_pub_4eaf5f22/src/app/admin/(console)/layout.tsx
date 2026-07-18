@@ -9,10 +9,13 @@ export default async function AdminConsoleLayout({ children }: { children: React
       loginPath="/admin/login"
       renderChrome={(user) => (
         <UserBar
-          displayName={user.displayName}
-          username={user.username}
-          roleLabel="Admin"
           homeHref="/admin"
+          user={{
+            displayName: user.displayName,
+            username: user.username,
+            roleLabel: 'Quản trị viên',
+            avatarUrl: user.avatarUrl,
+          }}
         />
       )}
     >
