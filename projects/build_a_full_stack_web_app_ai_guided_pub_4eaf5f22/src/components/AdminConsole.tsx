@@ -656,8 +656,9 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
   const [accounts, setAccounts] = useState<AccountUser[]>([]);
   const [actorId, setActorId] = useState<string | null>(null);
   const [roleDrafts, setRoleDrafts] = useState<Record<string, AccountRole>>({});
-  const [pwDrafts, setPwDrafts] = useState<Record<string, string>>({});
   const [accountBusyId, setAccountBusyId] = useState<string | null>(null);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [accountSuccess, setAccountSuccess] = useState<string | null>(null);
   const [newAccount, setNewAccount] = useState({
     username: '',
     displayName: '',
@@ -665,7 +666,31 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
     password: '',
     role: 'manager' as AccountRole,
   });
+  const [newAccountPasswordConfirm, setNewAccountPasswordConfirm] = useState('');
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [creatingAccount, setCreatingAccount] = useState<boolean>(false);
+  const [passwordTarget, setPasswordTarget] = useState<AccountUser | null>(null);
+  const [nextPassword, setNextPassword] = useState('');
+  const [nextPasswordConfirm, setNextPasswordConfirm] = useState('');
+  const [showNextPassword, setShowNextPassword] = useState(false);
+
+  const passwordValidationMessage = (password: string, confirmation: string): string | null => {
+    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+      return 'Mật khẩu phải có ít nhất 8 ký tự, gồm cả chữ và số.';
+    }
+    if (password !== confirmation) {
+      return 'Hai lần nhập mật khẩu chưa trùng khớp.';
+    }
+    return null;
+  };
+
+  const closePasswordDialog = () => {
+    if (accountBusyId !== null) return;
+    setPasswordTarget(null);
+    setNextPassword('');
+    setNextPasswordConfirm('');
+    setShowNextPassword(false);
+  };
 
   const handleFetchData = async (opts?: { silent?: boolean }) => {
     setLoading(true);
@@ -846,12 +871,21 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
   const handleCreateAccount = async (e: FormEvent) => {
     e.preventDefault();
     if (creatingAccount) return;
+    const validationError = passwordValidationMessage(
+      newAccount.password,
+      newAccountPasswordConfirm
+    );
+    if (validationError) {
+      setAccountError(validationError);
+      setAccountSuccess(null);
+      return;
+    }
     setCreatingAccount(true);
-    setError(null);
-    setSuccess(null);
+    setAccountError(null);
+    setAccountSuccess(null);
     try {
       const payload: Record<string, string> = {
-        username: newAccount.username.trim(),
+        username: newAccount.username.trim().toLowerCase(),
         displayName: newAccount.displayName.trim(),
         password: newAccount.password,
         role: newAccount.role,
@@ -869,11 +903,15 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
         const { status, code, message } = await getErrorFromResponse(res);
         throw new Error(errorMessageFor(status, code, message));
       }
-      setSuccess(`Đã tạo tài khoản ${payload.username} (${ROLE_LABELS[newAccount.role]}).`);
+      setAccountSuccess(
+        `Đã tạo tài khoản ${payload.username} (${ROLE_LABELS[newAccount.role]}). Có thể đăng nhập ngay bằng mật khẩu vừa đặt.`
+      );
       setNewAccount({ username: '', displayName: '', email: '', password: '', role: 'manager' });
+      setNewAccountPasswordConfirm('');
+      setShowCreatePassword(false);
       await handleFetchData({ silent: true });
     } catch (err: any) {
-      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
+      setAccountError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
     } finally {
       setCreatingAccount(false);
     }
@@ -913,18 +951,26 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
     }
   };
 
-  const handleAccountPasswordReset = async (id: string) => {
-    if (!isSafeId(id)) {
-      setError('Mã tài khoản không hợp lệ.');
+  const handleAccountPasswordReset = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!passwordTarget || accountBusyId !== null) return;
+    if (!isSafeId(passwordTarget.id)) {
+      setAccountError('Mã tài khoản không hợp lệ.');
       return;
     }
-    const nextPassword = (pwDrafts[id] ?? '').trim();
-    if (nextPassword === '') return;
-    setAccountBusyId(id);
-    setError(null);
-    setSuccess(null);
+    const validationError = passwordValidationMessage(nextPassword, nextPasswordConfirm);
+    if (validationError) {
+      setAccountError(validationError);
+      setAccountSuccess(null);
+      return;
+    }
+    const target = passwordTarget;
+    const isSelf = actorId !== null && target.id === actorId;
+    setAccountBusyId(target.id);
+    setAccountError(null);
+    setAccountSuccess(null);
     try {
-      const res = await fetch(`/api/v1/admin/users/${encodeURIComponent(id)}`, {
+      const res = await fetch(`/api/v1/admin/users/${encodeURIComponent(target.id)}`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -934,14 +980,20 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
         const { status, code, message } = await getErrorFromResponse(res);
         throw new Error(errorMessageFor(status, code, message));
       }
-      setSuccess('Đã đặt lại mật khẩu — mọi phiên đăng nhập cũ của tài khoản đã bị thu hồi.');
-      setPwDrafts((prev) => {
-        const { [id]: _removed, ...rest } = prev;
-        return rest;
-      });
+      setPasswordTarget(null);
+      setNextPassword('');
+      setNextPasswordConfirm('');
+      setShowNextPassword(false);
+      if (isSelf) {
+        window.location.assign('/admin/login?passwordChanged=1');
+        return;
+      }
+      setAccountSuccess(
+        `Đã đặt mật khẩu mới cho ${target.username}. Tất cả phiên đăng nhập cũ của tài khoản này đã bị thu hồi.`
+      );
       await handleFetchData({ silent: true });
     } catch (err: any) {
-      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
+      setAccountError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
     } finally {
       setAccountBusyId(null);
     }
@@ -1492,12 +1544,28 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
             </p>
           </div>
 
+          {accountError && (
+            <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              <strong>Không thể hoàn tất:</strong> {accountError}
+            </div>
+          )}
+          {accountSuccess && (
+            <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              <strong>Thành công:</strong> {accountSuccess}
+            </div>
+          )}
+
           <form
             onSubmit={handleCreateAccount}
             className="card border border-slate-100 shadow-sm space-y-4 p-6"
           >
-            <h4 className="text-sm font-bold text-slate-700">Tạo tài khoản mới</h4>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <div>
+              <h4 className="text-base font-bold text-slate-800">Tạo tài khoản mới</h4>
+              <p className="mt-1 text-xs text-slate-500">
+                Điền đầy đủ thông tin và đặt mật khẩu đăng nhập ban đầu cho tài khoản.
+              </p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               <input
                 value={newAccount.username}
                 onChange={(e) => setNewAccount((p) => ({ ...p, username: e.target.value }))}
@@ -1531,17 +1599,41 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                 aria-label="Email"
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
               />
+              <div className="relative">
+                <input
+                  type={showCreatePassword ? 'text' : 'password'}
+                  value={newAccount.password}
+                  onChange={(e) => setNewAccount((p) => ({ ...p, password: e.target.value }))}
+                  placeholder="Mật khẩu (≥8, có chữ và số)"
+                  required
+                  minLength={8}
+                  maxLength={128}
+                  disabled={creatingAccount}
+                  autoComplete="new-password"
+                  aria-label="Mật khẩu đăng nhập"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 pr-16 text-sm focus:border-amber-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCreatePassword((visible) => !visible)}
+                  disabled={creatingAccount}
+                  className="absolute inset-y-0 right-2 text-xs font-semibold text-brand-700 disabled:text-slate-400"
+                  aria-label={showCreatePassword ? 'Ẩn mật khẩu tạo tài khoản' : 'Hiện mật khẩu tạo tài khoản'}
+                >
+                  {showCreatePassword ? 'Ẩn' : 'Hiện'}
+                </button>
+              </div>
               <input
-                type="password"
-                value={newAccount.password}
-                onChange={(e) => setNewAccount((p) => ({ ...p, password: e.target.value }))}
-                placeholder="Mật khẩu tạm (≥8, có chữ và số)"
+                type={showCreatePassword ? 'text' : 'password'}
+                value={newAccountPasswordConfirm}
+                onChange={(e) => setNewAccountPasswordConfirm(e.target.value)}
+                placeholder="Nhập lại mật khẩu"
                 required
                 minLength={8}
                 maxLength={128}
                 disabled={creatingAccount}
                 autoComplete="new-password"
-                aria-label="Mật khẩu tạm"
+                aria-label="Nhập lại mật khẩu đăng nhập"
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
               />
               <select
@@ -1558,13 +1650,16 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                 ))}
               </select>
             </div>
-            <button
-              type="submit"
-              disabled={creatingAccount}
-              className="btn bg-slate-900 hover:bg-slate-700 text-white text-sm py-2 px-4 disabled:bg-slate-200 disabled:text-slate-400"
-            >
-              {creatingAccount ? 'Đang tạo...' : '➕ Tạo tài khoản'}
-            </button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-slate-500">Mật khẩu phải có ít nhất 8 ký tự, gồm chữ và số.</p>
+              <button
+                type="submit"
+                disabled={creatingAccount}
+                className="btn bg-slate-900 hover:bg-slate-700 text-white text-sm py-2 px-5 disabled:bg-slate-200 disabled:text-slate-400"
+              >
+                {creatingAccount ? 'Đang tạo tài khoản...' : '➕ Tạo tài khoản mới'}
+              </button>
+            </div>
           </form>
 
           <div className="card border border-slate-100 shadow-sm p-0 overflow-hidden">
@@ -1576,7 +1671,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                     <th className="px-4 py-3 text-left font-semibold text-slate-600">Email</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-600">Vai trò</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-600">Ngày tạo</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-600">Đặt lại mật khẩu</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-600">Mật khẩu</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
@@ -1648,27 +1743,26 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                             {formatDate(acc.createdAt)}
                           </td>
                           <td className="px-4 py-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <input
-                                type="password"
-                                value={pwDrafts[acc.id] ?? ''}
-                                onChange={(e) =>
-                                  setPwDrafts((prev) => ({ ...prev, [acc.id]: e.target.value }))
-                                }
-                                placeholder="Mật khẩu mới"
-                                disabled={busy}
-                                autoComplete="new-password"
-                                aria-label={`Mật khẩu mới cho ${acc.username}`}
-                                className="w-40 rounded-lg border border-slate-300 px-2 py-1 text-xs focus:border-amber-500 focus:outline-none"
-                              />
-                              <button
-                                onClick={() => handleAccountPasswordReset(acc.id)}
-                                disabled={busy || (pwDrafts[acc.id] ?? '').trim() === ''}
-                                className="btn bg-amber-600 hover:bg-amber-500 text-white text-xs py-1 px-2.5 disabled:bg-slate-200 disabled:text-slate-400"
-                              >
-                                {accountBusyId === acc.id ? 'Đang lưu...' : 'Đặt lại'}
-                              </button>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPasswordTarget(acc);
+                                setNextPassword('');
+                                setNextPasswordConfirm('');
+                                setShowNextPassword(false);
+                                setAccountError(null);
+                                setAccountSuccess(null);
+                              }}
+                              disabled={busy}
+                              aria-label={`${acc.hasPassword ? 'Đặt mật khẩu mới' : 'Tạo mật khẩu đăng nhập'} cho ${acc.username}`}
+                              className="btn border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                            >
+                              {accountBusyId === acc.id
+                                ? 'Đang cập nhật...'
+                                : acc.hasPassword
+                                  ? 'Đặt mật khẩu mới'
+                                  : 'Tạo mật khẩu đăng nhập'}
+                            </button>
                           </td>
                         </tr>
                       );
@@ -1678,6 +1772,121 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
               </table>
             </div>
           </div>
+
+          {passwordTarget && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+              onMouseDown={(e) => {
+                if (e.target === e.currentTarget) closePasswordDialog();
+              }}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="password-dialog-title"
+                className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
+              >
+                <form onSubmit={handleAccountPasswordReset} className="space-y-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h4 id="password-dialog-title" className="text-lg font-bold text-slate-900">
+                        {passwordTarget.hasPassword ? 'Đặt mật khẩu mới' : 'Tạo mật khẩu đăng nhập'}
+                      </h4>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Tài khoản <strong>{passwordTarget.username}</strong> · {passwordTarget.displayName}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={closePasswordDialog}
+                      disabled={accountBusyId !== null}
+                      className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                      aria-label="Đóng hộp thoại đặt mật khẩu"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {actorId === passwordTarget.id && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      Đây là tài khoản bạn đang dùng. Sau khi đổi mật khẩu, bạn sẽ được yêu cầu đăng nhập lại.
+                    </div>
+                  )}
+
+                  {accountError && (
+                    <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+                      {accountError}
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <label className="block text-sm font-semibold text-slate-700">
+                      Mật khẩu mới
+                      <div className="relative mt-1.5">
+                        <input
+                          type={showNextPassword ? 'text' : 'password'}
+                          value={nextPassword}
+                          onChange={(e) => setNextPassword(e.target.value)}
+                          required
+                          minLength={8}
+                          maxLength={128}
+                          autoComplete="new-password"
+                          disabled={accountBusyId !== null}
+                          aria-label="Mật khẩu mới"
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2.5 pr-16 font-normal focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNextPassword((visible) => !visible)}
+                          disabled={accountBusyId !== null}
+                          className="absolute inset-y-0 right-3 text-xs font-semibold text-brand-700 disabled:text-slate-400"
+                          aria-label={showNextPassword ? 'Ẩn mật khẩu mới' : 'Hiện mật khẩu mới'}
+                        >
+                          {showNextPassword ? 'Ẩn' : 'Hiện'}
+                        </button>
+                      </div>
+                    </label>
+                    <label className="block text-sm font-semibold text-slate-700">
+                      Nhập lại mật khẩu mới
+                      <input
+                        type={showNextPassword ? 'text' : 'password'}
+                        value={nextPasswordConfirm}
+                        onChange={(e) => setNextPasswordConfirm(e.target.value)}
+                        required
+                        minLength={8}
+                        maxLength={128}
+                        autoComplete="new-password"
+                        disabled={accountBusyId !== null}
+                        aria-label="Nhập lại mật khẩu mới"
+                        className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 font-normal focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
+                      />
+                    </label>
+                    <p className="text-xs text-slate-500">
+                      Ít nhất 8 ký tự, gồm chữ và số. Các phiên đăng nhập cũ sẽ bị thu hồi.
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+                    <button
+                      type="button"
+                      onClick={closePasswordDialog}
+                      disabled={accountBusyId !== null}
+                      className="btn border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={accountBusyId !== null || nextPassword === '' || nextPasswordConfirm === ''}
+                      className="btn bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-500 disabled:bg-slate-200 disabled:text-slate-400"
+                    >
+                      {accountBusyId !== null ? 'Đang cập nhật...' : 'Lưu mật khẩu mới'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
