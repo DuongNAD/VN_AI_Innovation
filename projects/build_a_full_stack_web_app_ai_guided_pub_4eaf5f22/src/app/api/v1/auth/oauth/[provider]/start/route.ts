@@ -26,7 +26,11 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
     );
   }
 
-  const origin = url.origin;
+  // Lấy chính xác protocol và host để tránh lỗi HTTP/HTTPS đằng sau proxy (Vercel)
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || url.host;
+  const proto = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
+  const origin = `${proto}://${host}`;
+  
   const state = oauthStateToken(portal, provider);
   const callback = `${origin}/api/v1/auth/oauth/${provider}/callback`;
 

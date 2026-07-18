@@ -98,7 +98,10 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
         throw new AppError(501, 'OAUTH_NOT_CONFIGURED', 'Google OAuth chưa được cấu hình Client ID và Secret.');
       }
       
-      const callbackUrl = `${url.origin}/api/v1/auth/oauth/google/callback`;
+      const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || url.host;
+      const proto = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
+      const origin = `${proto}://${host}`;
+      const callbackUrl = `${origin}/api/v1/auth/oauth/google/callback`;
       
       // 1. Trao đổi Auth Code lấy Access Token
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
