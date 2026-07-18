@@ -24,6 +24,23 @@ function pathIsHidden(pathname: string): boolean {
   return HIDE_ON_PATHS.some((path) => pathname === path || pathname.startsWith(path + '/'));
 }
 
+/** Remove DOM nodes injected by public/widget.js (not managed by React). */
+function destroyInjectedWidget(): void {
+  if (typeof document === 'undefined') return;
+
+  document.querySelectorAll('.pspw-launcher').forEach((el) => el.remove());
+  document.querySelectorAll('.pspw-panel').forEach((el) => el.remove());
+  document.getElementById('pspw-styles')?.remove();
+
+  if (typeof window !== 'undefined') {
+    try {
+      delete (window as unknown as { PSPWidget?: unknown }).PSPWidget;
+    } catch {
+      (window as unknown as { PSPWidget?: unknown }).PSPWidget = undefined;
+    }
+  }
+}
+
 export default function ChatWidget() {
   const pathname = usePathname();
   const [shouldShow, setShouldShow] = useState(false);
@@ -31,12 +48,27 @@ export default function ChatWidget() {
   useEffect(() => {
     // Nested iframe (e.g. widget panel loading /user/chat?embed=1): never inject another launcher
     if (typeof window !== 'undefined' && window.self !== window.top) {
+      destroyInjectedWidget();
       setShouldShow(false);
       return;
     }
 
-    setShouldShow(!pathIsHidden(pathname));
+    if (pathIsHidden(pathname)) {
+      // React unmounts <Script> but widget.js already appended launcher/panel to body
+      destroyInjectedWidget();
+      setShouldShow(false);
+      return;
+    }
+
+    setShouldShow(true);
   }, [pathname]);
+
+  // Cleanup on unmount (e.g. full layout change)
+  useEffect(() => {
+    return () => {
+      destroyInjectedWidget();
+    };
+  }, []);
 
   if (!shouldShow) {
     return null;

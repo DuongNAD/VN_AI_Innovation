@@ -221,9 +221,14 @@ export default function Home() {
           <span className="self-center text-slate-300" aria-hidden="true">
             |
           </span>
-          <Link href="/widget-demo" className="flex min-h-[44px] items-center transition-colors hover:text-brand-600">
+          <a
+            href="https://dichvucong.gov.vn/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-h-[44px] cursor-pointer items-center transition-colors hover:text-brand-600"
+          >
             Bản thử nghiệm Widget
-          </Link>
+          </a>
         </div>
         <div className="border-t border-surface-border pt-6">
           <SourceFooter showDisclaimer />

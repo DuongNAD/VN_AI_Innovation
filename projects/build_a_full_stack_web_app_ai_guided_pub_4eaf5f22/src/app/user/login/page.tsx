@@ -6,7 +6,7 @@ export default function UserLoginPage() {
       <LoginForm
         portal="user"
         title="Đăng nhập người dùng"
-        subtitle="Dùng tài khoản/mật khẩu, Google, Facebook hoặc quét QR VNeID."
+        subtitle="Dùng tài khoản/mật khẩu, Google hoặc quét QR VNeID."
         socialEnabled
       />
     </main>

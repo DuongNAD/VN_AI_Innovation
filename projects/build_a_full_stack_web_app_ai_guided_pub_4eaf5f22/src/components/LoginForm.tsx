@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { AppRole } from '@/lib/roles';
 import type { LoginPortal } from '@/components/login/portal';
 import { portalHome, portalAccent, safeReturnPath } from '@/components/login/portal';
-import { GoogleIcon, FacebookIcon, VnidIcon } from '@/components/login/SocialIcons';
+import { GoogleIcon, VnidIcon } from '@/components/login/SocialIcons';
 
 export type { LoginPortal } from '@/components/login/portal';
 
@@ -15,13 +15,56 @@ const USERNAME_PLACEHOLDER = 'Tài khoản hoặc email';
 const PASSWORD_PLACEHOLDER = '••••••••';
 const GENERIC_AUTH_ERROR = 'Tài khoản hoặc mật khẩu không đúng.';
 
+const LS_FAILED_ATTEMPTS = 'loginFailedAttempts';
+const LS_LOCK_EXPIRATION = 'loginLockExpiration';
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_MS = 300_000; // 5 phút
+
 type Props = {
   portal: LoginPortal;
   title: string;
   subtitle: string;
-  /** Enable Google / Facebook / VNeID (citizen portal only) */
+  /** Enable Google / VNeID (citizen portal only) */
   socialEnabled?: boolean;
 };
+
+function formatMmSs(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+}
+
+function readLockExpiration(): number | null {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem(LS_LOCK_EXPIRATION);
+  if (!raw) return null;
+  const ts = Number(raw);
+  if (!Number.isFinite(ts) || ts <= 0) return null;
+  return ts;
+}
+
+function readFailedAttempts(): number {
+  if (typeof window === 'undefined') return 0;
+  const raw = localStorage.getItem(LS_FAILED_ATTEMPTS);
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.floor(n);
+}
+
+function clearLockStorage(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(LS_FAILED_ATTEMPTS);
+  localStorage.removeItem(LS_LOCK_EXPIRATION);
+}
+
+function writeFailedAttempts(n: number): void {
+  localStorage.setItem(LS_FAILED_ATTEMPTS, String(n));
+}
+
+function writeLockExpiration(ts: number): void {
+  localStorage.setItem(LS_LOCK_EXPIRATION, String(ts));
+}
 
 export default function LoginForm({
   portal,
@@ -39,6 +82,74 @@ export default function LoginForm({
   const [vnidId, setVnidId] = useState<string | null>(null);
   const [vnidStatus, setVnidStatus] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /** Khóa client-side: hết hạn (epoch ms) hoặc null nếu không khóa */
+  const [lockExpiration, setLockExpiration] = useState<number | null>(null);
+  /** Giây còn lại — cập nhật mỗi giây khi đang khóa */
+  const [lockRemainingSec, setLockRemainingSec] = useState(0);
+
+  const isLocked = lockExpiration != null && lockRemainingSec > 0;
+
+  const unlockForm = useCallback(() => {
+    clearLockStorage();
+    setLockExpiration(null);
+    setLockRemainingSec(0);
+  }, []);
+
+  // Khôi phục trạng thái khóa từ localStorage (sau F5 / mở lại tab)
+  useEffect(() => {
+    const exp = readLockExpiration();
+    if (exp == null) {
+      // Đồng bộ attempts nếu còn; không khóa
+      return;
+    }
+    const remainingMs = exp - Date.now();
+    if (remainingMs <= 0) {
+      unlockForm();
+      return;
+    }
+    setLockExpiration(exp);
+    setLockRemainingSec(Math.ceil(remainingMs / 1000));
+  }, [unlockForm]);
+
+  // Đếm ngược MM:SS mỗi giây
+  useEffect(() => {
+    if (lockExpiration == null) return;
+
+    const tick = () => {
+      const remainingMs = lockExpiration - Date.now();
+      if (remainingMs <= 0) {
+        unlockForm();
+        setError(null);
+        return;
+      }
+      setLockRemainingSec(Math.ceil(remainingMs / 1000));
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [lockExpiration, unlockForm]);
+
+  /** Ghi nhận 1 lần thất bại; khóa form sau đúng 5 lần liên tiếp. */
+  const recordFailedAttempt = useCallback((serverMessage?: string) => {
+    const current = readFailedAttempts() + 1;
+    if (current >= MAX_FAILED_ATTEMPTS) {
+      const exp = Date.now() + LOCKOUT_MS;
+      writeFailedAttempts(MAX_FAILED_ATTEMPTS);
+      writeLockExpiration(exp);
+      setLockExpiration(exp);
+      setLockRemainingSec(Math.ceil(LOCKOUT_MS / 1000));
+      setError(
+        `Bạn đã nhập sai quá nhiều lần. Form bị khóa ${formatMmSs(LOCKOUT_MS / 1000)}.`
+      );
+      return;
+    }
+    writeFailedAttempts(current);
+    const left = MAX_FAILED_ATTEMPTS - current;
+    const base = serverMessage?.trim() || GENERIC_AUTH_ERROR;
+    setError(`${base} (Còn ${left} lần thử trước khi khóa tạm thời.)`);
+  }, []);
 
   const stopPoll = useCallback(() => {
     if (pollRef.current) {
@@ -63,9 +174,9 @@ export default function LoginForm({
         if (cancelled || !data.authenticated || !data.user) return;
         const role = data.user.role;
         if (role === portal) {
+          unlockForm();
           router.replace(safeReturnPath(portal) ?? portalHome(portal));
         }
-        // Wrong role (e.g. manager on /admin/login): stay on form, do not open admin
       } catch {
         /* ignore */
       }
@@ -73,10 +184,12 @@ export default function LoginForm({
     return () => {
       cancelled = true;
     };
-  }, [portal, router]);
+  }, [portal, router, unlockForm]);
 
   async function handlePasswordLogin(e: React.FormEvent) {
     e.preventDefault();
+    if (isLocked) return;
+
     setLoading(true);
     setError(null);
     try {
@@ -88,23 +201,29 @@ export default function LoginForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data?.error?.message || GENERIC_AUTH_ERROR);
+        recordFailedAttempt(
+          typeof data?.error?.message === 'string' ? data.error.message : GENERIC_AUTH_ERROR
+        );
+        return;
       }
       // Defense in depth: never navigate if server returned a mismatched role
       const role = data?.user?.role as AppRole | undefined;
       if (role !== portal) {
-        throw new Error(GENERIC_AUTH_ERROR);
+        recordFailedAttempt(GENERIC_AUTH_ERROR);
+        return;
       }
+      unlockForm();
       router.replace(safeReturnPath(portal) ?? portalHome(portal));
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : GENERIC_AUTH_ERROR);
+      recordFailedAttempt(err instanceof Error ? err.message : GENERIC_AUTH_ERROR);
     } finally {
       setLoading(false);
     }
   }
 
   async function startVnid() {
+    if (isLocked) return;
     setError(null);
     setShowVnid(true);
     setVnidStatus('PENDING');
@@ -129,6 +248,7 @@ export default function LoginForm({
           setVnidStatus(body.status);
           if (body.status === 'CONFIRMED' && body.user) {
             stopPoll();
+            unlockForm();
             router.replace('/user?logged_in=1&via=vnid');
             router.refresh();
           }
@@ -146,7 +266,7 @@ export default function LoginForm({
   }
 
   async function simulateVnidScan() {
-    if (!vnidId) return;
+    if (!vnidId || isLocked) return;
     setError(null);
     try {
       const res = await fetch(`/api/v1/auth/vnid/${vnidId}/confirm`, {
@@ -158,11 +278,11 @@ export default function LoginForm({
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || 'Xác nhận VNeID thất bại.');
       setVnidStatus('CONFIRMED');
-      // Next poll will set cookie via status endpoint
       const st = await fetch(`/api/v1/auth/vnid/${vnidId}/status`, { credentials: 'include' });
       const body = await st.json();
       if (body.status === 'CONFIRMED' || body.status === 'CONSUMED' || body.user) {
         stopPoll();
+        unlockForm();
         router.replace('/user?logged_in=1&via=vnid');
         router.refresh();
       }
@@ -176,9 +296,13 @@ export default function LoginForm({
       ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(vnidPayload)}`
       : null;
 
+  const inputDisabledClass = isLocked
+    ? ' opacity-60 cursor-not-allowed bg-slate-50'
+    : '';
+
   return (
     <div className="mx-auto w-full max-w-md space-y-6">
-      <div className="text-center space-y-2">
+      <div className="space-y-2 text-center">
         <div
           className={`mx-auto inline-flex rounded-full bg-gradient-to-r ${portalAccent(portal)} px-3 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-sm`}
         >
@@ -202,9 +326,10 @@ export default function LoginForm({
             autoComplete="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20"
+            className={`w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20${inputDisabledClass}`}
             placeholder={USERNAME_PLACEHOLDER}
             required
+            disabled={isLocked || loading}
           />
         </div>
         <div>
@@ -218,13 +343,34 @@ export default function LoginForm({
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20"
+            className={`w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20${inputDisabledClass}`}
             placeholder={PASSWORD_PLACEHOLDER}
             required
+            disabled={isLocked || loading}
           />
         </div>
 
-        {error && (
+        {isLocked && (
+          <div
+            className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-center text-sm text-amber-900"
+            role="status"
+            aria-live="polite"
+          >
+            <p className="font-semibold">Form tạm khóa do đăng nhập sai nhiều lần</p>
+            <p className="mt-1 tabular-nums text-lg font-bold tracking-wide text-amber-800">
+              {formatMmSs(lockRemainingSec)}
+            </p>
+            <p className="mt-1 text-xs text-amber-700">Vui lòng thử lại sau khi hết thời gian chờ.</p>
+          </div>
+        )}
+
+        {error && !isLocked && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800" role="alert">
+            {error}
+          </div>
+        )}
+
+        {error && isLocked && (
           <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800" role="alert">
             {error}
           </div>
@@ -232,10 +378,14 @@ export default function LoginForm({
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || isLocked}
           className={`w-full rounded-xl bg-gradient-to-r ${portalAccent(portal)} py-3 font-semibold text-white shadow-md transition hover:opacity-95 disabled:opacity-60`}
         >
-          {loading ? 'Đang đăng nhập…' : 'Đăng nhập'}
+          {isLocked
+            ? `Khóa tạm — ${formatMmSs(lockRemainingSec)}`
+            : loading
+              ? 'Đang đăng nhập…'
+              : 'Đăng nhập'}
         </button>
 
         <p className="text-center text-sm text-slate-600">
@@ -254,32 +404,30 @@ export default function LoginForm({
           <p className="text-center text-xs font-semibold uppercase tracking-wide text-slate-400">
             Hoặc đăng nhập nhanh
           </p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2">
             <a
               href="/api/v1/auth/oauth/google/start?portal=user"
-              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              className={`flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 ${isLocked ? 'pointer-events-none opacity-60' : ''}`}
+              aria-disabled={isLocked}
+              onClick={(e) => {
+                if (isLocked) e.preventDefault();
+              }}
             >
               <GoogleIcon />
               Google
-            </a>
-            <a
-              href="/api/v1/auth/oauth/facebook/start?portal=user"
-              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-            >
-              <FacebookIcon />
-              Facebook
             </a>
           </div>
           <button
             type="button"
             onClick={startVnid}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-800 hover:bg-red-100"
+            disabled={isLocked}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-800 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <VnidIcon />
             Quét mã QR VNeID
           </button>
 
-          {showVnid && (
+          {showVnid && !isLocked && (
             <div className="mt-2 space-y-3 rounded-xl border border-slate-100 bg-slate-50 p-4 text-center">
               <p className="text-sm font-medium text-slate-700">
                 Mở app VNeID trên điện thoại và quét mã
@@ -316,7 +464,6 @@ export default function LoginForm({
           )}
         </div>
       )}
-
     </div>
   );
 }
