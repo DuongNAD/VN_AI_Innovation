@@ -217,7 +217,7 @@ export async function requireStaffRole(
 
   const role = await resolveStaffFromRequest(req);
   if (role === null) {
-    rateLimitConsume('staff-auth', req);
+    rateLimitConsume('staff-auth', req, 900000);
     throw new AppError(401, 'UNAUTHORIZED', 'Vui lòng đăng nhập hoặc cung cấp mã xác thực.');
   }
   if (!allowed.includes(role)) {
