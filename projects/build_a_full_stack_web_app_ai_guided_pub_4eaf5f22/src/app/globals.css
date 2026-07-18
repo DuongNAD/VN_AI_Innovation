@@ -796,7 +796,7 @@
   justify-content: center;
   align-items: center;
   gap: 8px;
-  margin: 14px auto 0;
+  margin: 40px auto 0;
   color: #405277;
   font-size: 13.5px;
   padding: 0;
@@ -971,11 +971,11 @@
 
 .procedure-groups {
   display: grid;
-  gap: 38px;
+  gap: 26px;
 }
 
 .procedure-group__title {
-  margin: 0 0 18px;
+  margin: 0 0 24px;
 }
 
 .procedure-grid {
