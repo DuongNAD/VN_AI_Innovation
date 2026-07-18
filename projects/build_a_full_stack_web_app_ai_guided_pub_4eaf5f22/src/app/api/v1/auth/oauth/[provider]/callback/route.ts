@@ -3,6 +3,8 @@ import { AppError, handleRoute } from '@/lib/errors';
 import { createLoginSession, fingerprintEmail, parseOAuthState } from '@/lib/login-auth';
 import { enforceRateLimit } from '@/lib/rate-limit';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 const PROVIDERS = new Set(['google', 'facebook']);
 

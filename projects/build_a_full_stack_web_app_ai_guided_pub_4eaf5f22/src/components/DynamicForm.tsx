@@ -865,7 +865,7 @@ export function ApplicationFormRunner({
             : 'Trong thời gian chờ duyệt, hồ sơ được khóa và không thể chỉnh sửa.'}
         </p>
         <Link
-          href={'/result?applicationId=' + applicationId}
+          href={'/user/result?applicationId=' + applicationId}
           className={
             'btn mt-4 inline-block text-white ' +
             (approved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-700 hover:bg-blue-800')
