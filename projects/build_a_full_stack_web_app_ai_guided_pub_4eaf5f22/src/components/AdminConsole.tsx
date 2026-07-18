@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { visibleFieldsFor } from '@/components/DynamicForm';
+import { Pagination } from '@/components/Pagination';
 import type { FieldDef } from '@/lib/schema-guards';
 import { DEFAULT_TTS_MODE, isTtsMode, type TtsMode } from '@/lib/tts-mode';
 import AttachmentPreviewLink from '@/components/AttachmentPreviewLink';
@@ -674,6 +675,17 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
   const [nextPasswordConfirm, setNextPasswordConfirm] = useState('');
   const [showNextPassword, setShowNextPassword] = useState(false);
 
+  // Pagination states
+  const [procPage, setProcPage] = useState(1);
+  const [appPage, setAppPage] = useState(1);
+  const [crPage, setCrPage] = useState(1);
+  const [accPage, setAccPage] = useState(1);
+  
+  const PROCEDURES_PER_PAGE = 10;
+  const APPS_PER_PAGE = 5;
+  const CRS_PER_PAGE = 5;
+  const ACCS_PER_PAGE = 10;
+
   const passwordValidationMessage = (password: string, confirmation: string): string | null => {
     if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
       return 'Mật khẩu phải có ít nhất 8 ký tự, gồm cả chữ và số.';
@@ -1214,7 +1226,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                       </td>
                     </tr>
                   ) : (
-                    overview.procedures.flatMap((proc) => {
+                    overview.procedures.slice((procPage - 1) * PROCEDURES_PER_PAGE, procPage * PROCEDURES_PER_PAGE).flatMap((proc) => {
                       const versions = proc.formVersions;
                       if (versions.length === 0) {
                         return [
@@ -1262,6 +1274,12 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                   )}
                 </tbody>
               </table>
+              <Pagination 
+                currentPage={procPage} 
+                totalItems={overview.procedures.length} 
+                pageSize={PROCEDURES_PER_PAGE} 
+                onPageChange={setProcPage} 
+              />
             </div>
           </div>
 
@@ -1399,7 +1417,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
             </div>
           ) : (
             <div className="space-y-6">
-              {citizenApps.map((app) => {
+              {citizenApps.slice((appPage - 1) * APPS_PER_PAGE, appPage * APPS_PER_PAGE).map((app) => {
                 const isPendingReview = app.status === 'SUBMITTED';
                 const reviewFields = visibleFieldsFor(app.fields, app.data).filter((f) => {
                   const v = app.data[f.id];
@@ -1528,6 +1546,12 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                   </div>
                 );
               })}
+              <Pagination 
+                currentPage={appPage} 
+                totalItems={citizenApps.length} 
+                pageSize={APPS_PER_PAGE} 
+                onPageChange={setAppPage} 
+              />
             </div>
           )}
         </div>
@@ -1682,7 +1706,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                       </td>
                     </tr>
                   ) : (
-                    accounts.map((acc) => {
+                    accounts.slice((accPage - 1) * ACCS_PER_PAGE, accPage * ACCS_PER_PAGE).map((acc) => {
                       const isSelf = actorId !== null && acc.id === actorId;
                       const busy = accountBusyId !== null;
                       const draftRole = roleDrafts[acc.id] ?? acc.role;
@@ -1770,6 +1794,12 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                   )}
                 </tbody>
               </table>
+              <Pagination 
+                currentPage={accPage} 
+                totalItems={accounts.length} 
+                pageSize={ACCS_PER_PAGE} 
+                onPageChange={setAccPage} 
+              />
             </div>
           </div>
 
@@ -1905,7 +1935,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
             </div>
           ) : (
             <div className="space-y-6">
-              {changeRequests.map((cr) => {
+              {changeRequests.slice((crPage - 1) * CRS_PER_PAGE, crPage * CRS_PER_PAGE).map((cr) => {
                 const isPending = cr.status === 'PENDING';
                 const result = approvalResults[cr.id];
                 
