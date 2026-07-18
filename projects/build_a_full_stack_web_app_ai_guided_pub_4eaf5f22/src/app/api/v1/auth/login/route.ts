@@ -13,6 +13,8 @@ const PORTAL_ROLE: Record<string, AppRole> = {
   admin: 'admin',
 };
 
+const GENERIC_AUTH_ERROR = 'Tài khoản hoặc mật khẩu không đúng.';
+
 export const POST = handleRoute(async (req: Request) => {
   enforceRateLimit('auth-login', req, { limit: 20, windowMs: 60000 });
   rateLimitCheck('auth-login-fail', req, 10, 900000);
@@ -34,13 +36,13 @@ export const POST = handleRoute(async (req: Request) => {
 
   if (!user || !user.passwordHash) {
     rateLimitConsume('auth-login-fail', req);
-    throw new AppError(401, 'UNAUTHORIZED', 'Tài khoản hoặc mật khẩu không đúng.');
+    throw new AppError(401, 'UNAUTHORIZED', GENERIC_AUTH_ERROR);
   }
 
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) {
     rateLimitConsume('auth-login-fail', req);
-    throw new AppError(401, 'UNAUTHORIZED', 'Tài khoản hoặc mật khẩu không đúng.');
+    throw new AppError(401, 'UNAUTHORIZED', GENERIC_AUTH_ERROR);
   }
 
   // Strict 1:1 portal ↔ role (manager never becomes admin session via /admin/login).
@@ -49,7 +51,7 @@ export const POST = handleRoute(async (req: Request) => {
   // right, or which portal it belongs to.
   if (user.role !== requiredRole) {
     rateLimitConsume('auth-login-fail', req);
-    throw new AppError(401, 'UNAUTHORIZED', 'Tài khoản hoặc mật khẩu không đúng.');
+    throw new AppError(401, 'UNAUTHORIZED', GENERIC_AUTH_ERROR);
   }
 
   const session = await createLoginSession(user.id, req);

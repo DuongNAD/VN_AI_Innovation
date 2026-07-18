@@ -21,9 +21,23 @@ export function middleware(req: NextRequest) {
     requestHeaders.set('x-embed', '1');
   }
 
-  const isUserLogin = pathname === '/user/login' || pathname.startsWith('/user/login/');
-  const isManagerLogin = pathname === '/manager/login' || pathname.startsWith('/manager/login/');
-  const isAdminLogin = pathname === '/admin/login' || pathname.startsWith('/admin/login/');
+  const isUserPublic =
+    pathname === '/user/login' ||
+    pathname.startsWith('/user/login/') ||
+    pathname === '/user/register' ||
+    pathname.startsWith('/user/register/') ||
+    pathname === '/user/chat' ||
+    pathname.startsWith('/user/chat/');
+  const isManagerPublic =
+    pathname === '/manager/login' ||
+    pathname.startsWith('/manager/login/') ||
+    pathname === '/manager/register' ||
+    pathname.startsWith('/manager/register/');
+  const isAdminPublic =
+    pathname === '/admin/login' ||
+    pathname.startsWith('/admin/login/') ||
+    pathname === '/admin/register' ||
+    pathname.startsWith('/admin/register/');
 
   const isUserProtected = pathname === '/user' || pathname.startsWith('/user/');
   const isManagerProtected = pathname === '/manager' || pathname.startsWith('/manager/');
@@ -31,24 +45,30 @@ export function middleware(req: NextRequest) {
 
   const hasCookie = Boolean(req.cookies.get(LOGIN_COOKIE)?.value);
 
-  if (isUserProtected && !isUserLogin && !hasCookie) {
+  // Preserve full path + query (e.g. /user/chat?embed=1) so login can return to embed
+  const nextTarget = `${pathname}${req.nextUrl.search || ''}`;
+
+  if (isUserProtected && !isUserPublic && !hasCookie) {
     const url = req.nextUrl.clone();
     url.pathname = '/user/login';
-    url.searchParams.set('next', pathname);
+    url.search = '';
+    url.searchParams.set('next', nextTarget);
     return NextResponse.redirect(url);
   }
 
-  if (isManagerProtected && !isManagerLogin && !hasCookie) {
+  if (isManagerProtected && !isManagerPublic && !hasCookie) {
     const url = req.nextUrl.clone();
     url.pathname = '/manager/login';
-    url.searchParams.set('next', pathname);
+    url.search = '';
+    url.searchParams.set('next', nextTarget);
     return NextResponse.redirect(url);
   }
 
-  if (isAdminProtected && !isAdminLogin && !hasCookie) {
+  if (isAdminProtected && !isAdminPublic && !hasCookie) {
     const url = req.nextUrl.clone();
     url.pathname = '/admin/login';
-    url.searchParams.set('next', pathname);
+    url.search = '';
+    url.searchParams.set('next', nextTarget);
     return NextResponse.redirect(url);
   }
 
