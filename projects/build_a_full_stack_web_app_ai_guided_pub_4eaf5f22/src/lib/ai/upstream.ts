@@ -1,5 +1,5 @@
 import { Buffer } from 'buffer';
-import { getOpenAiBaseUrl, getOpenAiKey } from '@/lib/config';
+import { getOpenAiBaseUrl, getServiceApiKey, type AiService } from '@/lib/config';
 
 export class UpstreamError extends Error {
   constructor(reason: string) {
@@ -9,8 +9,14 @@ export class UpstreamError extends Error {
   }
 }
 
+const PATH_SERVICE: Readonly<Record<string, AiService>> = Object.freeze({
+  '/chat/completions': 'llm',
+  '/audio/transcriptions': 'stt',
+  '/audio/speech': 'tts',
+});
+
 const APPROVED_PATHS: ReadonlySet<string> = Object.freeze(
-  new Set(['/chat/completions', '/audio/transcriptions', '/audio/speech'])
+  new Set(Object.keys(PATH_SERVICE))
 );
 
 const BINARY_PREFIX_ALLOWLIST: ReadonlySet<string> = Object.freeze(
@@ -77,7 +83,7 @@ export async function fetchUpstreamJson(
 
   let res: Response;
   try {
-    const key = getOpenAiKey();
+    const key = getServiceApiKey(PATH_SERVICE[path]);
     res = await fetch(url.href, {
       method: init.method,
       headers: {
@@ -174,7 +180,7 @@ export async function fetchUpstreamBinary(
 
   let res: Response;
   try {
-    const key = getOpenAiKey();
+    const key = getServiceApiKey(PATH_SERVICE[path]);
     res = await fetch(url.href, {
       method: init.method,
       headers: {

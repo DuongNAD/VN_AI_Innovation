@@ -13,6 +13,9 @@ interface ApplicationData {
   status: string;
   data: Record<string, unknown>;
   revision: number;
+  reviewNote?: string | null;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
   fields: any[];
   rules: any[];
   updateAvailable: boolean;
@@ -154,7 +157,7 @@ export default function ApplicationFormPage() {
         <div className="mx-auto max-w-4xl space-y-8">
           <div className="border-b border-slate-200 pb-6">
             <h1 className="mb-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-              {data.procedure.name} Phiên bản {data.formVersion}
+              {data.procedure.name} — Phiên bản {data.formVersion}
             </h1>
             <SourceFooter
               sourceUrl={data.procedure.sourceUrl}
@@ -166,14 +169,22 @@ export default function ApplicationFormPage() {
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
             <ApplicationFormRunner
               applicationId={data.applicationId}
+              formCode={data.formCode}
               fields={data.fields}
               rules={data.rules}
               initialData={data.data}
               revision={data.revision}
               formVersion={data.formVersion}
+              status={data.status}
+              reviewNote={data.reviewNote}
+              reviewedBy={data.reviewedBy}
+              reviewedAt={data.reviewedAt}
               updateAvailable={data.updateAvailable}
               newVersion={data.newVersion}
               token={token}
+              onVersionChange={(version) =>
+                setData((prev) => (prev ? { ...prev, formVersion: version } : prev))
+              }
             />
           </div>
         </div>

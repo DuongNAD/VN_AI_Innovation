@@ -45,7 +45,10 @@ export const POST = handleRoute(async (req: Request) => {
     throw new AppError(401, 'UNAUTHORIZED', GENERIC_AUTH_ERROR);
   }
 
-  // Wrong portal/role: same envelope as bad password (no role / path leakage)
+  // Strict 1:1 portal ↔ role (manager never becomes admin session via /admin/login).
+  // Anti-enumeration: a wrong-portal attempt answers EXACTLY like wrong
+  // credentials — never confirm the account exists, that the password was
+  // right, or which portal it belongs to.
   if (user.role !== requiredRole) {
     rateLimitConsume('auth-login-fail', req);
     throw new AppError(401, 'UNAUTHORIZED', GENERIC_AUTH_ERROR);

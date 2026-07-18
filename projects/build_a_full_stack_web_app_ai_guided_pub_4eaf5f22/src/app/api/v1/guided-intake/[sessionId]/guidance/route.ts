@@ -2,14 +2,14 @@ import { handleRoute, AppError, jsonOk } from '@/lib/errors';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { requireSessionToken, sha256hex } from '@/lib/auth';
 import { getProvider } from '@/lib/data-provider';
-import { pruneAnswers, buildGuidance } from '@/lib/intake-machine';
+import { pruneAnswers } from '@/lib/intake-machine';
+import { assembleGuidance } from '@/lib/guidance';
 import { cachedJson } from '@/lib/cache';
 import { canonicalJson } from '@/lib/idempotency';
 import { prisma } from '@/lib/db';
 
 export const GET = handleRoute(async (req: Request, { params }: { params: Promise<{ sessionId: string }> }) => {
   enforceRateLimit('guidance', req);
-
   const { sessionId } = await params;
 
   // Load session (404/expired ordering per conventions)
@@ -61,53 +61,27 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
     : {};
   const { answers } = pruneAnswers(questions, sessionAnswers);
 
+  // The cached payload embeds formAvailable, so the key must change when the
+  // active form version changes (e.g. right after an admin approval).
+  const activeForm = await provider.getActiveFormVersion(procedure.code);
+  const formAvailable = activeForm !== null;
+
   // Generate cache key
   const answersHash = sha256hex(canonicalJson(answers));
-  const key = `guidance:${procedure.code}:${procVersion.version}:${answersHash}:vi`;
+  const sourceHash = sha256hex(procedure.sourceUrl).slice(0, 16);
+  const key = `guidance:${procedure.code}:${procVersion.version}:${activeForm?.version ?? 'none'}:${sourceHash}:${answersHash}:vi`;
 
-  // Get guidance from cache or compute it
-  const { value, cacheHit } = await cachedJson(key, 300, async () => {
-    const baseGuidance = buildGuidance({
+  // Get guidance from cache or compute it (shared with the TTS pre-gen CLI)
+  const { value, cacheHit } = await cachedJson(key, 300, async () =>
+    assembleGuidance({
       procedure,
       procedureVersion: procVersion,
       documents,
       answers,
-    });
-
-    // Check if there is an active FormVersion
-    const activeForm = await provider.getActiveFormVersion(procedure.code);
-    const formAvailable = activeForm !== null;
-
-    // Build checklist mapping documents with submission types
-    const docMap = new Map(documents.map((d) => [d.code, d]));
-    const checklist = baseGuidance.checklist.map((item: any) => {
-      const doc = docMap.get(item.code);
-      return {
-        ...item,
-        submissionType: doc ? doc.submissionType : 'SUBMIT',
-      };
-    });
-
-    // Map steps and carry step examples
-    const steps = (baseGuidance.steps || procVersion.stepsJson || []).map((step: any) => ({
-      order: step.order,
-      title: step.title,
-      description: step.description,
-      example: step.example || '',
-    }));
-
-    return {
-      ...baseGuidance,
-      legalBasisText: procVersion.legalBasisText || null,
-      procedure: {
-        ...baseGuidance.procedure,
-        legalBasisText: procVersion.legalBasisText || null,
-      },
-      checklist,
-      steps,
+      questions,
       formAvailable,
-    };
-  });
+    })
+  );
 
   return jsonOk({
     ...value,

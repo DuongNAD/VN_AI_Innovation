@@ -1,9 +1,20 @@
 import { PrismaClient } from '@prisma/client';
 import { parseFieldDefs, parseRuleDefs, parseMigrationHints } from '../src/lib/schema-guards';
+import { OFFICIAL_PROCEDURE_SOURCE_URLS } from '../src/lib/official-procedures';
 import { hashPassword } from '../src/lib/password';
 import { fileURLToPath } from 'url';
 
 const prisma = new PrismaClient();
+
+export function assertSeedAllowed(
+  env: Partial<Pick<NodeJS.ProcessEnv, 'NODE_ENV' | 'ALLOW_DEMO_SEED'>> = process.env
+): void {
+  if (env.NODE_ENV === 'production' && env.ALLOW_DEMO_SEED !== '1') {
+    throw new Error(
+      'DEMO_SEED_BLOCKED: refusing to reset demo workflow data in production; set ALLOW_DEMO_SEED=1 only for an intentional disposable environment'
+    );
+  }
+}
 
 async function seedUsers() {
   /** Local test accounts — password pattern: <Role>Demo123! */
@@ -52,6 +63,28 @@ async function seedUsers() {
       role: 'manager',
       password: 'ManagerDemo123!',
     },
+    // manager — thêm để test tay, mỗi tài khoản mật khẩu riêng
+    {
+      username: 'quanly.hanoi',
+      email: 'quanly.hanoi@demo.vn',
+      displayName: 'Đỗ Thị Hà',
+      role: 'manager',
+      password: 'HaNoi2026@ql',
+    },
+    {
+      username: 'quanly.hcm',
+      email: 'quanly.hcm@demo.vn',
+      displayName: 'Bùi Văn Sơn',
+      role: 'manager',
+      password: 'SaiGon2026@ql',
+    },
+    {
+      username: 'quanly.danang',
+      email: 'quanly.danang@demo.vn',
+      displayName: 'Ngô Thị Diễm',
+      role: 'manager',
+      password: 'DaNang2026@ql',
+    },
     // admin
     {
       username: 'admin',
@@ -73,6 +106,28 @@ async function seedUsers() {
       displayName: 'Admin Kiểm Thử',
       role: 'admin',
       password: 'AdminDemo123!',
+    },
+    // admin — thêm để test tay, mỗi tài khoản mật khẩu riêng
+    {
+      username: 'admin.truong',
+      email: 'admin.truong@demo.vn',
+      displayName: 'Trần Quản Trị Trưởng',
+      role: 'admin',
+      password: 'Truong2026@ad',
+    },
+    {
+      username: 'admin.kythuat',
+      email: 'admin.kythuat@demo.vn',
+      displayName: 'Lý Kỹ Thuật',
+      role: 'admin',
+      password: 'KyThuat2026@ad',
+    },
+    {
+      username: 'admin.kiemtoan',
+      email: 'admin.kiemtoan@demo.vn',
+      displayName: 'Phan Kiểm Toán',
+      role: 'admin',
+      password: 'KiemToan2026@ad',
     },
   ] as const;
 
@@ -96,7 +151,7 @@ async function seedUsers() {
     });
   }
   console.log(
-    `Seeded ${accounts.length} test users (3 user / 3 manager / 3 admin).`
+    `Seeded ${accounts.length} test users (3 user / 6 manager / 6 admin).`
   );
 }
 
@@ -105,6 +160,7 @@ async function upsertProcedure(
   name: string,
   sector: string,
   agency: string,
+  audience: 'CITIZEN' | 'BUSINESS',
   sourceUrl: string,
   versions: Array<{
     version: string;
@@ -140,6 +196,7 @@ async function upsertProcedure(
       name,
       sector,
       agency,
+      audience,
       sourceUrl,
       lastCheckedAt: new Date(),
     },
@@ -148,6 +205,7 @@ async function upsertProcedure(
       name,
       sector,
       agency,
+      audience,
       sourceUrl,
       lastCheckedAt: new Date(),
     },
@@ -332,7 +390,11 @@ async function upsertFormAndVersions(
   return form;
 }
 
-export async function main() {
+export async function main(options: { allowProductionBootstrap?: boolean } = {}) {
+  if (!options.allowProductionBootstrap) {
+    assertSeedAllowed();
+  }
+
   try {
     // 1. Seed MARRIAGE_REGISTRATION
     const marriageSteps = [
@@ -365,7 +427,8 @@ export async function main() {
       'Đăng ký kết hôn',
       'Hộ tịch',
       'UBND cấp xã',
-      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-hanh-chinh.html?ma_thu_tuc=1.000894',
+      'CITIZEN',
+      OFFICIAL_PROCEDURE_SOURCE_URLS.MARRIAGE_REGISTRATION,
       [
         {
           version: '1.0',
@@ -503,7 +566,8 @@ export async function main() {
       'Đăng ký khai sinh',
       'Hộ tịch',
       'UBND cấp xã',
-      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-hanh-chinh.html?ma_thu_tuc=1.001193',
+      'CITIZEN',
+      OFFICIAL_PROCEDURE_SOURCE_URLS.BIRTH_REGISTRATION,
       [
         {
           version: '1.0',
@@ -575,7 +639,8 @@ export async function main() {
       'Đăng ký tạm trú',
       'Cư trú',
       'Công an cấp xã',
-      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-nganh-doc.html?ma_thu_tuc=1.004194',
+      'CITIZEN',
+      OFFICIAL_PROCEDURE_SOURCE_URLS.TEMP_RESIDENCE_REGISTRATION,
       [
         {
           version: '1.0',
@@ -613,7 +678,8 @@ export async function main() {
       'Cấp thẻ căn cước',
       'Căn cước',
       'Công an cấp huyện',
-      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-nganh-doc.html?ma_thu_tuc=2.000200',
+      'CITIZEN',
+      OFFICIAL_PROCEDURE_SOURCE_URLS.CITIZEN_ID_ISSUANCE,
       [
         {
           version: '1.0',
@@ -652,7 +718,8 @@ export async function main() {
       'Cấp hộ chiếu phổ thông trong nước',
       'Xuất nhập cảnh',
       'Phòng Quản lý xuất nhập cảnh Công an cấp tỉnh',
-      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-nganh-doc.html?ma_thu_tuc=1.001456',
+      'CITIZEN',
+      OFFICIAL_PROCEDURE_SOURCE_URLS.PASSPORT_ISSUANCE,
       [
         {
           version: '1.0',
@@ -668,7 +735,100 @@ export async function main() {
       passportDocuments
     );
 
-    // 6. Seed PENDING ChangeRequest for MARRIAGE_REGISTRATION v1.0 -> v2.0
+    // 6. Seed HOUSEHOLD_BUSINESS_REGISTRATION (audience: BUSINESS, full form flow)
+    const householdBusinessSteps = [
+      { order: 1, title: 'Chuẩn bị hồ sơ', description: 'Điền Giấy đề nghị đăng ký hộ kinh doanh; nếu hộ do các thành viên hộ gia đình đăng ký, chuẩn bị thêm văn bản ủy quyền cho một thành viên làm đại diện (công chứng/chứng thực).', example: 'Bạn điền tên hộ kinh doanh, ngành nghề và vốn kinh doanh vào giấy đề nghị.' },
+      { order: 2, title: 'Nộp hồ sơ', description: 'Nộp trực tuyến qua cổng dịch vụ công hoặc trực tiếp tại cơ quan đăng ký kinh doanh cấp xã bất kỳ trong tỉnh nơi đặt trụ sở.', example: 'Bạn đăng nhập VNeID và nộp hồ sơ đăng ký hộ kinh doanh trực tuyến.' },
+      { order: 3, title: 'Tiếp nhận hồ sơ', description: 'Cơ quan đăng ký kinh doanh cấp xã tiếp nhận và trao Giấy biên nhận.', example: 'Bạn nhận Giấy biên nhận có ghi ngày hẹn trả kết quả.' },
+      { order: 4, title: 'Thẩm định hồ sơ', description: 'Trường hợp hồ sơ chưa hợp lệ, cơ quan thông báo bằng văn bản trong 03 ngày làm việc để bổ sung, sửa đổi.', example: 'Bạn nhận được yêu cầu bổ sung làm rõ ngành nghề kinh doanh qua email.' },
+      { order: 5, title: 'Nhận kết quả', description: 'Nhận Giấy chứng nhận đăng ký hộ kinh doanh trong 03 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ.', example: 'Bạn nhận Giấy chứng nhận đăng ký hộ kinh doanh bản điện tử qua cổng dịch vụ công.' }
+    ];
+
+    const householdBusinessQuestions = [
+      { code: 'registered_by_family', orderNumber: 1, fieldType: 'radio', optionsJson: [{ value: false, label: 'Một cá nhân' }, { value: true, label: 'Các thành viên hộ gia đình' }], conditionJson: null, questionText: 'Hộ kinh doanh do một cá nhân hay các thành viên hộ gia đình cùng đăng ký?' },
+      { code: 'province', orderNumber: 2, fieldType: 'province', optionsJson: null, conditionJson: null, questionText: 'Trụ sở hộ kinh doanh đặt tại tỉnh/thành phố nào?' },
+      { code: 'submission_channel', orderNumber: 3, fieldType: 'radio', optionsJson: [{ value: 'online', label: 'Trực tuyến' }, { value: 'offline', label: 'Trực tiếp' }], conditionJson: null, questionText: 'Bạn muốn nộp hồ sơ trực tuyến hay trực tiếp?' }
+    ];
+
+    const householdBusinessDocuments = [
+      { code: 'HKD_REQUEST_FORM', name: 'Giấy đề nghị đăng ký hộ kinh doanh', originals: 1, copies: 0, orderNumber: 1, conditionJson: null, reasonText: null, submissionType: 'SUBMIT' },
+      { code: 'FAMILY_AUTHORIZATION', name: 'Văn bản ủy quyền của thành viên hộ gia đình cho người đại diện', originals: 0, copies: 1, orderNumber: 2, conditionJson: { field: 'registered_by_family', operator: 'equals', value: true }, reasonText: 'Áp dụng vì hộ kinh doanh do các thành viên hộ gia đình cùng đăng ký (bản sao có công chứng/chứng thực).', submissionType: 'SUBMIT' },
+      { code: 'OWNER_IDENTITY_LOOKUP', name: 'Giấy tờ pháp lý cá nhân của chủ hộ/người đại diện', originals: 0, copies: 0, orderNumber: 3, conditionJson: null, reasonText: 'Cơ quan đăng ký kinh doanh tra cứu thông tin công dân qua CSDL quốc gia về dân cư theo số định danh cá nhân (không phải nộp).', submissionType: 'SYSTEM_LOOKUP' }
+    ];
+
+    const householdBusinessProc = await upsertProcedure(
+      'HOUSEHOLD_BUSINESS_REGISTRATION',
+      'Đăng ký thành lập hộ kinh doanh',
+      'Đăng ký kinh doanh',
+      'Cơ quan đăng ký kinh doanh cấp xã',
+      'BUSINESS',
+      OFFICIAL_PROCEDURE_SOURCE_URLS.HOUSEHOLD_BUSINESS_REGISTRATION,
+      [
+        {
+          version: '1.0',
+          status: 'ACTIVE',
+          effectiveFrom: new Date('2026-01-01T00:00:00+07:00'),
+          stepsJson: householdBusinessSteps,
+          durationText: '03 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ',
+          feesText: 'Theo nghị quyết của HĐND cấp tỉnh (nhiều địa phương miễn lệ phí khi đăng ký trực tuyến)',
+          legalBasisText: 'Luật Doanh nghiệp 2020; Nghị định 168/2025/NĐ-CP'
+        }
+      ],
+      householdBusinessQuestions,
+      householdBusinessDocuments
+    );
+
+    const householdBusinessFieldsV1Raw = [
+      { id: "business_name", type: "text", label: "Tên hộ kinh doanh", required: true },
+      { id: "owner_full_name", type: "text", label: "Họ và tên chủ hộ kinh doanh", required: true },
+      { id: "owner_birth_date", type: "date", label: "Ngày sinh chủ hộ", required: true },
+      { id: "owner_identity_number", type: "text", label: "Số định danh cá nhân/CCCD chủ hộ", required: true },
+      { id: "business_address", type: "text", label: "Địa chỉ trụ sở hộ kinh doanh", required: true },
+      { id: "province", type: "province", label: "Tỉnh/thành phố đăng ký", required: true },
+      { id: "business_lines", type: "text", label: "Ngành, nghề kinh doanh", required: true },
+      { id: "capital_amount", type: "number", label: "Vốn kinh doanh (đồng)", required: true },
+      { id: "phone_number", type: "text", label: "Số điện thoại liên hệ", required: false },
+      { id: "registered_by_family", type: "radio", label: "Đăng ký bởi các thành viên hộ gia đình", required: true, options: [{ value: true, label: "Có" }, { value: false, label: "Không" }] },
+      { id: "family_authorization", type: "file", label: "Văn bản ủy quyền của thành viên hộ gia đình", required: false, visibleWhen: { field: "registered_by_family", operator: "equals", value: true } },
+      { id: "submission_channel", type: "radio", label: "Kênh nộp hồ sơ", required: true, options: [{ value: "online", label: "Trực tuyến" }, { value: "offline", label: "Trực tiếp" }] }
+    ];
+
+    const householdBusinessRulesV1Raw = [
+      { id: "hkd_v1_req_business_name", type: "required", fieldId: "business_name", params: {}, message: "Vui lòng nhập tên hộ kinh doanh.", suggestion: "Nhập tên đầy đủ, ví dụ: Hộ kinh doanh Tạp hóa Minh Anh.", severity: "error", orderNumber: 1 },
+      { id: "hkd_v1_req_owner_name", type: "required", fieldId: "owner_full_name", params: {}, message: "Vui lòng nhập họ tên chủ hộ kinh doanh.", suggestion: "Nhập đầy đủ họ tên theo CCCD.", severity: "error", orderNumber: 2 },
+      { id: "hkd_v1_req_owner_birth", type: "required", fieldId: "owner_birth_date", params: {}, message: "Vui lòng nhập ngày sinh chủ hộ.", suggestion: "Nhập đúng ngày tháng năm sinh.", severity: "error", orderNumber: 3 },
+      { id: "hkd_v1_date_owner_birth", type: "date_not_future", fieldId: "owner_birth_date", params: {}, message: "Ngày sinh chủ hộ không được ở tương lai", suggestion: "Vui lòng kiểm tra lại ngày sinh.", severity: "error", orderNumber: 4 },
+      { id: "hkd_v1_req_owner_id", type: "required", fieldId: "owner_identity_number", params: {}, message: "Vui lòng nhập số định danh cá nhân/CCCD chủ hộ.", suggestion: "Nhập đủ 12 chữ số trên thẻ căn cước.", severity: "error", orderNumber: 5 },
+      { id: "hkd_v1_fmt_owner_id", type: "regex", fieldId: "owner_identity_number", params: { pattern: "^[0-9]{12}$" }, message: "Số CCCD phải gồm đúng 12 chữ số", suggestion: "Kiểm tra lại số CCCD trên thẻ căn cước", severity: "error", orderNumber: 6 },
+      { id: "hkd_v1_req_address", type: "required", fieldId: "business_address", params: {}, message: "Vui lòng nhập địa chỉ trụ sở hộ kinh doanh.", suggestion: "Nhập số nhà, đường/phố, phường/xã nơi đặt trụ sở.", severity: "error", orderNumber: 7 },
+      { id: "hkd_v1_req_province", type: "required", fieldId: "province", params: {}, message: "Vui lòng chọn tỉnh/thành phố đăng ký.", suggestion: "Chọn nơi đặt trụ sở hộ kinh doanh.", severity: "error", orderNumber: 8 },
+      { id: "hkd_v1_req_lines", type: "required", fieldId: "business_lines", params: {}, message: "Vui lòng nhập ngành, nghề kinh doanh.", suggestion: "Ví dụ: bán lẻ tạp hóa, dịch vụ ăn uống.", severity: "error", orderNumber: 9 },
+      { id: "hkd_v1_req_capital", type: "required", fieldId: "capital_amount", params: {}, message: "Vui lòng nhập vốn kinh doanh.", suggestion: "Nhập số vốn bằng đồng Việt Nam.", severity: "error", orderNumber: 10 },
+      { id: "hkd_v1_range_capital", type: "number_range", fieldId: "capital_amount", params: { min: 1 }, message: "Vốn kinh doanh phải lớn hơn 0 đồng", suggestion: "Kiểm tra lại số vốn đã kê khai.", severity: "error", orderNumber: 11 },
+      { id: "hkd_v1_fmt_phone", type: "regex", fieldId: "phone_number", params: { pattern: "^0[0-9]{9}$" }, message: "Số điện thoại phải gồm 10 chữ số bắt đầu bằng 0", suggestion: "Ví dụ: 0912345678.", severity: "error", orderNumber: 12 },
+      { id: "hkd_v1_req_family_flag", type: "required", fieldId: "registered_by_family", params: {}, message: "Vui lòng chọn hình thức đăng ký.", suggestion: "Chọn Có nếu các thành viên hộ gia đình cùng đăng ký.", severity: "error", orderNumber: 13 },
+      { id: "hkd_v1_cond_doc_authorization", type: "conditional_document", fieldId: "family_authorization", params: { condition: { field: "registered_by_family", operator: "equals", value: true } }, message: "Vui lòng tải lên văn bản ủy quyền của thành viên hộ gia đình.", suggestion: "Cần bản sao văn bản ủy quyền có công chứng/chứng thực vì hộ do các thành viên hộ gia đình đăng ký.", severity: "error", orderNumber: 14 },
+      { id: "hkd_v1_conflict_authorization", type: "cross_field_conflict", fieldId: undefined, params: { conditions: [{ field: "registered_by_family", operator: "equals", value: false }, { field: "family_authorization", operator: "not_empty" }] }, message: "Thông tin mâu thuẫn: đăng ký cá nhân nhưng có văn bản ủy quyền thành viên hộ gia đình", suggestion: "Kiểm tra lại hình thức đăng ký hoặc gỡ tệp ủy quyền.", severity: "error", orderNumber: 15 },
+      { id: "hkd_v1_req_channel", type: "required", fieldId: "submission_channel", params: {}, message: "Vui lòng chọn kênh nộp hồ sơ.", suggestion: "Chọn Trực tuyến hoặc Trực tiếp.", severity: "error", orderNumber: 16 }
+    ];
+
+    await upsertFormAndVersions(
+      'HOUSEHOLD_BUSINESS_REGISTRATION',
+      'Đăng ký thành lập hộ kinh doanh',
+      householdBusinessProc.id,
+      [
+        {
+          version: '1.0',
+          status: 'ACTIVE',
+          effectiveFrom: new Date('2026-01-01T00:00:00+07:00'),
+          fieldsRaw: householdBusinessFieldsV1Raw,
+          hintsRaw: [],
+          rulesRaw: householdBusinessRulesV1Raw
+        }
+      ]
+    );
+
+    // 7. Seed PENDING ChangeRequest for MARRIAGE_REGISTRATION v1.0 -> v2.0
     const mActiveFormV1 = await prisma.formVersion.findFirst({
       where: {
         form: { code: 'MARRIAGE_REGISTRATION' },
@@ -687,7 +847,7 @@ export async function main() {
         status: 'PENDING',
         reviewedBy: null,
         reviewedAt: null,
-        sourceUrl: 'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-hanh-chinh.html?ma_thu_tuc=1.000894',
+        sourceUrl: OFFICIAL_PROCEDURE_SOURCE_URLS.MARRIAGE_REGISTRATION,
         diffJson: {
           summary: 'Cập nhật biểu mẫu theo quy định mới về cư trú',
           added: ['permanent_address', 'temporary_address', 'phone_number'],
@@ -702,7 +862,7 @@ export async function main() {
         id: 'cr_marriage_v2',
         oldVersionId: mActiveFormV1.id,
         status: 'PENDING',
-        sourceUrl: 'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-hanh-chinh.html?ma_thu_tuc=1.000894',
+        sourceUrl: OFFICIAL_PROCEDURE_SOURCE_URLS.MARRIAGE_REGISTRATION,
         diffJson: {
           summary: 'Cập nhật biểu mẫu theo quy định mới về cư trú',
           added: ['permanent_address', 'temporary_address', 'phone_number'],
@@ -720,8 +880,12 @@ export async function main() {
     console.log('Database seeded successfully.');
   } catch (error) {
     console.error('Seeding integrity error occurred:', error);
-    process.exit(1);
+    throw error;
   }
+}
+
+export async function disconnectSeedDatabase(): Promise<void> {
+  await prisma.$disconnect();
 }
 
 const isDirectRun = process.argv[1] && (
@@ -734,9 +898,9 @@ if (isDirectRun) {
   main()
     .catch((e) => {
       console.error(e);
-      process.exit(1);
+      process.exitCode = 1;
     })
     .finally(async () => {
-      await prisma.$disconnect();
+      await disconnectSeedDatabase();
     });
 }

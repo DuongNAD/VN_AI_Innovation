@@ -37,6 +37,11 @@ describe('form-migration · selectActiveVersion', () => {
     expect(selectActiveVersion(onlyDraft, new Date('2026-01-01'))).toBeNull();
   });
 
+  it('rejects unknown status values even when their dates look active', () => {
+    const malformed = [v('9.0', 'PUBLISHED', '2000-01-01', null)];
+    expect(selectActiveVersion(malformed, new Date('2026-01-01'))).toBeNull();
+  });
+
   it('returns null before any version is effective', () => {
     expect(selectActiveVersion(all, new Date('2000-01-01'))).toBeNull();
   });

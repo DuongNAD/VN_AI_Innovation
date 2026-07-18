@@ -1,6 +1,8 @@
 import crypto from 'crypto';
+import type { Session } from '@prisma/client';
 import { AppError } from './errors';
 import { getAdminToken, getManagerToken } from './config';
+import { prisma } from './db';
 import { rateLimitCheck, rateLimitConsume } from './rate-limit';
 import { staffSatisfies, type StaffRole } from './roles';
 
@@ -62,9 +64,50 @@ function tokenMatchesSecret(presented: string, secret: string): boolean {
 }
 
 /**
+ * Authenticates a live session using only the X-Session-Token header.
+ */
+export async function requireLiveSession(
+  req: Request,
+  expectedProcedureCode?: string
+): Promise<Session> {
+  const token = req.headers.get('x-session-token');
+  if (!token || token.trim() === '' || token.length > 200) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Phiên truy cập không hợp lệ hoặc đã hết hạn.');
+  }
+
+  const accessTokenHash = hashToken(token);
+  const session = await prisma.session.findUnique({
+    where: { accessTokenHash },
+  });
+
+  if (
+    !session ||
+    !verifyToken(token, session.accessTokenHash) ||
+    !(session.expiresAt instanceof Date) ||
+    !Number.isFinite(session.expiresAt.getTime()) ||
+    session.expiresAt.getTime() < Date.now()
+  ) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Phiên truy cập không hợp lệ hoặc đã hết hạn.');
+  }
+
+  if (
+    expectedProcedureCode !== undefined &&
+    session.procedureCode !== expectedProcedureCode
+  ) {
+    throw new AppError(
+      403,
+      'OWNERSHIP_MISMATCH',
+      'Phiên truy cập không thuộc thủ tục được yêu cầu.'
+    );
+  }
+
+  return session;
+}
+
+/**
  * Resolve staff role from request headers.
  * - X-Admin-Token  → admin (if matches ADMIN_TOKEN)
- * - X-Manager-Token → manager (if matches MANAGER_TOKEN)
+ * - X-Manager-Token → manager (only when the optional MANAGER_TOKEN is set)
  * Admin takes precedence when both headers are present and valid.
  * Returns null when neither credential is valid (does not throw / rate-limit).
  */
@@ -81,7 +124,12 @@ export function resolveStaffRole(req: Request): StaffRole | null {
   }
 
   try {
-    if (managerPresented !== '' && tokenMatchesSecret(managerPresented, getManagerToken())) {
+    const managerToken = getManagerToken();
+    if (
+      managerToken !== null &&
+      managerPresented !== '' &&
+      tokenMatchesSecret(managerPresented, managerToken)
+    ) {
       return 'manager';
     }
   } catch {
@@ -101,7 +149,7 @@ export function requireStaff(req: Request, minRole: StaffRole = 'manager'): Staf
   const role = resolveStaffRole(req);
 
   if (role === null) {
-    rateLimitConsume('staff-auth', req);
+    rateLimitConsume('staff-auth', req, 900000);
     throw new AppError(401, 'UNAUTHORIZED', 'Sai mã xác thực. Vui lòng kiểm tra lại.');
   }
 

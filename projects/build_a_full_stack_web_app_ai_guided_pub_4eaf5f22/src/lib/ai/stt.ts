@@ -56,6 +56,9 @@ const openAiStt: SttProvider = {
     formData.append('file', file, `audio.${ext}`);
     formData.append('model', model);
     formData.append('language', language);
+    // Pin the response shape per provider docs (FPT sample sends this
+    // explicitly) instead of relying on the upstream default staying "json".
+    formData.append('response_format', 'json');
 
     const response = await fetchUpstreamJson('/audio/transcriptions', {
       method: 'POST',

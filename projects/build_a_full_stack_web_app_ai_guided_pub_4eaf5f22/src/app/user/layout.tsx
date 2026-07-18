@@ -34,7 +34,12 @@ export default async function UserLayout({ children }: { children: React.ReactNo
       allow={['user']}
       loginPath="/user/login"
       renderChrome={(user) => (
-        <UserBar displayName={user.displayName} roleLabel="Công dân" homeHref="/user" />
+        <UserBar
+          displayName={user.displayName}
+          username={user.username}
+          roleLabel="Công dân"
+          homeHref="/user"
+        />
       )}
     >
       {children}

@@ -1,9 +1,15 @@
 /**
  * Known residual design limitation:
  * Static validation passes for DNS names that resolve to internal IP addresses in non-production.
- * Production environment is protected by pinning the hostname to 'api.openai.com'.
+ * Production environment is protected by pinning the hostname to an allowlist of
+ * known AI upstream hosts (OpenAI, FPT AI Marketplace).
  * Re-validation at connect time is the responsibility of the outbound HTTP client.
  */
+
+const PROD_ALLOWED_AI_HOSTS: ReadonlySet<string> = new Set([
+  'api.openai.com',
+  'mkp-api.fptcloud.com',
+]);
 
 function getBoundedInteger(
   varName: string,
@@ -61,15 +67,33 @@ export function getAiProvider(): 'mock' | 'openai' {
   return process.env.AI_PROVIDER === 'openai' ? 'openai' : 'mock';
 }
 
-export function getOpenAiKey(): string {
-  const key = process.env.OPENAI_API_KEY;
-  if (getAiProvider() === 'openai') {
-    if (key === undefined || key.trim() === '') {
-      throw new Error('CONFIG_INVALID: OPENAI_API_KEY is required when AI_PROVIDER=openai');
-    }
-    return key;
+export type AiService = 'llm' | 'stt' | 'tts';
+
+const SERVICE_KEY_VARS: Record<AiService, string> = {
+  llm: 'LLM_API_KEY',
+  stt: 'STT_API_KEY',
+  tts: 'TTS_API_KEY',
+};
+
+/**
+ * Resolves the API key for one AI service. Per-service keys (LLM_API_KEY /
+ * STT_API_KEY / TTS_API_KEY) take precedence — marketplaces like FPT AI issue
+ * keys scoped to a single model — with OPENAI_API_KEY as the shared fallback.
+ */
+export function getServiceApiKey(service: AiService): string {
+  const varName = SERVICE_KEY_VARS[service];
+  const specific = process.env[varName];
+  if (specific !== undefined && specific.trim() !== '') {
+    return specific;
   }
-  return key || '';
+  const shared = process.env.OPENAI_API_KEY;
+  if (shared !== undefined && shared.trim() !== '') {
+    return shared;
+  }
+  if (getAiProvider() === 'openai') {
+    throw new Error(`CONFIG_INVALID: ${varName} or OPENAI_API_KEY is required when AI_PROVIDER=openai`);
+  }
+  return '';
 }
 
 export function getOpenAiBaseUrl(): string {
@@ -99,7 +123,7 @@ export function getOpenAiBaseUrl(): string {
     if (protocol !== 'https:') {
       throw new Error('CONFIG_INVALID: OPENAI_BASE_URL must use https (http is allowed only for localhost outside production)');
     }
-    if (hostname !== 'api.openai.com') {
+    if (!PROD_ALLOWED_AI_HOSTS.has(hostname)) {
       throw new Error('CONFIG_INVALID: OPENAI_BASE_URL host is not allowed in production');
     }
   } else {
@@ -124,20 +148,24 @@ export function getOpenAiBaseUrl(): string {
 }
 
 function validateStaffToken(varName: string, token: string | undefined, forbiddenPlaceholder: string): string {
-  if (token === undefined) {
+  if (token === undefined || token === '') {
     throw new Error(`CONFIG_INVALID: ${varName} is required`);
   }
-  if (token === forbiddenPlaceholder) {
-    throw new Error(`CONFIG_INVALID: ${varName} must not be a placeholder value`);
-  }
-  if (token.length < 24 || !/^[\x21-\x7E]+$/.test(token)) {
-    throw new Error(
-      `CONFIG_INVALID: ${varName} must be at least 24 printable non-whitespace ASCII characters`
-    );
-  }
-  const distinctChars = new Set(token).size;
-  if (distinctChars < 8) {
-    throw new Error(`CONFIG_INVALID: ${varName} must contain at least 8 distinct characters`);
+  // Strength requirements are enforced in production only, as documented in
+  // README/.env.example — local demos may run with the shipped example values.
+  if (isProd()) {
+    if (token === forbiddenPlaceholder) {
+      throw new Error(`CONFIG_INVALID: ${varName} must not be a placeholder value`);
+    }
+    if (token.length < 24 || !/^[\x21-\x7E]+$/.test(token)) {
+      throw new Error(
+        `CONFIG_INVALID: ${varName} must be at least 24 printable non-whitespace ASCII characters`
+      );
+    }
+    const distinctChars = new Set(token).size;
+    if (distinctChars < 8) {
+      throw new Error(`CONFIG_INVALID: ${varName} must contain at least 8 distinct characters`);
+    }
   }
   return token;
 }
@@ -147,21 +175,29 @@ export function getAdminToken(): string {
 }
 
 /**
- * Shared demo token for the manager portal (/manager).
- * Manager can view overview + change requests but cannot approve.
+ * OPTIONAL legacy shared token for the X-Manager-Token header path.
+ * Managers sign in with accounts (cookie sessions) since the login system, so
+ * nothing requires this anymore: unset ⇒ returns null and the header path is
+ * simply disabled. When set, production still enforces a real, strong value.
  */
-export function getManagerToken(): string {
-  return validateStaffToken('MANAGER_TOKEN', process.env.MANAGER_TOKEN, 'demo-manager-token');
+export function getManagerToken(): string | null {
+  const raw = process.env.MANAGER_TOKEN;
+  if (raw === undefined || raw === '') {
+    return null;
+  }
+  return validateStaffToken('MANAGER_TOKEN', raw, 'demo-manager-token');
 }
 
 export function assertStartupConfig(): void {
   const admin = getAdminToken();
   const manager = getManagerToken();
-  if (admin === manager) {
+  if (manager !== null && admin === manager) {
     throw new Error('CONFIG_INVALID: ADMIN_TOKEN and MANAGER_TOKEN must be different');
   }
   getOpenAiBaseUrl();
   if (getAiProvider() === 'openai') {
-    getOpenAiKey();
+    getServiceApiKey('llm');
+    getServiceApiKey('stt');
+    getServiceApiKey('tts');
   }
 }

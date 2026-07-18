@@ -8,6 +8,7 @@ export const FLOW_STEPS = [
   { key: 'checklist', label: 'Giấy tờ' },
   { key: 'form', label: 'Biểu mẫu' },
   { key: 'result', label: 'Kiểm tra' },
+  { key: 'approval', label: 'Nộp & duyệt' },
 ] as const;
 
 export type FlowStepKey = (typeof FLOW_STEPS)[number]['key'];

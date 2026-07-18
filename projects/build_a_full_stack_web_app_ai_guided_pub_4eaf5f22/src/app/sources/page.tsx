@@ -57,6 +57,7 @@ async function loadCatalog() {
       name: proc.name,
       agency: proc.agency,
       sector: proc.sector,
+      audience: proc.audience === 'BUSINESS' ? 'BUSINESS' : 'CITIZEN',
       sourceUrl: safeHttpsUrl(proc.sourceUrl),
       lastCheckedAt: proc.lastCheckedAt,
       version: activeVersion?.version ?? null,
@@ -65,6 +66,11 @@ async function loadCatalog() {
     };
   });
 }
+
+const AUDIENCE_GROUPS = [
+  { key: 'CITIZEN', label: 'Thủ tục dành cho Công dân', badge: 'bg-blue-50 border-blue-200 text-blue-700' },
+  { key: 'BUSINESS', label: 'Thủ tục dành cho Doanh nghiệp', badge: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
+] as const;
 
 export default async function SourcesPage() {
   let catalog: Awaited<ReturnType<typeof loadCatalog>> = [];
@@ -76,7 +82,7 @@ export default async function SourcesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen  text-slate-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto space-y-10">
         <div className="space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold uppercase tracking-wider">
@@ -113,8 +119,15 @@ export default async function SourcesPage() {
           </div>
         )}
 
-        <div className="space-y-6">
-          {catalog.map((item) => {
+        {AUDIENCE_GROUPS.map((group) => {
+          const items = catalog.filter((item) => item.audience === group.key);
+          if (items.length === 0) return null;
+          return (
+            <div key={group.key} className="space-y-6">
+              <span className={`inline-flex items-center px-4 py-1.5 rounded-full border text-sm font-bold uppercase tracking-wide ${group.badge}`}>
+                {group.label}
+              </span>
+              {items.map((item) => {
             const checked = formatDate(item.lastCheckedAt);
             return (
               <section
@@ -165,7 +178,7 @@ export default async function SourcesPage() {
                 </dl>
 
                 {item.legalBasisText && (
-                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                  <div className=" border border-slate-100 rounded-xl p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
                       Căn cứ pháp lý
                     </p>
@@ -202,8 +215,10 @@ export default async function SourcesPage() {
                 )}
               </section>
             );
-          })}
-        </div>
+              })}
+            </div>
+          );
+        })}
 
         <footer className="pt-6 border-t border-slate-200">
           <p className="text-xs text-slate-400 italic leading-relaxed">

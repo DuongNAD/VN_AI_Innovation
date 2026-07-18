@@ -13,7 +13,7 @@ export async function readJsonBody(
   if (contentLengthStr) {
     const contentLength = Number(contentLengthStr);
     if (Number.isFinite(contentLength) && contentLength >= 0 && contentLength > maxBytes) {
-      throw new AppError(400, 'BODY_TOO_LARGE', 'Kích thước yêu cầu vượt quá giới hạn.');
+      throw new AppError(413, 'PAYLOAD_TOO_LARGE', 'Kích thước yêu cầu vượt quá giới hạn.');
     }
   }
 
@@ -47,7 +47,7 @@ export async function readJsonBody(
           try {
             await reader.cancel();
           } catch (_) {}
-          throw new AppError(400, 'BODY_TOO_LARGE', 'Kích thước yêu cầu vượt quá giới hạn.');
+          throw new AppError(413, 'PAYLOAD_TOO_LARGE', 'Kích thước yêu cầu vượt quá giới hạn.');
         }
         chunks.push(value);
       }
@@ -61,7 +61,7 @@ export async function readJsonBody(
   }
 
   if (totalBytes > maxBytes) {
-    throw new AppError(400, 'BODY_TOO_LARGE', 'Kích thước yêu cầu vượt quá giới hạn.');
+    throw new AppError(413, 'PAYLOAD_TOO_LARGE', 'Kích thước yêu cầu vượt quá giới hạn.');
   }
 
   const concatenated = new Uint8Array(totalBytes);

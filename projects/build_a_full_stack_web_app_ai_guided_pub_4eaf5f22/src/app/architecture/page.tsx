@@ -121,7 +121,7 @@ export default function ArchitecturePage() {
                     <span className="text-xs font-semibold text-slate-500">llm.ts</span>
                   </div>
                   <div className="text-xs text-slate-600">
-                    Kết nối <span className="font-semibold">gpt-4o-mini</span> qua OpenAI API.
+                    Kết nối <span className="font-semibold">DeepSeek-V4-Flash</span> qua FPT AI Marketplace (API tương thích OpenAI).
                   </div>
                   <div className="border-t border-dashed border-slate-200 pt-2 text-[11px] text-amber-605 italic">
                     Fallback: Chuyển sang mockLlm (degraded=true) nếu có lỗi.
@@ -135,7 +135,7 @@ export default function ArchitecturePage() {
                     <span className="text-xs font-semibold text-slate-500">stt.ts</span>
                   </div>
                   <div className="text-xs text-slate-600">
-                    Kết nối <span className="font-semibold">whisper-1</span> để chuyển giọng nói sang văn bản.
+                    Kết nối <span className="font-semibold">FPT.AI-whisper-large-v3-turbo</span> (Whisper tinh chỉnh cho tiếng Việt) để chuyển giọng nói sang văn bản.
                   </div>
                   <div className="border-t border-dashed border-slate-200 pt-2 text-[11px] text-amber-605 italic">
                     Fallback: Chuyển sang mockStt (degraded=true) nếu có lỗi.
@@ -149,7 +149,7 @@ export default function ArchitecturePage() {
                     <span className="text-xs font-semibold text-slate-500">tts.ts</span>
                   </div>
                   <div className="text-xs text-slate-600">
-                    Kết nối <span className="font-semibold">tts-1</span> chuyển văn bản thành giọng nói (vi-female ➜ nova, vi-male ➜ onyx).
+                    Kết nối <span className="font-semibold">FPT.AI-VITs</span> chuyển văn bản thành giọng Việt (vi-female ➜ banmai, vi-male ➜ leminh).
                   </div>
                   <div className="border-t border-dashed border-slate-200 pt-2 text-[11px] text-amber-605 italic">
                     Fallback: Chuyển sang mockTts (degraded=true) nếu có lỗi.
@@ -210,7 +210,7 @@ export default function ArchitecturePage() {
 
                 {/* Connection description */}
                 <div className="text-center p-3 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-500 leading-relaxed shadow-sm w-full">
-                  ⚡ <span className="font-semibold">Mối liên kết liên làn:</span> ORM Prisma đọc/ghi trực tiếp vào DB PostgreSQL. Các cấu hình thủ tục pháp lý được đối chiếu tĩnh thay vì sinh sinh bởi LLM.
+                  ⚡ <span className="font-semibold">Mối liên kết liên làn:</span> ORM Prisma đọc/ghi trực tiếp vào DB PostgreSQL. Các cấu hình thủ tục pháp lý được đối chiếu tĩnh thay vì sinh ra bởi LLM.
                 </div>
               </div>
             </div>
@@ -248,7 +248,7 @@ export default function ArchitecturePage() {
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
                 <tr className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-4 py-4 font-bold text-slate-900">gpt-4o-mini</td>
+                  <td className="px-4 py-4 font-bold text-slate-900">DeepSeek-V4-Flash</td>
                   <td className="px-4 py-4 font-mono text-xs text-slate-550">llm.ts</td>
                   <td className="px-4 py-4 text-slate-600 leading-relaxed">
                     Phân loại ý định khi từ khóa không khớp + Giải thích mã lỗi nghiệp vụ (mô hình bị giới hạn đầu ra định dạng JSON).
@@ -258,7 +258,7 @@ export default function ArchitecturePage() {
                   </td>
                 </tr>
                 <tr className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-4 py-4 font-bold text-slate-900">whisper-1</td>
+                  <td className="px-4 py-4 font-bold text-slate-900">FPT.AI-whisper-large-v3-turbo</td>
                   <td className="px-4 py-4 font-mono text-xs text-slate-550">stt.ts</td>
                   <td className="px-4 py-4 text-slate-600 leading-relaxed">
                     Speech-to-Text (STT) - Chuyển đổi giọng nói tiếng Việt từ micro thành văn bản.
@@ -268,13 +268,13 @@ export default function ArchitecturePage() {
                   </td>
                 </tr>
                 <tr className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-4 py-4 font-bold text-slate-900">tts-1</td>
+                  <td className="px-4 py-4 font-bold text-slate-900">FPT.AI-VITs</td>
                   <td className="px-4 py-4 font-mono text-xs text-slate-550">tts.ts</td>
                   <td className="px-4 py-4 text-slate-600 leading-relaxed">
                     Text-to-Speech (TTS) - Chuyển đổi văn bản hướng dẫn hành chính thành giọng nói tiếng Việt.
                   </td>
                   <td className="px-4 py-4 text-slate-600 leading-relaxed text-xs">
-                    Bản đồ giọng nói (Voice Map): <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">vi-female</code> ➜ <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">nova</code>, <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">vi-male</code> ➜ <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">onyx</code>. Fallback xuống <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">mockTts</code> sinh mã WAV sine-wave.
+                    Bản đồ giọng nói (Voice Map): <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">vi-female</code> ➜ <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">banmai</code>, <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">vi-male</code> ➜ <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">leminh</code>. Fallback xuống <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">mockTts</code> sinh mã WAV sine-wave.
                   </td>
                 </tr>
               </tbody>

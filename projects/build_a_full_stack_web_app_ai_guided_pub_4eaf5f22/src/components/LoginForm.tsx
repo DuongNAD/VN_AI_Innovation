@@ -206,7 +206,8 @@ export default function LoginForm({
         );
         return;
       }
-      // Defense in depth: never navigate if server returned a mismatched role
+      // Defense in depth: never navigate if server returned a mismatched role.
+      // Generic message — don't disclose what role the account actually has.
       const role = data?.user?.role as AppRole | undefined;
       if (role !== portal) {
         recordFailedAttempt(GENERIC_AUTH_ERROR);

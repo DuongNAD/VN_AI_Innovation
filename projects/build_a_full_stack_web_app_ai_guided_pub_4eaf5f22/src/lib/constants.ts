@@ -38,11 +38,14 @@ export const PROVINCES: readonly string[] = [
 ] as const;
 
 export const LIMITS = {
-  JSON_BODY_MAX_BYTES: 100000,
-  AUDIO_MAX_BYTES: 5242880,
-  AUDIO_PREPARSE_MAX_BYTES: 6291456,
+  JSON_BODY_MAX_BYTES: 1048576,
+  AUDIO_MAX_BYTES: 10485760,
+  AUDIO_PREPARSE_MAX_BYTES: 11534336,
   AUDIO_MAX_SECONDS: 60,
-  TTS_TEXT_MAX: 500,
+  TTS_TEXT_MAX: 5000,
+  // Max characters the client sends to the TTS endpoint per request. Shared by
+  // the SpeechButton and the pre-generation CLI so their cache keys match.
+  TTS_CLIENT_MAX: 500,
   ANSWER_TEXT_MAX: 500,
   FIELD_VALUE_MAX: 2000
 } as const;

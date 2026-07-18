@@ -752,10 +752,10 @@ export function parseMigrationHints(raw: unknown): MigrationHint[] {
 }
 
 /**
- * Syntactic guard for DISPLAY links only. NOT an SSRF egress boundary.
+ * Guard for official public-service DISPLAY links only. NOT an SSRF egress boundary.
  * Any code that ever fetches these URLs server-side must pass a separate
  * network-layer egress guard (DNS resolution, IP-range blocking, redirect re-validation,
- * domain allowlist), which is intentionally outside this module's scope.
+ * and connect-time validation), which is intentionally outside this module's scope.
  */
 export function safeHttpsUrl(url: unknown): string | null {
   if (typeof url !== 'string' || url.length > MAX_URL) {
@@ -793,6 +793,14 @@ export function safeHttpsUrl(url: unknown): string | null {
     return null;
   }
   if (!hostname.includes('.')) {
+    return null;
+  }
+
+  const approvedGovernmentHosts = ['dichvucong.gov.vn'] as const;
+  const isApprovedGovernmentHost = approvedGovernmentHosts.some(
+    (approved) => hostname === approved || hostname.endsWith(`.${approved}`)
+  );
+  if (!isApprovedGovernmentHost) {
     return null;
   }
 

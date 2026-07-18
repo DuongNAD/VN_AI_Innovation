@@ -1,8 +1,10 @@
 import { handleRoute, AppError, jsonOk } from '@/lib/errors';
 import { enforceRateLimit } from '@/lib/rate-limit';
+import { requireLiveSession } from '@/lib/auth';
 import { LIMITS } from '@/lib/constants';
 import { inspectAudio } from '@/lib/ai/audio';
-import { getSttProvider, mockStt } from '@/lib/ai/stt';
+import { getSttProvider } from '@/lib/ai/stt';
+import { UpstreamError } from '@/lib/ai/upstream';
 import { aiMeta } from '@/lib/http';
 import { Buffer } from 'buffer';
 
@@ -35,7 +37,7 @@ async function readBodyCapped(req: Request, maxBytes: number): Promise<Uint8Arra
           try {
             await reader.cancel();
           } catch (_) {}
-          throw new AppError(413, 'AUDIO_TOO_LARGE', 'Tệp âm thanh quá lớn.');
+          throw new AppError(413, 'PAYLOAD_TOO_LARGE', 'Tệp âm thanh quá lớn.');
         }
         chunks.push(value);
       }
@@ -56,6 +58,7 @@ async function readBodyCapped(req: Request, maxBytes: number): Promise<Uint8Arra
 
 export const POST = handleRoute(async (req: Request) => {
   enforceRateLimit('transcribe', req);
+  await requireLiveSession(req);
 
   const contentType = req.headers.get('content-type');
   if (!contentType || !contentType.toLowerCase().startsWith('multipart/form-data')) {
@@ -69,7 +72,7 @@ export const POST = handleRoute(async (req: Request) => {
 
   const contentLength = Number(cl);
   if (contentLength > LIMITS.AUDIO_PREPARSE_MAX_BYTES) {
-    throw new AppError(413, 'AUDIO_TOO_LARGE', 'Tệp âm thanh quá lớn.');
+    throw new AppError(413, 'PAYLOAD_TOO_LARGE', 'Tệp âm thanh quá lớn.');
   }
 
   const bytes = await readBodyCapped(req, LIMITS.AUDIO_PREPARSE_MAX_BYTES);
@@ -92,7 +95,7 @@ export const POST = handleRoute(async (req: Request) => {
   }
 
   if (file.size > LIMITS.AUDIO_MAX_BYTES) {
-    throw new AppError(413, 'AUDIO_TOO_LARGE', 'Tệp âm thanh quá lớn.');
+    throw new AppError(413, 'PAYLOAD_TOO_LARGE', 'Tệp âm thanh quá lớn.');
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -104,15 +107,18 @@ export const POST = handleRoute(async (req: Request) => {
 
   const provider = getSttProvider();
   let result;
-  let degraded = false;
-  let finalProviderName = provider.name;
 
   try {
     result = await provider.transcribe(buffer, mimeType, 'vi', durationSeconds);
   } catch (err) {
-    degraded = true;
-    finalProviderName = 'mock';
-    result = await mockStt.transcribe(buffer, mimeType, 'vi', durationSeconds);
+    if (err instanceof UpstreamError) {
+      throw new AppError(
+        503,
+        'AI_SERVICE_UNAVAILABLE',
+        'Dịch vụ AI hiện không khả dụng. Vui lòng thử lại sau.'
+      );
+    }
+    throw err;
   }
 
   return jsonOk({
@@ -120,6 +126,6 @@ export const POST = handleRoute(async (req: Request) => {
     model: result.model,
     audioSeconds: result.audioSeconds,
     language: 'vi',
-    ...aiMeta(finalProviderName, degraded),
+    ...aiMeta(provider.name, false),
   });
 });

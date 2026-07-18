@@ -1,16 +1,20 @@
 import { handleRoute, AppError } from '@/lib/errors';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { readJsonBody, requireString, optionalString } from '@/lib/http';
+import { requireLiveSession } from '@/lib/auth';
 import { LIMITS } from '@/lib/constants';
-import { TTS_VOICES, getTtsProvider, mockTts, makeTtsCacheKey } from '@/lib/ai/tts';
-import { cacheGet, cacheSet } from '@/lib/cache';
+import { TTS_VOICES, getTtsProvider, makeSynthesisCacheKey } from '@/lib/ai/tts';
+import { ttsCacheGet, ttsCacheSet } from '@/lib/ai/tts-cache';
+import { UpstreamError } from '@/lib/ai/upstream';
 import { logAiUsage } from '@/lib/ai/usage';
 
 export const POST = handleRoute(async (req: Request) => {
   const startTime = Date.now();
 
   enforceRateLimit('synthesize', req);
+  await requireLiveSession(req);
 
+  const provider = getTtsProvider();
   const body = await readJsonBody(req);
 
   let text: string;
@@ -40,73 +44,63 @@ export const POST = handleRoute(async (req: Request) => {
     throw new AppError(400, 'INVALID_INPUT', 'Ngôn ngữ không được hỗ trợ.', { field: 'language' });
   }
 
-  const key = makeTtsCacheKey(text, voice, speed, language);
+  const key = makeSynthesisCacheKey({ text, voice, speed, language });
 
-  const cached = cacheGet(key);
+  const cached = await ttsCacheGet(key);
   if (cached) {
-    try {
-      const parsed = JSON.parse(cached);
-      if (
-        parsed &&
-        typeof parsed.b64 === 'string' &&
-        typeof parsed.mimeType === 'string' &&
-        typeof parsed.model === 'string'
-      ) {
-        const latencyMs = Date.now() - startTime;
-        logAiUsage({
-          serviceType: 'tts',
-          model: parsed.model,
-          cacheHit: true,
-          latencyMs,
-        });
+    const latencyMs = Date.now() - startTime;
+    logAiUsage({
+      serviceType: 'tts',
+      model: cached.model,
+      cacheHit: true,
+      latencyMs,
+    });
 
-        return new Response(Buffer.from(parsed.b64, 'base64'), {
-          status: 200,
-          headers: {
-            'Content-Type': parsed.mimeType,
-            'X-Cache-Hit': 'true',
-            'X-Model': parsed.model,
-          },
-        });
-      }
-    } catch (_) {
-      // Treat as cache miss
-    }
+    return new Response(cached.audio as unknown as BodyInit, {
+      status: 200,
+      headers: {
+        'Content-Type': cached.mimeType,
+        'X-Cache-Hit': 'true',
+        'X-Cache-Tier': cached.tier,
+        'X-Model': cached.model,
+        'Cache-Control': 'no-store, private',
+        'Pragma': 'no-cache',
+      },
+    });
   }
 
   let result: { audio: Buffer; mimeType: string; model: string };
-  let degraded = false;
 
   try {
-    result = await getTtsProvider().synthesize(text, voice, speed, language);
+    result = await provider.synthesize(text, voice, speed, language);
   } catch (err) {
-    degraded = true;
-    result = await mockTts.synthesize(text, voice, speed, language);
+    if (err instanceof UpstreamError) {
+      throw new AppError(
+        503,
+        'AI_SERVICE_UNAVAILABLE',
+        'Dịch vụ AI tạm thời không khả dụng. Vui lòng thử lại sau.'
+      );
+    }
+    throw err;
   }
 
-  const b64 = result.audio.toString('base64');
-  cacheSet(
-    key,
-    JSON.stringify({
-      b64,
-      mimeType: result.mimeType,
-      model: result.model,
-    }),
-    3600
-  );
-
-  const headers: Record<string, string> = {
-    'Content-Type': result.mimeType,
-    'X-Cache-Hit': 'false',
-    'X-Model': result.model,
-  };
-
-  if (degraded) {
-    headers['X-Degraded'] = 'true';
-  }
+  // Persist to the durable (Postgres) + in-process cache. The module bounds entry
+  // size and storage, and swallows DB errors so caching never breaks the response.
+  await ttsCacheSet(key, {
+    audio: result.audio,
+    mimeType: result.mimeType,
+    model: result.model,
+  });
 
   return new Response(result.audio as unknown as BodyInit, {
     status: 200,
-    headers,
+    headers: {
+      'Content-Type': result.mimeType,
+      'X-Cache-Hit': 'false',
+      'X-Cache-Tier': 'miss',
+      'X-Model': result.model,
+      'Cache-Control': 'no-store, private',
+      'Pragma': 'no-cache',
+    },
   });
 });

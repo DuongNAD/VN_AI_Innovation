@@ -4,13 +4,22 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ValidationReport from '@/components/ValidationReport';
 import SourceFooter from '@/components/SourceFooter';
+import DocumentPreview from '@/components/DocumentPreview';
 import FlowChrome from '@/components/FlowChrome';
+import SubmissionPanel from '@/components/SubmissionPanel';
 
 interface ApplicationData {
   formCode: string;
   formVersion: string;
+  status?: string;
+  submittedAt?: string | Date | null;
+  reviewedAt?: string | Date | null;
+  reviewedBy?: string | null;
+  reviewNote?: string | null;
   data: Record<string, any>;
+  fields?: any[];
   procedure?: {
+    name?: string;
     sourceUrl?: string;
     lastCheckedAt?: string | Date;
   };
@@ -44,6 +53,7 @@ function ResultPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [appData, setAppData] = useState<ApplicationData | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResponse | null>(null);
+  const [sessionToken, setSessionToken] = useState<string>('');
 
   useEffect(() => {
     if (!applicationId) {
@@ -68,6 +78,7 @@ function ResultPageContent() {
       setLoading(false);
       return;
     }
+    setSessionToken(token);
 
     async function performValidation() {
       try {
@@ -138,31 +149,83 @@ function ResultPageContent() {
     return null;
   }
 
+  const appStatus = appData.status ?? 'DRAFT';
+  const lifecycleActive = appStatus === 'SUBMITTED' || appStatus === 'APPROVED' || appStatus === 'RETURNED';
+
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
-      <FlowChrome current="result" title="Kết quả kiểm tra" />
-      <main id="main-content" className="mx-auto w-full max-w-3xl flex-1 space-y-6 p-4 md:p-8">
-        <h1 className="mb-2 text-2xl font-bold text-slate-900 md:text-3xl">
-          Kết quả kiểm tra hồ sơ
-        </h1>
-
+      <FlowChrome
+        current={lifecycleActive ? 'approval' : 'result'}
+        title={lifecycleActive ? 'Trạng thái hồ sơ' : 'Kết quả kiểm tra'}
+      />
+      <main
+        id="main-content"
+        className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8 sm:px-6 lg:px-8"
+      >
         {validationResult.valid && (
-          <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4 text-center text-lg font-bold text-green-900 shadow-sm">
-            Hồ sơ hợp lệ, sẵn sàng nộp
-          </div>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+            {lifecycleActive ? 'Trạng thái hồ sơ' : 'Kết quả kiểm tra hồ sơ'}
+          </h1>
         )}
 
-        <ValidationReport
-          valid={validationResult.valid}
-          errors={validationResult.errors}
-          aiExplanation={validationResult.aiExplanation}
-          applicationId={applicationId!}
-          formVersion={validationResult.formVersion || appData.formVersion}
-          aiMode={validationResult.aiMode}
-          degraded={validationResult.degraded}
-        />
+        {/* Officer decision / submission — the headline once the citizen has handed the file over. */}
+        {lifecycleActive && (
+          <SubmissionPanel
+            applicationId={applicationId!}
+            token={sessionToken}
+            status={appStatus}
+            valid={validationResult.valid}
+            submittedAt={appData.submittedAt}
+            reviewedAt={appData.reviewedAt}
+            reviewedBy={appData.reviewedBy}
+            reviewNote={appData.reviewNote}
+            onStatusChange={(next) =>
+              setAppData((prev) => (prev ? { ...prev, ...next } : prev))
+            }
+          />
+        )}
 
-        <div className="border-t border-slate-200 pt-6">
+        {/* Once submitted, the status panel is the headline; repeating the green
+            "ready to submit" card underneath would contradict it. */}
+        {!(lifecycleActive && validationResult.valid) && (
+          <ValidationReport
+            valid={validationResult.valid}
+            errors={validationResult.errors}
+            aiExplanation={validationResult.aiExplanation}
+            applicationId={applicationId!}
+            formVersion={validationResult.formVersion || appData.formVersion}
+            aiMode={validationResult.aiMode}
+            degraded={validationResult.degraded}
+          />
+        )}
+
+        {!lifecycleActive && (
+          <SubmissionPanel
+            applicationId={applicationId!}
+            token={sessionToken}
+            status={appStatus}
+            valid={validationResult.valid}
+            submittedAt={appData.submittedAt}
+            reviewedAt={appData.reviewedAt}
+            reviewedBy={appData.reviewedBy}
+            reviewNote={appData.reviewNote}
+            onStatusChange={(next) =>
+              setAppData((prev) => (prev ? { ...prev, ...next } : prev))
+            }
+          />
+        )}
+
+        {validationResult.valid && Array.isArray(appData.fields) && appData.fields.length > 0 && (
+          <DocumentPreview
+            procedureName={appData.procedure?.name || 'thủ tục hành chính'}
+            formCode={appData.formCode}
+            formVersion={validationResult.formVersion || appData.formVersion}
+            fields={appData.fields}
+            data={appData.data}
+          />
+        )}
+
+        <div className="no-print pt-6 border-t border-slate-200">
           <SourceFooter
             showDisclaimer={true}
             sourceUrl={appData.procedure?.sourceUrl}
@@ -177,14 +240,12 @@ function ResultPageContent() {
 
 export default function ResultPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-[50vh] flex-col items-center justify-center p-6 text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-slate-900" />
-          <p className="font-medium text-slate-600">Đang tải...</p>
-        </div>
-      }
-    >
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mb-4"></div>
+        <p className="text-slate-600 font-medium">Đang tải...</p>
+      </div>
+    }>
       <ResultPageContent />
     </Suspense>
   );

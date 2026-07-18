@@ -1,239 +1,327 @@
-import React from 'react';
 import Link from 'next/link';
 import SourceFooter from '@/components/SourceFooter';
-import BrandLogo from '@/components/BrandLogo';
-import HeroIllustration from '@/components/HeroIllustration';
 
-const JOURNEY = [
-  { n: 1, label: 'Tư vấn' },
-  { n: 2, label: 'Giấy tờ' },
-  { n: 3, label: 'Biểu mẫu' },
-  { n: 4, label: 'Kiểm tra' },
-] as const;
+const benefits = [
+  {
+    title: 'Nhanh chóng',
+    description: 'Chỉ 5–10 phút',
+    tone: 'green',
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m5 12.5 4.2 4.2L19 7" />
+      </svg>
+    ),
+  },
+  {
+    title: 'Chính xác',
+    description: 'Theo quy định mới nhất',
+    tone: 'blue',
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="8.5" />
+        <circle cx="12" cy="12" r="3.5" />
+      </svg>
+    ),
+  },
+  {
+    title: 'Dễ hiểu',
+    description: 'Hướng dẫn từng bước',
+    tone: 'purple',
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 5.8c2.7-.9 5.3-.2 8 1.5v11c-2.7-1.7-5.3-2.4-8-1.5v-11Zm16 0c-2.7-.9-5.3-.2-8 1.5v11c2.7-1.7 5.3-2.4 8-1.5v-11Z" />
+      </svg>
+    ),
+  },
+];
+
+const steps = [
+  { number: '1', title: 'Nhập câu hỏi', description: 'Mô tả thủ tục bạn cần', tone: 'blue' },
+  { number: '2', title: 'AI phân tích', description: 'Tìm thông tin chính xác', tone: 'indigo' },
+  { number: '3', title: 'Nhận hướng dẫn', description: 'Xem chi tiết từng bước', tone: 'purple' },
+];
+
+type ProcedureCardDef = {
+  href: string;
+  title: string;
+  description: string;
+  tone: 'blue' | 'purple' | 'orange' | 'cyan';
+  cta?: string;
+  icon: React.ReactNode;
+};
+
+const CITIZEN_CARDS: ProcedureCardDef[] = [
+  {
+    href: '/user/chat?procedure=MARRIAGE_REGISTRATION',
+    title: 'Đăng ký kết hôn',
+    description: 'Chuẩn bị giấy tờ, điền tờ khai và nộp hồ sơ đăng ký kết hôn trong nước.',
+    tone: 'blue',
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4.3 6.3a4.5 4.5 0 0 0 0 6.4L12 20.4l7.7-7.7a4.5 4.5 0 0 0-6.4-6.4L12 7.6l-1.3-1.3a4.5 4.5 0 0 0-6.4 0Z" />
+      </svg>
+    ),
+  },
+  {
+    href: '/user/chat?procedure=BIRTH_REGISTRATION',
+    title: 'Đăng ký khai sinh',
+    description: 'Tìm hiểu các bước và giấy tờ cần chuẩn bị để đăng ký khai sinh cho trẻ.',
+    tone: 'purple',
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M12 7.5v9M7.5 12h9" />
+      </svg>
+    ),
+  },
+  {
+    href: '/user/chat?q=đăng%20ký%20thường%20trú',
+    title: 'Đăng ký thường trú',
+    description: 'Hướng dẫn thủ tục đăng ký thường trú cho cá nhân và hộ gia đình.',
+    tone: 'orange',
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m3.5 10 8.5-7 8.5 7" />
+        <path d="M5.5 9v11h13V9M9.5 20v-6h5v6" />
+      </svg>
+    ),
+  },
+  {
+    href: '/user/chat?q=cấp%20lại%20CCCD',
+    title: 'Cấp lại CCCD',
+    description: 'Hướng dẫn cấp lại Căn cước công dân khi bị mất hoặc hư hỏng.',
+    tone: 'cyan',
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <circle cx="9" cy="11" r="2.2" />
+        <path d="M5.8 16c.7-1.7 1.8-2.5 3.2-2.5s2.5.8 3.2 2.5M15 10h3.5M15 14h3.5" />
+      </svg>
+    ),
+  },
+];
+
+const BUSINESS_CARDS: ProcedureCardDef[] = [
+  {
+    href: '/user/chat?procedure=HOUSEHOLD_BUSINESS_REGISTRATION',
+    title: 'Đăng ký hộ kinh doanh',
+    description:
+      'Thành lập hộ kinh doanh theo Nghị định 168/2025/NĐ-CP: một bộ hồ sơ gọn nhẹ, nộp tại cấp xã, kết quả trong 3 ngày làm việc.',
+    tone: 'blue',
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+        <path d="M5 20h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2Z" />
+        <path d="M12 11v3" />
+      </svg>
+    ),
+  },
+  {
+    href: '/user/chat',
+    title: 'Thủ tục khác cho doanh nghiệp',
+    description:
+      'Chưa thấy thủ tục bạn cần? Hỏi trực tiếp trợ lý — hệ thống sẽ hướng dẫn hoặc chỉ ra danh mục đang hỗ trợ.',
+    tone: 'purple',
+    cta: 'Hỏi trợ lý →',
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M8.2 9c.5-1.2 2-2 3.8-2 2.2 0 4 1.3 4 3 0 1.4-1.3 2.6-3 2.9-.5.1-1 .5-1 1.1m0 3h.01" />
+        <circle cx="12" cy="12" r="9" />
+      </svg>
+    ),
+  },
+];
+
+function ProcedureCard({ card }: { card: ProcedureCardDef }) {
+  return (
+    <Link href={card.href} className="procedure-card">
+      <div className={`procedure-card__icon procedure-card__icon--${card.tone}`}>{card.icon}</div>
+      <div>
+        <h3>{card.title}</h3>
+        <p>{card.description}</p>
+        <span className="procedure-card__link">{card.cta ?? 'Bắt đầu ngay →'}</span>
+      </div>
+    </Link>
+  );
+}
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col justify-between text-slate-900">
-      {/* Thanh thương hiệu — không còn banner debug */}
-      <div className="border-b border-white/50 bg-white/70 shadow-shell backdrop-blur-glass">
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <BrandLogo size="md" href="/user" />
-          <Link
-            href="/user/chat"
-            className="btn-primary min-h-touch px-4 py-2 text-sm sm:px-5"
-          >
-            Bắt đầu tư vấn
-          </Link>
+    <main className="home-page">
+      <section className="home-hero" aria-labelledby="home-title">
+        <div className="home-hero__veil" aria-hidden="true" />
+
+        <div className="scene-life" aria-hidden="true">
+          <svg className="scene-birds scene-birds--left" viewBox="0 0 140 64">
+            <g className="scene-bird scene-bird--one">
+              <path d="M5 25c9-10 18-10 27 0 9-10 18-10 27 0" />
+            </g>
+            <g className="scene-bird scene-bird--two">
+              <path d="M78 12c7-8 14-8 21 0 7-8 14-8 21 0" />
+            </g>
+            <g className="scene-bird scene-bird--three">
+              <path d="M90 48c6-7 12-7 18 0 6-7 12-7 18 0" />
+            </g>
+          </svg>
+
+          <svg className="scene-birds scene-birds--right" viewBox="0 0 105 52">
+            <g className="scene-bird scene-bird--one">
+              <path d="M4 22c8-9 16-9 24 0 8-9 16-9 24 0" />
+            </g>
+            <g className="scene-bird scene-bird--two">
+              <path d="M58 38c6-7 12-7 18 0 6-7 12-7 18 0" />
+            </g>
+          </svg>
+
+          <svg className="scene-dragonfly scene-dragonfly--left" viewBox="0 0 66 48">
+            <g className="dragonfly-wings">
+              <ellipse cx="25" cy="16" rx="15" ry="7" transform="rotate(-25 25 16)" />
+              <ellipse cx="41" cy="16" rx="15" ry="7" transform="rotate(25 41 16)" />
+              <ellipse cx="25" cy="31" rx="13" ry="6" transform="rotate(24 25 31)" />
+              <ellipse cx="41" cy="31" rx="13" ry="6" transform="rotate(-24 41 31)" />
+            </g>
+            <path className="dragonfly-body" d="M33 8v31m0-31-4-5m4 5 4-5" />
+          </svg>
+
+          <svg className="scene-dragonfly scene-dragonfly--right" viewBox="0 0 66 48">
+            <g className="dragonfly-wings">
+              <ellipse cx="25" cy="16" rx="15" ry="7" transform="rotate(-25 25 16)" />
+              <ellipse cx="41" cy="16" rx="15" ry="7" transform="rotate(25 41 16)" />
+              <ellipse cx="25" cy="31" rx="13" ry="6" transform="rotate(24 25 31)" />
+              <ellipse cx="41" cy="31" rx="13" ry="6" transform="rotate(-24 41 31)" />
+            </g>
+            <path className="dragonfly-body" d="M33 8v31m0-31-4-5m4 5 4-5" />
+          </svg>
+
+          <svg className="scene-cloud scene-cloud--left" viewBox="0 0 190 72">
+            <path d="M8 52c16 0 21-12 20-21 16 5 21-9 21-17 18 2 25 13 23 24 15-4 25 4 25 14h85" />
+          </svg>
+
+          <div className="scene-petals scene-petals--one"><span /></div>
+          <div className="scene-petals scene-petals--two"><span /></div>
+          <div className="scene-petals scene-petals--three"><span /></div>
+
+          <div className="scene-ripple scene-ripple--one"><span /><span /></div>
+          <div className="scene-ripple scene-ripple--two"><span /><span /></div>
+          <div className="scene-water-shimmer" />
         </div>
-      </div>
 
-      <div className="mx-auto my-auto w-full max-w-4xl space-y-12 px-4 py-10 sm:space-y-16 sm:px-6 sm:py-14 lg:px-8">
-        {/* Hero: copy + illustration */}
-        <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-8">
-          <div className="space-y-6 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 rounded-full border-2 border-brand-300 bg-white px-4 py-2 text-overline uppercase text-brand-800 shadow-glow">
-              VN AI Innovation
-            </div>
-
-            <h1 className="bg-gradient-to-br from-brand-900 via-brand-700 to-brand-500 bg-clip-text text-display text-transparent drop-shadow-sm">
-              Trợ lý Thủ tục
-              <br />
-              Hành chính
-            </h1>
-
-            <p className="mx-auto max-w-xl text-body-lg text-slate-600 lg:mx-0">
-              Trợ lý AI hướng dẫn giấy tờ, điền biểu mẫu và kiểm tra hồ sơ trước khi nộp —
-              nhanh, rõ ràng, theo lộ trình 4 bước.
-            </p>
-
-            {/* Journey strip */}
-            <div className="mx-auto max-w-md rounded-2xl border border-white/70 bg-surface/90 p-4 shadow-shell-lg ring-1 ring-slate-900/5 backdrop-blur-sm lg:mx-0">
-              <p className="mb-3 text-overline uppercase text-brand-700">Lộ trình hồ sơ</p>
-              <ol className="flex items-center justify-between gap-1" aria-label="4 bước hỗ trợ">
-                {JOURNEY.map((step, i) => (
-                  <li key={step.n} className="flex flex-1 items-center">
-                    <div className="flex min-w-0 flex-col items-center">
-                      <span
-                        className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white shadow-sm ${
-                          i === 0 ? 'bg-brand-600 ring-4 ring-brand-200' : 'bg-brand-500'
-                        }`}
-                      >
-                        {step.n}
-                      </span>
-                      <span className="mt-1 truncate text-[10px] font-semibold tracking-snugish text-slate-700 sm:text-xs">
-                        {step.label}
-                      </span>
-                    </div>
-                    {i < JOURNEY.length - 1 && (
-                      <div className="mx-0.5 mb-4 h-1 flex-1 rounded bg-brand-200" aria-hidden="true" />
-                    )}
-                  </li>
-                ))}
-              </ol>
-            </div>
+        <div className="home-hero__content">
+          <div className="beta-badge">
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M10 2.2a5.2 5.2 0 0 0-5.2 5.2v3.1l-1.2 1.2c-.6.6-.2 1.6.7 1.6h11.4c.9 0 1.3-1 .7-1.6l-1.2-1.2V7.4A5.2 5.2 0 0 0 10 2.2Zm0 15.6a2.7 2.7 0 0 0 2.6-2H7.4a2.7 2.7 0 0 0 2.6 2Z" />
+            </svg>
+            Phiên bản Beta – Miễn phí hoàn toàn
           </div>
 
-          <HeroIllustration className="max-w-md lg:max-w-none" />
-        </div>
+          <h1 id="home-title" className="home-title">
+            Trợ lý AI hướng dẫn
+            <span>thủ tục hành chính</span>
+          </h1>
 
-        {/* Search Form */}
-        <form method="GET" action="/user/chat" className="mx-auto max-w-2xl">
-          <div className="relative flex items-center rounded-2xl border-2 border-surface-border bg-surface/95 p-2 shadow-shell-lg ring-1 ring-slate-900/5 backdrop-blur-sm transition-all focus-within:border-brand-500 focus-within:shadow-glow focus-within:ring-4 focus-within:ring-brand-500/20">
+          <p className="home-subtitle">
+            Hỗ trợ giải đáp thắc mắc, chuẩn bị hồ sơ và hướng dẫn chi tiết các thủ tục
+            hành chính công trực tuyến một cách dễ dàng và chính xác.
+          </p>
+
+          <div className="benefit-row" aria-label="Lợi ích">
+            {benefits.map((benefit) => (
+              <div className="benefit" key={benefit.title}>
+                <div className={`benefit__icon benefit__icon--${benefit.tone}`}>{benefit.icon}</div>
+                <div>
+                  <strong>{benefit.title}</strong>
+                  <span>{benefit.description}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <form method="GET" action="/user/chat" className="hero-search">
+            <label className="sr-only" htmlFor="procedure-search">
+              Mô tả thủ tục bạn muốn thực hiện
+            </label>
             <input
+              id="procedure-search"
               type="text"
               name="q"
               placeholder="Ví dụ: Tôi muốn đăng ký kết hôn"
-              className="min-h-[56px] w-full border-none bg-transparent py-4 pl-4 pr-16 text-body-lg tracking-snugish text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-0"
+              autoComplete="off"
               required
             />
-            <button
-              type="submit"
-              className="absolute right-3 flex min-h-[56px] items-center justify-center rounded-xl bg-gradient-to-r from-brand-600 to-brand-700 p-4 text-white shadow-lg transition-all hover:from-brand-700 hover:to-brand-800 hover:shadow-glow focus:outline-none focus:ring-4 focus:ring-brand-500/50"
-              aria-label="Tìm kiếm"
-            >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
+            <button type="submit" aria-label="Tìm kiếm">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="10.8" cy="10.8" r="6.8" />
+                <path d="m16 16 4.2 4.2" />
               </svg>
             </button>
-          </div>
-          <p className="mt-3 text-center text-sm text-slate-600">
-            Mô tả nhu cầu bằng lời — trợ lý AI sẽ nhận diện thủ tục phù hợp
+          </form>
+
+          <p className="search-hint">
+            <span aria-hidden="true">💡</span>
+            Bạn có thể mô tả bằng lời hoặc hỏi trực tiếp về thủ tục cần làm
           </p>
-        </form>
-
-        {/* Value Props */}
-        <div className="mx-auto grid max-w-3xl grid-cols-1 gap-4 md:grid-cols-3">
-          {[
-            { title: 'Nhanh chóng', sub: 'Chỉ 5–10 phút', tone: 'bg-emerald-100 text-emerald-600' },
-            { title: 'Chính xác', sub: 'Theo quy định mới', tone: 'bg-brand-100 text-brand-600' },
-            { title: 'Dễ hiểu', sub: 'Từng bước rõ ràng', tone: 'bg-accent-100 text-accent-700' },
-          ].map((v) => (
-            <div
-              key={v.title}
-              className="card-premium flex items-center gap-3 p-3 text-left"
-            >
-              <div
-                className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${v.tone.split(' ')[0]}`}
-              >
-                <span className={`text-sm font-bold ${v.tone.split(' ')[1]}`}>✓</span>
-              </div>
-              <div>
-                <p className="font-semibold tracking-snugish text-slate-900">{v.title}</p>
-                <p className="text-sm text-slate-500">{v.sub}</p>
-              </div>
-            </div>
-          ))}
         </div>
 
-        {/* Popular procedures */}
-        <div className="mx-auto max-w-3xl">
-          <h2 className="mb-6 text-center text-title text-slate-900 sm:text-2xl sm:font-semibold">
-            Thủ tục phổ biến
-          </h2>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <Link
-              href="/user/chat?procedure=MARRIAGE_REGISTRATION"
-              className="card-premium group flex cursor-pointer flex-col justify-between p-8"
-            >
-              <div className="space-y-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-200 text-brand-600 motion-safe:transition-transform motion-safe:group-hover:scale-110">
-                  <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                    />
-                  </svg>
+        <div className="process-wrap">
+          <h2>Quy trình 3 bước đơn giản</h2>
+          <div className="process-bar">
+            {steps.map((step, index) => (
+              <div className="process-segment" key={step.number}>
+                <div className={`step-number step-number--${step.tone}`}>{step.number}</div>
+                <div className="step-copy">
+                  <strong>{step.title}</strong>
+                  <span>{step.description}</span>
                 </div>
-                <h3 className="text-2xl font-semibold tracking-snugish text-slate-900 transition-colors group-hover:text-brand-600">
-                  Đăng ký kết hôn
-                </h3>
-                <p className="text-body leading-relaxed text-slate-600">
-                  Hướng dẫn chi tiết thủ tục đăng ký kết hôn trong nước, bao gồm chuẩn bị giấy tờ,
-                  điền tờ khai và nộp hồ sơ.
-                </p>
-              </div>
-              <div className="mt-6 flex items-center text-base font-semibold text-brand-600 transition-all group-hover:gap-2 group-hover:text-brand-700">
-                Bắt đầu ngay
-                <svg
-                  className="ml-1 h-5 w-5 motion-safe:transition-transform motion-safe:group-hover:translate-x-1"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </Link>
-
-            <Link
-              href="/user/chat?procedure=BIRTH_REGISTRATION"
-              className="card-premium group flex cursor-pointer flex-col justify-between p-8 hover:shadow-glow-accent"
-            >
-              <div className="space-y-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-accent-100 to-accent-200 text-accent-700 motion-safe:transition-transform motion-safe:group-hover:scale-110">
-                  <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
+                {index < steps.length - 1 && (
+                  <svg className="step-arrow" viewBox="0 0 42 18" aria-hidden="true">
+                    <path d="M1 9h34m-6-6 6 6-6 6" />
                   </svg>
-                </div>
-                <h3 className="text-2xl font-semibold tracking-snugish text-slate-900 transition-colors group-hover:text-accent-700">
-                  Đăng ký khai sinh
-                </h3>
-                <p className="text-body leading-relaxed text-slate-600">
-                  Tìm hiểu các bước đăng ký khai sinh cho trẻ mới sinh, các giấy tờ cần chuẩn bị từ
-                  bệnh viện và gia đình.
-                </p>
+                )}
               </div>
-              <div className="mt-6 flex items-center text-base font-semibold text-accent-700 transition-all group-hover:gap-2 group-hover:text-accent-900">
-                Bắt đầu ngay
-                <svg
-                  className="ml-1 h-5 w-5 motion-safe:transition-transform motion-safe:group-hover:translate-x-1"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </Link>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      <footer className="mx-auto mt-16 w-full max-w-3xl space-y-6 px-4 text-center sm:mt-22 sm:px-6">
-        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm font-medium text-slate-500">
-          <Link href="/sources" className="flex min-h-[44px] items-center transition-colors hover:text-brand-600">
-            Nguồn dữ liệu & Phiên bản
+      <section className="popular-section" aria-labelledby="popular-title">
+        <div className="popular-section__inner">
+          <p className="section-eyebrow">Bắt đầu nhanh</p>
+          <h2 id="popular-title">Thủ tục phổ biến</h2>
+          <p className="section-lead">Chọn một thủ tục thường gặp để nhận hướng dẫn ngay.</p>
+
+          <p className="section-eyebrow" id="citizen-procedures">
+            Dành cho Công dân
+          </p>
+          <div className="procedure-grid" aria-labelledby="citizen-procedures">
+            {CITIZEN_CARDS.map((card) => (
+              <ProcedureCard key={card.href} card={card} />
+            ))}
+          </div>
+
+          <p className="section-eyebrow" id="business-procedures">
+            Dành cho Doanh nghiệp
+          </p>
+          <div className="procedure-grid" aria-labelledby="business-procedures">
+            {BUSINESS_CARDS.map((card) => (
+              <ProcedureCard key={card.href} card={card} />
+            ))}
+          </div>
+
+          <Link href="/user/chat" className="all-procedures-link">
+            Xem tất cả thủ tục
+            <span aria-hidden="true">→</span>
           </Link>
-          <span className="self-center text-slate-300" aria-hidden="true">
-            |
-          </span>
-          <a
-            href="https://dichvucong.gov.vn/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex min-h-[44px] cursor-pointer items-center transition-colors hover:text-brand-600"
-          >
-            Bản thử nghiệm Widget
-          </a>
         </div>
-        <div className="border-t border-surface-border pt-6">
+
+        <footer className="home-footer">
+          <nav aria-label="Liên kết bổ sung">
+            <Link href="/sources">Nguồn dữ liệu &amp; Phiên bản</Link>
+            <span aria-hidden="true">•</span>
+            <Link href="/widget-demo">Bản thử nghiệm Widget</Link>
+          </nav>
           <SourceFooter showDisclaimer />
-        </div>
-      </footer>
-    </div>
+        </footer>
+      </section>
+    </main>
   );
 }

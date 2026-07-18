@@ -29,6 +29,16 @@ const KEYWORD_TABLE: Record<string, string[]> = {
   TEMP_RESIDENCE_REGISTRATION: ['dang ky tam tru', 'tam tru'],
   CITIZEN_ID_ISSUANCE: ['cap the can cuoc', 'can cuoc', 'cccd', 'the can cuoc'],
   PASSPORT_ISSUANCE: ['cap ho chieu', 'ho chieu', 'passport'],
+  HOUSEHOLD_BUSINESS_REGISTRATION: [
+    'dang ky ho kinh doanh',
+    'thanh lap ho kinh doanh',
+    'ho kinh doanh',
+    'dang ky kinh doanh',
+    'mo cua hang',
+    'mo tiem',
+    'ban hang',
+    'kinh doanh ca the',
+  ],
 };
 
 const ERROR_EXPLANATIONS: Record<string, (err: { field?: string; fields?: string[] }) => string> = {
@@ -183,6 +193,28 @@ export const mockLlm: LlmProvider = {
 
 const LLM_MODEL = process.env.LLM_MODEL || 'gpt-4o-mini';
 
+/**
+ * Builds the chat-completions request body. Reasoning models served via
+ * vLLM-compatible marketplaces (e.g. DeepSeek-V4-Flash on FPT AI Marketplace)
+ * put their answer in `reasoning_content` and leave `content` null unless
+ * thinking is disabled through `chat_template_kwargs`. OpenAI rejects that
+ * extra field, so it is only sent when LLM_DISABLE_THINKING=1.
+ */
+function buildChatCompletionBody(
+  messages: { role: string; content: string }[]
+): string {
+  const body: Record<string, unknown> = {
+    model: LLM_MODEL,
+    temperature: 0,
+    response_format: { type: 'json_object' },
+    messages,
+  };
+  if (process.env.LLM_DISABLE_THINKING === '1') {
+    body.chat_template_kwargs = { thinking: false };
+  }
+  return JSON.stringify(body);
+}
+
 const SYSTEM_PROMPT_CLASSIFY = `Bạn là một trợ lý phân loại ý định của người dân đối với các thủ tục hành chính công.
 Hãy chọn mã thủ tục (procedureCode) PHÙ HỢP NHẤT từ danh mục được cung cấp trong tin nhắn của người dùng hoặc trả về null nếu không khớp với thủ tục nào.
 
@@ -224,15 +256,10 @@ export const openaiLlm: LlmProvider = {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: LLM_MODEL,
-        temperature: 0,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT_CLASSIFY },
-          { role: 'user', content: JSON.stringify({ message: truncatedMessage, catalog: sanitizedCatalog }) },
-        ],
-      }),
+      body: buildChatCompletionBody([
+        { role: 'system', content: SYSTEM_PROMPT_CLASSIFY },
+        { role: 'user', content: JSON.stringify({ message: truncatedMessage, catalog: sanitizedCatalog }) },
+      ]),
     }) as any;
 
     const usage = response?.usage;
@@ -304,15 +331,10 @@ export const openaiLlm: LlmProvider = {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: LLM_MODEL,
-        temperature: 0,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT_EXPLAIN },
-          { role: 'user', content: JSON.stringify({ formCode: sanitizeFormCode(formCode), errors: sanitizedErrors }) },
-        ],
-      }),
+      body: buildChatCompletionBody([
+        { role: 'system', content: SYSTEM_PROMPT_EXPLAIN },
+        { role: 'user', content: JSON.stringify({ formCode: sanitizeFormCode(formCode), errors: sanitizedErrors }) },
+      ]),
     }) as any;
 
     const usage = response?.usage;

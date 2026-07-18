@@ -101,7 +101,11 @@ class OpenAiTtsProvider implements TtsProvider {
     audioSeconds: number;
   }> {
     const startTime = Date.now();
-    const mappedVoice = voice === 'vi-female' ? 'nova' : voice === 'vi-male' ? 'onyx' : voice;
+    // Upstream voice ids differ per provider (OpenAI: nova/onyx; FPT.AI-VITs:
+    // banmai/leminh/...), so the app-facing vi-female/vi-male ids map through env.
+    const femaleVoice = process.env.TTS_VOICE_FEMALE?.trim() || 'nova';
+    const maleVoice = process.env.TTS_VOICE_MALE?.trim() || 'onyx';
+    const mappedVoice = voice === 'vi-female' ? femaleVoice : voice === 'vi-male' ? maleVoice : voice;
     const model = process.env.TTS_MODEL || 'tts-1';
     const audioSeconds = text.length * 0.05;
 
@@ -161,4 +165,31 @@ export function makeTtsCacheKey(
   language: string
 ): string {
   return 'tts:' + sha256hex(JSON.stringify([text, voice, speed, language]));
+}
+
+/**
+ * The upstream model id the current provider synthesizes with. Upstream voice ids
+ * differ per provider, but the model label is what varies the cache key/pricing.
+ */
+export function getConfiguredTtsModel(providerName: string): string {
+  return providerName === 'openai'
+    ? (process.env.TTS_MODEL?.trim() || 'tts-1')
+    : 'mock-tts';
+}
+
+/**
+ * Full durable-cache key for a synthesis request, namespaced by provider + model
+ * so a provider/model switch never serves stale audio. The single source of truth
+ * for this key — the route and the pre-generation CLI both call it, so warmed
+ * entries are guaranteed to match what runtime looks up.
+ */
+export function makeSynthesisCacheKey(params: {
+  text: string;
+  voice: string;
+  speed: number;
+  language: string;
+}): string {
+  const providerName = getTtsProvider().name;
+  const model = getConfiguredTtsModel(providerName);
+  return `${providerName}:${model}:${makeTtsCacheKey(params.text, params.voice, params.speed, params.language)}`;
 }
