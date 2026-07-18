@@ -63,6 +63,28 @@ async function seedUsers() {
       role: 'manager',
       password: 'ManagerDemo123!',
     },
+    // manager — thêm để test tay, mỗi tài khoản mật khẩu riêng
+    {
+      username: 'quanly.hanoi',
+      email: 'quanly.hanoi@demo.vn',
+      displayName: 'Đỗ Thị Hà',
+      role: 'manager',
+      password: 'HaNoi2026@ql',
+    },
+    {
+      username: 'quanly.hcm',
+      email: 'quanly.hcm@demo.vn',
+      displayName: 'Bùi Văn Sơn',
+      role: 'manager',
+      password: 'SaiGon2026@ql',
+    },
+    {
+      username: 'quanly.danang',
+      email: 'quanly.danang@demo.vn',
+      displayName: 'Ngô Thị Diễm',
+      role: 'manager',
+      password: 'DaNang2026@ql',
+    },
     // admin
     {
       username: 'admin',
@@ -84,6 +106,28 @@ async function seedUsers() {
       displayName: 'Admin Kiểm Thử',
       role: 'admin',
       password: 'AdminDemo123!',
+    },
+    // admin — thêm để test tay, mỗi tài khoản mật khẩu riêng
+    {
+      username: 'admin.truong',
+      email: 'admin.truong@demo.vn',
+      displayName: 'Trần Quản Trị Trưởng',
+      role: 'admin',
+      password: 'Truong2026@ad',
+    },
+    {
+      username: 'admin.kythuat',
+      email: 'admin.kythuat@demo.vn',
+      displayName: 'Lý Kỹ Thuật',
+      role: 'admin',
+      password: 'KyThuat2026@ad',
+    },
+    {
+      username: 'admin.kiemtoan',
+      email: 'admin.kiemtoan@demo.vn',
+      displayName: 'Phan Kiểm Toán',
+      role: 'admin',
+      password: 'KiemToan2026@ad',
     },
   ] as const;
 
@@ -107,7 +151,7 @@ async function seedUsers() {
     });
   }
   console.log(
-    `Seeded ${accounts.length} test users (3 user / 3 manager / 3 admin).`
+    `Seeded ${accounts.length} test users (3 user / 6 manager / 6 admin).`
   );
 }
 
