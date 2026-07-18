@@ -2,8 +2,30 @@
 const nextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ['music-metadata'],
-  turbopack: {
-    root: 'd:/9router/VN_AI_Innovation/projects/build_a_full_stack_web_app_ai_guided_pub_4eaf5f22',
+  async redirects() {
+    return [
+      // Legacy citizen paths → /user/*
+      {
+        source: '/chat',
+        destination: '/user/chat',
+        permanent: false,
+      },
+      {
+        source: '/checklist',
+        destination: '/user/checklist',
+        permanent: false,
+      },
+      {
+        source: '/result',
+        destination: '/user/result',
+        permanent: false,
+      },
+      {
+        source: '/form/:applicationId',
+        destination: '/user/form/:applicationId',
+        permanent: false,
+      },
+    ];
   },
 };
 

@@ -46,8 +46,11 @@ export default function WidgetDemoPage() {
             <Link href="/sources" className="hover:underline hover:text-blue-200 transition">
               Tra cứu thủ tục
             </Link>
+            <Link href="/user" className="hover:underline hover:text-blue-200 transition">
+              Cổng người dùng
+            </Link>
             <Link href="/admin" className="hover:underline hover:text-blue-200 transition">
-              Quản trị viên
+              Quản trị
             </Link>
           </nav>
         </div>
@@ -273,7 +276,7 @@ export default function WidgetDemoPage() {
                 HỆ THỐNG DỊCH VỤ CÔNG MÔ PHỎNG
               </h4>
               <p className="text-xs text-slate-400 max-w-md leading-relaxed">
-                Được phát triển trong khuôn khổ dự án &quot;Trợ lý Thủ tục Hành chính&quot; AI-Native. Hệ thống giúp tối ưu hóa và đơn giản hóa thủ tục hành chính công bằng công nghệ trí tuệ nhân tạo.
+                Được phát triển trong khuôn khổ dự án VN AI Innovation — Trợ lý Thủ tục Hành chính. Hệ thống giúp tối ưu hóa và đơn giản hóa thủ tục hành chính công bằng công nghệ trí tuệ nhân tạo.
               </p>
             </div>
             <div className="space-y-3">
@@ -297,8 +300,12 @@ export default function WidgetDemoPage() {
                 Nguồn dữ liệu
               </Link>
               <span>·</span>
+              <Link href="/manager" className="hover:underline hover:text-slate-300">
+                Manager
+              </Link>
+              <span>·</span>
               <Link href="/admin" className="hover:underline hover:text-slate-300">
-                Trang quản trị
+                Admin
               </Link>
             </div>
           </div>

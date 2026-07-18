@@ -1,10 +1,12 @@
-import { requireAdmin } from '@/lib/auth';
+import { requireStaffAuth } from '@/lib/login-auth';
 import { prisma } from '@/lib/db';
 import { AppError, handleRoute, jsonOk } from '@/lib/errors';
 import { activateVersion } from '@/lib/form-migration';
 
+/** POST approve — admin only (cookie session or legacy X-Admin-Token) */
 export const POST = handleRoute(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
-  requireAdmin(req);
+  const { user } = await requireStaffAuth(req, 'admin');
+  const reviewedBy = user?.username ?? user?.displayName ?? 'shared-admin-token';
 
   const { id } = await params;
   const now = new Date();
@@ -15,7 +17,7 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
       where: { id, status: 'PENDING' },
       data: {
         status: 'APPROVED',
-        reviewedBy: 'shared-admin-token',
+        reviewedBy,
         reviewedAt: now,
       },
     });

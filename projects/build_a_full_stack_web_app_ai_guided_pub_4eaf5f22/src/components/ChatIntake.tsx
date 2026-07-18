@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSessionId, getToken, setSession, clearSession } from '@/lib/session';
+import SpeechButton from '@/components/SpeechButton';
+import BrandLogo from '@/components/BrandLogo';
 
 type Phase = 'search' | 'intake' | 'done';
 
@@ -98,52 +100,6 @@ function safeHttpsUrl(raw: unknown): string | null {
     // ignore
   }
   return null;
-}
-
-function SpeechButton({ text, label = 'Nghe' }: { text: string; label?: string }) {
-  const [mounted, setMounted] = useState(false);
-  const [playing, setPlaying] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
-
-  const hasSpeech = typeof window !== 'undefined' && ('speechSynthesis' in window || 'webkitSpeechSynthesis' in window);
-  if (!hasSpeech) return null;
-
-  const handleSpeak = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-      setPlaying(false);
-      return;
-    }
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'vi-VN';
-    utterance.onend = () => setPlaying(false);
-    utterance.onerror = () => setPlaying(false);
-    setPlaying(true);
-    window.speechSynthesis.speak(utterance);
-  };
-
-  return (
-    <button
-      onClick={handleSpeak}
-      type="button"
-      className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-md border transition-colors ${
-        playing
-          ? 'bg-amber-100 border-amber-300 text-amber-800 focus:ring-amber-500'
-          : 'bg-slate-700 hover:bg-slate-600 border-slate-600 text-slate-200'
-      }`}
-      aria-pressed={playing}
-      aria-label={playing ? 'Dừng phát âm thanh' : 'Nghe đọc nội dung'}
-    >
-      <span>🔊 {playing ? 'Dừng' : label}</span>
-    </button>
-  );
 }
 
 async function api<T>(
@@ -565,7 +521,7 @@ export default function ChatIntake({
     setBusy(false);
 
     if (res.ok) {
-      router.push(`/form/${res.data.applicationId}`);
+      router.push(`/user/form/${res.data.applicationId}`);
     } else {
       appendBotMessage(res.message);
     }
@@ -763,14 +719,14 @@ export default function ChatIntake({
   const renderOptions = (q: Question) => {
     const options = q.options || [];
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto w-full my-4">
+      <div className="mx-auto my-4 grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
         {options.map((opt) => (
           <button
             key={String(opt.value)}
             type="button"
             disabled={busy}
             onClick={() => submitAnswer(q.questionCode, opt.value, opt.label)}
-            className="w-full text-left p-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-100 font-semibold shadow-sm transition-all duration-200 focus:ring-2 focus:ring-amber-500 hover:scale-[1.01] min-h-[48px]"
+            className="min-h-[48px] w-full rounded-xl border border-surface-border bg-surface p-4 text-left font-semibold text-slate-900 shadow-sm motion-safe:transition-all motion-safe:duration-200 motion-safe:active:scale-[0.99] hover:border-brand-400 hover:bg-brand-50 hover:shadow-md focus:ring-2 focus:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {opt.label}
           </button>
@@ -782,12 +738,12 @@ export default function ChatIntake({
   // RENDER PROVINCE SELECT
   const renderProvinceSelect = (q: Question) => {
     return (
-      <div className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto w-full my-4 items-center">
+      <div className="mx-auto my-4 flex w-full max-w-xl flex-col items-center gap-3 sm:flex-row">
         <select
           value={provinceSelectVal}
           onChange={(e) => setProvinceSelectVal(e.target.value)}
           disabled={busy}
-          className="flex-1 w-full bg-slate-800 text-white border border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-500 min-h-[48px] focus:outline-none"
+          className="min-h-[48px] w-full flex-1 rounded-xl border border-surface-border bg-surface px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600"
           aria-label="Chọn tỉnh thành"
         >
           <option value="">-- Chọn Tỉnh/Thành phố --</option>
@@ -804,7 +760,7 @@ export default function ChatIntake({
             setKnownProvince(provinceSelectVal);
             submitAnswer(q.questionCode, provinceSelectVal, provinceSelectVal);
           }}
-          className="btn bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 disabled:text-slate-650 text-slate-950 font-bold rounded-xl px-6 py-3 w-full sm:w-auto min-h-[48px] transition-all"
+          className="btn min-h-[48px] w-full rounded-xl bg-accent-500 px-6 py-3 font-bold text-slate-950 transition-all hover:bg-accent-400 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 sm:w-auto"
         >
           Xác nhận
         </button>
@@ -816,16 +772,18 @@ export default function ChatIntake({
   const renderProcedureCard = (attachment: any) => {
     const validatedLink = safeHttpsUrl(attachment.procedure?.sourceUrl);
     return (
-      <div className="mt-3 p-4 bg-slate-900 border border-slate-700/60 rounded-xl space-y-3">
-        <h4 className="font-bold text-base text-white">{attachment.procedure?.name}</h4>
-        <div className="flex items-center justify-between text-sm text-slate-400">
-          <span>Độ tin cậy {attachment.procedure ? Math.round(attachment.procedure.confidence * 100) : 0}%</span>
+      <div className="mt-3 space-y-3 rounded-xl border border-brand-200 bg-brand-50 p-4">
+        <h4 className="text-base font-bold text-brand-900">{attachment.procedure?.name}</h4>
+        <div className="flex items-center justify-between text-sm text-slate-700">
+          <span>
+            Độ tin cậy {attachment.procedure ? Math.round(attachment.procedure.confidence * 100) : 0}%
+          </span>
           {validatedLink ? (
             <a
               href={validatedLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-amber-500 hover:text-amber-400 underline font-medium"
+              className="font-medium text-brand-700 underline hover:text-brand-800"
             >
               Nguồn
             </a>
@@ -835,7 +793,7 @@ export default function ChatIntake({
           type="button"
           disabled={busy}
           onClick={() => attachment.procedure && startIntake(attachment.procedure.code, attachment.procedure.name)}
-          className="w-full btn bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 rounded-lg text-sm transition-all min-h-[44px]"
+          className="btn min-h-[44px] w-full rounded-lg bg-accent-500 py-2 text-sm font-bold text-slate-950 transition-all hover:bg-accent-400 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
         >
           Đúng, bắt đầu thủ tục này
         </button>
@@ -853,7 +811,7 @@ export default function ChatIntake({
             type="button"
             disabled={busy}
             onClick={() => startIntake(proc.code, attachment.originalMessage || '')}
-            className="w-full text-left p-3 rounded-lg bg-slate-900 hover:bg-slate-700 border border-slate-700/50 text-slate-200 text-sm font-semibold transition-all min-h-[44px]"
+            className="min-h-[44px] w-full rounded-lg border border-surface-border bg-surface p-3 text-left text-sm font-semibold text-slate-900 transition-all hover:border-brand-400 hover:bg-brand-50"
           >
             {proc.name}
           </button>
@@ -864,61 +822,138 @@ export default function ChatIntake({
 
   const isInputEnabled = phase === 'search' || (activeQuestion?.fieldType === 'text' && (phase === 'intake' || editingCode !== null));
 
+  // Chỉ dùng để quyết định render UI chào mừng — không đổi state
+  const showBrandedWelcome =
+    phase === 'search' &&
+    !isTyping &&
+    messages.length === 1 &&
+    messages[0]?.id === 'welcome';
+
   return (
-    <div className={`flex flex-col h-full text-slate-100 font-sans ${embed ? 'w-full h-full bg-slate-900' : 'max-w-4xl mx-auto w-full h-[85vh] rounded-2xl shadow-xl border border-slate-800 bg-slate-900'}`}>
-      
-      {/* Header */}
-      {!embed && (
-        <header className="p-4 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">💬</span>
-            <h1 className="text-lg font-bold text-slate-200">Trợ lý Hướng dẫn Thủ tục Hành chính</h1>
-          </div>
-          {ecoBadge && <span className="badge-eco" />}
-        </header>
+    <div
+      className={`flex h-full min-h-0 flex-col font-sans text-slate-900 ${
+        embed
+          ? 'h-full w-full bg-surface-muted'
+          : 'mx-auto h-full min-h-[min(100dvh,720px)] w-full max-w-4xl rounded-3xl border-2 border-brand-200/80 bg-white/90 shadow-shell-lg ring-1 ring-brand-100 backdrop-blur-sm sm:min-h-[min(85dvh,800px)]'
+      }`}
+    >
+      {ecoBadge && (
+        <div className="flex shrink-0 justify-end border-b border-surface-border bg-brand-50/80 px-4 py-2">
+          <span className="badge-eco" aria-label="Chế độ tiết kiệm" />
+        </div>
       )}
 
-      {/* Message scroll thread */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
-        {embed && ecoBadge && (
-          <div className="flex justify-end my-2">
-            <span className="badge-eco" />
+      {/* Message scroll thread — live region cho trình đọc màn hình */}
+      <div
+        className="flex-1 space-y-5 overflow-y-auto bg-gradient-to-b from-brand-50/80 to-slate-100 p-4 md:p-6 [background-image:radial-gradient(circle_at_1px_1px,rgb(148_163_184/0.22)_1px,transparent_0)] [background-size:18px_18px]"
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
+        aria-label="Hội thoại với trợ lý"
+      >
+        {showBrandedWelcome && (
+          <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-5 py-4 text-center">
+            <BrandLogo size="lg" href={null} />
+            {/* Minh họa chào mừng gọn (inline SVG) */}
+            <svg
+              viewBox="0 0 200 120"
+              className="h-28 w-full max-w-[220px]"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <rect x="20" y="24" width="100" height="72" rx="10" fill="white" stroke="#bfdbfe" strokeWidth="2" />
+              <rect x="20" y="24" width="100" height="18" rx="10" fill="#2563eb" />
+              <rect x="20" y="34" width="100" height="8" fill="#2563eb" />
+              <rect x="34" y="54" width="72" height="6" rx="3" fill="#dbeafe" />
+              <rect x="34" y="68" width="56" height="6" rx="3" fill="#e2e8f0" />
+              <rect x="34" y="82" width="40" height="6" rx="3" fill="#e2e8f0" />
+              <circle cx="150" cy="52" r="28" fill="#1d4ed8" />
+              <circle cx="140" cy="48" r="3" fill="#93c5fd" />
+              <circle cx="160" cy="48" r="3" fill="#93c5fd" />
+              <circle cx="150" cy="62" r="3" fill="#fbbf24" />
+              <path d="M140 48l10 14M160 48l-10 14M140 48h20" stroke="#bfdbfe" strokeWidth="1.5" />
+              <rect x="128" y="88" width="52" height="18" rx="9" fill="#f59e0b" />
+              <path d="M140 97h28" stroke="white" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <div className="space-y-2">
+              <h2 className="text-title text-brand-900 sm:text-xl">
+                Chào mừng đến Trợ lý Thủ tục Hành chính
+              </h2>
+              <p className="text-body text-slate-600">
+                VN AI Innovation — chọn lối tắt bên dưới hoặc gõ nhu cầu của bạn.
+              </p>
+            </div>
+            <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => startIntake('MARRIAGE_REGISTRATION', 'Tôi muốn đăng ký kết hôn')}
+                className="card-premium p-4 text-left hover:shadow-glow disabled:opacity-60"
+              >
+                <span className="block text-sm font-bold text-brand-800">Đăng ký kết hôn</span>
+                <span className="mt-1 block text-xs text-slate-500">Bắt đầu ngay</span>
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => startIntake('BIRTH_REGISTRATION', 'Tôi muốn đăng ký khai sinh')}
+                className="card-premium p-4 text-left hover:shadow-glow-accent disabled:opacity-60"
+              >
+                <span className="block text-sm font-bold text-accent-800">Đăng ký khai sinh</span>
+                <span className="mt-1 block text-xs text-slate-500">Bắt đầu ngay</span>
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => handleSearch('Tôi cần hỗ trợ thủ tục hành chính')}
+                className="card-premium p-4 text-left hover:border-brand-300 disabled:opacity-60"
+              >
+                <span className="block text-sm font-bold text-slate-800">Mô tả nhu cầu</span>
+                <span className="mt-1 block text-xs text-slate-500">AI nhận diện thủ tục</span>
+              </button>
+            </div>
           </div>
         )}
 
         {messages.map((message) => {
+          // Ẩn bubble welcome khi đã hiển thị branded empty state (chỉ UI)
+          if (showBrandedWelcome && message.id === 'welcome') {
+            return null;
+          }
           const isBot = message.role === 'bot';
           return (
             <div key={message.id} className={`flex items-start gap-2 ${isBot ? '' : 'justify-end'}`}>
               {isBot ? (
-                <div className="bg-slate-800/80 backdrop-blur border border-slate-700/50 rounded-2xl rounded-tl-none p-4 max-w-[85%] text-slate-200 shadow-md transition-all duration-200 hover:border-slate-650 w-full md:w-auto">
+                <div className="w-full max-w-[85%] rounded-2xl rounded-tl-sm border border-white bg-gradient-to-b from-white to-slate-50 p-4 text-slate-900 shadow-shell ring-1 ring-slate-900/5 motion-safe:transition-all motion-safe:duration-200 md:w-auto">
                   <div className="flex items-start justify-between gap-4">
-                    <p className="text-lg leading-relaxed whitespace-pre-wrap">{message.text}</p>
-                    <SpeechButton text={message.text} label="Nghe" />
+                    <p className="whitespace-pre-wrap text-body-lg leading-[1.7] tracking-snugish text-slate-800">
+                      {message.text}
+                    </p>
+                    <SpeechButton text={message.text} label="Nghe" compact />
                   </div>
                   {message.attachment?.type === 'procedure_card' && renderProcedureCard(message.attachment)}
                   {message.attachment?.type === 'supported_procedures' && renderSupportedProcedures(message.attachment)}
                 </div>
               ) : (
-                <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-2xl rounded-tr-none p-4 max-w-[85%] ml-auto shadow-md transition-all duration-200 font-medium text-lg">
-                  <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                <div className="ml-auto max-w-[85%] rounded-2xl rounded-tr-sm bg-gradient-to-br from-brand-500 via-brand-600 to-brand-800 p-4 text-lg font-medium tracking-snugish text-white shadow-glow ring-1 ring-white/25 motion-safe:transition-transform motion-safe:duration-200 motion-safe:active:scale-[0.99]">
+                  <p className="whitespace-pre-wrap leading-relaxed">{message.text}</p>
                 </div>
               )}
             </div>
           );
         })}
 
-        {/* Typing Indicator */}
         {isTyping && (
-          <div className="flex items-start gap-2">
-            <div className="bg-slate-800/80 backdrop-blur border border-slate-700/50 rounded-2xl rounded-tl-none p-4 max-w-[85%] text-slate-200 shadow-md">
+          <div className="flex items-start gap-2" aria-live="polite">
+            <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-white bg-white p-4 shadow-shell">
               <div className="flex items-center gap-2">
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                  <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                  <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                <div className="flex gap-1.5" aria-hidden="true">
+                  <span className="h-2.5 w-2.5 rounded-full bg-brand-500 motion-safe:animate-pulse" style={{ animationDelay: '0ms' }} />
+                  <span className="h-2.5 w-2.5 rounded-full bg-brand-500 motion-safe:animate-pulse" style={{ animationDelay: '150ms' }} />
+                  <span className="h-2.5 w-2.5 rounded-full bg-brand-500 motion-safe:animate-pulse" style={{ animationDelay: '300ms' }} />
                 </div>
-                <span className="text-sm text-slate-400">Đang suy nghĩ...</span>
+                <span className="text-sm font-medium text-slate-600">Đang suy nghĩ...</span>
               </div>
             </div>
           </div>
@@ -927,31 +962,35 @@ export default function ChatIntake({
         <div ref={bottomRef} />
       </div>
 
-      {/* Answered / Edit controls area */}
       {answeredList.length > 0 && (
-        <div className="px-4 shrink-0">
-          <div className="flex justify-center my-2">
+        <div className="shrink-0 bg-surface px-4">
+          <div className="my-2 flex justify-center">
             <button
+              type="button"
               onClick={() => setShowEditList(!showEditList)}
-              className="px-4 py-2 rounded-full border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm font-semibold transition-all duration-200"
+              className="min-h-touch rounded-full border border-surface-border bg-surface-muted px-4 py-2 text-sm font-semibold text-slate-800 transition-all duration-200 hover:bg-brand-50 hover:text-brand-800"
+              aria-expanded={showEditList}
             >
-              {showEditList ? 'Ẩn danh sách câu trả lời' : '✍️ Sửa câu trả lời'}
+              {showEditList ? 'Ẩn danh sách câu trả lời' : 'Sửa câu trả lời'}
             </button>
           </div>
           {showEditList && (
-            <div className="max-w-2xl mx-auto w-full bg-slate-800/95 border border-slate-700/50 rounded-2xl p-4 my-2 space-y-2 shadow-lg">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Chọn câu hỏi cần sửa:</h4>
+            <div className="mx-auto my-2 w-full max-w-2xl space-y-2 rounded-2xl border border-surface-border bg-surface p-4 shadow-sm">
+              <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-600">
+                Chọn câu hỏi cần sửa:
+              </h4>
               {answeredList.map((item) => (
                 <button
                   key={item.questionCode}
+                  type="button"
                   onClick={() => {
                     setEditingCode(item.questionCode);
                     setShowEditList(false);
                   }}
-                  className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-700/50 text-left transition-all border border-transparent hover:border-slate-600"
+                  className="flex w-full items-center justify-between rounded-xl border border-transparent p-3 text-left transition-all hover:border-brand-200 hover:bg-brand-50"
                 >
-                  <span className="text-sm font-medium text-slate-200">{item.label}</span>
-                  <span className="text-sm font-semibold text-amber-500 font-mono">{item.displayValue}</span>
+                  <span className="text-sm font-medium text-slate-800">{item.label}</span>
+                  <span className="font-mono text-sm font-semibold text-brand-700">{item.displayValue}</span>
                 </button>
               ))}
             </div>
@@ -959,15 +998,15 @@ export default function ChatIntake({
         </div>
       )}
 
-      {/* Editing question controls container */}
       {editingCode && activeQuestion && (
-        <div className="p-4 bg-slate-900 border-t border-slate-800 shrink-0">
-          <div className="max-w-2xl mx-auto w-full bg-slate-800/90 border border-slate-700/50 rounded-2xl p-4 shadow-md">
-            <div className="flex items-center justify-between mb-3 border-b border-slate-700 pb-2">
-              <span className="text-sm font-bold text-amber-400">✍️ Chỉnh sửa: {activeQuestion.label}</span>
+        <div className="shrink-0 border-t border-surface-border bg-surface p-4">
+          <div className="mx-auto w-full max-w-2xl rounded-2xl border border-surface-border bg-surface-muted p-4 shadow-sm">
+            <div className="mb-3 flex items-center justify-between border-b border-surface-border pb-2">
+              <span className="text-sm font-bold text-brand-800">Chỉnh sửa: {activeQuestion.label}</span>
               <button
+                type="button"
                 onClick={() => setEditingCode(null)}
-                className="text-xs text-slate-400 hover:text-slate-200 underline"
+                className="min-h-touch text-sm font-medium text-slate-600 underline hover:text-slate-900"
               >
                 Hủy bỏ
               </button>
@@ -976,62 +1015,67 @@ export default function ChatIntake({
             {activeQuestion.fieldType === 'select' && renderOptions(activeQuestion)}
             {activeQuestion.fieldType === 'province' && renderProvinceSelect(activeQuestion)}
             {activeQuestion.fieldType === 'text' && (
-              <p className="text-sm text-slate-400 italic">Vui lòng sử dụng ô nhập tin nhắn bên dưới để sửa câu trả lời.</p>
+              <p className="text-sm italic text-slate-600">
+                Vui lòng sử dụng ô nhập tin nhắn bên dưới để sửa câu trả lời.
+              </p>
             )}
           </div>
         </div>
       )}
 
-      {/* Intake phase controls (rendered inline if not editing) */}
       {phase === 'intake' && activeQuestion && !editingCode && (
-        <div className="p-4 bg-slate-900 border-t border-slate-800 shrink-0">
+        <div className="shrink-0 border-t border-surface-border bg-surface p-4">
           {activeQuestion.fieldType === 'radio' && renderOptions(activeQuestion)}
           {activeQuestion.fieldType === 'select' && renderOptions(activeQuestion)}
           {activeQuestion.fieldType === 'province' && renderProvinceSelect(activeQuestion)}
         </div>
       )}
 
-      {/* Done phase controls */}
       {phase === 'done' && sessionId && (
-        <div className="p-4 bg-slate-900 border-t border-slate-800 flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto w-full my-2 shrink-0">
+        <div className="mx-auto my-2 flex w-full max-w-2xl shrink-0 flex-col gap-4 border-t border-surface-border bg-surface p-4 sm:flex-row">
           <button
-            onClick={() => router.push(`/checklist?sessionId=${sessionId}`)}
+            type="button"
+            onClick={() => router.push(`/user/checklist?sessionId=${sessionId}`)}
             disabled={busy}
-            className="flex-1 btn bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-100 font-bold py-3 px-6 rounded-xl transition-all duration-200 text-center min-h-[48px]"
+            className="btn min-h-[48px] flex-1 rounded-xl border border-surface-border bg-surface-muted px-6 py-3 text-center font-bold text-slate-800 transition-all duration-200 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Xem danh sách giấy tờ
           </button>
           <button
+            type="button"
             onClick={handleCreateApplication}
             disabled={busy}
-            className="flex-1 btn bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-6 rounded-xl transition-all duration-200 text-center min-h-[48px]"
+            className="btn min-h-[48px] flex-1 rounded-xl bg-accent-500 px-6 py-3 text-center font-bold text-slate-950 transition-all duration-200 hover:bg-accent-400 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
           >
             Điền biểu mẫu ngay
           </button>
         </div>
       )}
 
-      {/* Sticky Bottom Input Bar & Disclaimer */}
       <div className="shrink-0">
-        <form onSubmit={handleSend} className="p-4 bg-slate-900 border-t border-slate-800">
-          <div className="flex gap-2 max-w-4xl mx-auto items-center">
+        <form onSubmit={handleSend} className="border-t border-white/60 bg-white/80 p-3 backdrop-blur-glass sm:p-4">
+          <div className="mx-auto flex max-w-4xl items-center gap-2 rounded-full border-2 border-brand-100 bg-white px-2 py-1.5 shadow-shell focus-within:border-brand-400 focus-within:shadow-glow motion-safe:transition-shadow motion-safe:duration-300">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={phase === 'intake' && activeQuestion?.fieldType === 'text' ? 'Nhập câu trả lời...' : 'Nhập câu hỏi tại đây...'}
-              className="flex-1 bg-slate-800/90 text-white placeholder-slate-400 border border-slate-700/60 rounded-full px-5 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent min-h-[48px]"
+              placeholder={
+                phase === 'intake' && activeQuestion?.fieldType === 'text'
+                  ? 'Nhập câu trả lời...'
+                  : 'Nhập câu hỏi tại đây...'
+              }
+              className="min-h-[48px] flex-1 rounded-full border-0 bg-transparent px-4 text-body-lg tracking-snugish text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:text-slate-500"
               disabled={busy || !isInputEnabled}
+              aria-disabled={busy || !isInputEnabled}
               aria-label="Nội dung tin nhắn"
             />
-            {/* Microphone Button */}
             <button
               type="button"
               onClick={startVoice}
-              className={`relative flex items-center justify-center rounded-full transition-all min-w-[48px] min-h-[48px] ${
+              className={`relative flex min-h-[48px] min-w-[48px] items-center justify-center rounded-full motion-safe:transition-all ${
                 recording
-                  ? 'bg-rose-600 text-white animate-pulse'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                  ? 'bg-rose-600 text-white motion-safe:animate-pulse'
+                  : 'border border-surface-border bg-slate-50 text-slate-700 hover:bg-brand-50 hover:text-brand-800'
               }`}
               disabled={busy}
               aria-pressed={recording}
@@ -1039,38 +1083,37 @@ export default function ChatIntake({
             >
               {recording ? (
                 <>
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <rect x="6" y="6" width="12" height="12" rx="1.5" />
                   </svg>
                   {recordingDuration > 0 && (
-                    <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-rose-600 text-white text-xs font-mono px-2 py-1 rounded-full whitespace-nowrap">
-                      {Math.floor(recordingDuration / 60)}:{String(recordingDuration % 60).padStart(2, '0')}
+                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-rose-700 px-2 py-1 font-mono text-xs text-white">
+                      {Math.floor(recordingDuration / 60)}:
+                      {String(recordingDuration % 60).padStart(2, '0')}
                     </span>
                   )}
                 </>
               ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
                 </svg>
               )}
             </button>
-            {/* Send Button */}
             <button
               type="submit"
-              className="flex items-center justify-center bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 disabled:text-slate-650 text-slate-950 font-bold rounded-full min-w-[48px] min-h-[48px] transition-all"
+              className="flex min-h-[48px] min-w-[48px] items-center justify-center rounded-full bg-brand-600 font-bold text-white shadow-md motion-safe:transition-all motion-safe:duration-200 hover:bg-brand-700 hover:shadow-glow active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none disabled:active:scale-100"
               disabled={busy || !input.trim()}
               aria-label="Gửi tin nhắn"
             >
-              <svg className="w-5 h-5 transform rotate-90" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5 rotate-90 transform" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
               </svg>
             </button>
           </div>
         </form>
 
-        {/* Disclaimer Footer */}
-        <div className="bg-slate-950/40 border-t border-slate-950">
-          <p className="text-center text-[11px] text-slate-500 px-4 py-2.5 max-w-2xl mx-auto leading-relaxed">
+        <div className="border-t border-surface-border bg-brand-50/50">
+          <p className="mx-auto max-w-2xl px-4 py-3 text-center text-xs leading-relaxed text-slate-600 sm:text-sm">
             {DISCLAIMER}
           </p>
         </div>

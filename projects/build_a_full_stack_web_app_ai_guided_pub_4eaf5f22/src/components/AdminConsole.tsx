@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface FormVersionOverview {
   version: string;
@@ -408,22 +408,31 @@ const getErrorFromResponse = async (res: Response): Promise<{ status: number; co
   return { status: res.status, code };
 };
 
-export default function AdminConsole(): JSX.Element {
-  const [token, setToken] = useState<string>('');
+export type StaffConsoleRole = 'manager' | 'admin';
+
+export interface StaffConsoleProps {
+  /**
+   * manager — xem overview + change requests (không phê duyệt)
+   * admin — đầy đủ quyền, gồm phê duyệt & kích hoạt phiên bản
+   */
+  role?: StaffConsoleRole;
+}
+
+export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): JSX.Element {
+  const canApproveActions = role === 'admin';
+  const roleLabel = role === 'admin' ? 'Quản trị viên' : 'Người quản lý';
+
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [actorName, setActorName] = useState<string | null>(null);
   
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [approvalResults, setApprovalResults] = useState<Record<string, ApprovalResult>>({});
   const [approvingId, setApprovingId] = useState<string | null>(null);
 
-  const handleFetchData = async (activeToken = token) => {
-    if (!activeToken.trim()) {
-      setError('Vui lòng nhập mã quản trị');
-      return;
-    }
+  const handleFetchData = async () => {
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -431,10 +440,10 @@ export default function AdminConsole(): JSX.Element {
     try {
       const [overviewRes, crRes] = await Promise.all([
         fetch('/api/v1/admin/overview', {
-          headers: { 'X-Admin-Token': activeToken },
+          credentials: 'include',
         }),
         fetch('/api/v1/admin/change-requests', {
-          headers: { 'X-Admin-Token': activeToken },
+          credentials: 'include',
         }),
       ]);
 
@@ -465,13 +474,31 @@ export default function AdminConsole(): JSX.Element {
 
       setOverview(parsedOverview);
       setChangeRequests(parsedCRs);
-      setSuccess('Tải dữ liệu quản trị thành công.');
+
+      if (rawOverview && typeof rawOverview === 'object') {
+        const actor = (rawOverview as Record<string, unknown>).actor;
+        if (actor && typeof actor === 'object') {
+          const dn = (actor as Record<string, unknown>).displayName;
+          if (typeof dn === 'string') setActorName(dn);
+        }
+      }
+
+      setSuccess(
+        role === 'admin'
+          ? 'Tải dữ liệu quản trị thành công.'
+          : 'Tải dữ liệu người quản lý thành công (chế độ chỉ đọc).'
+      );
     } catch (err: any) {
       setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void handleFetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role]);
 
   const handleApprove = async (id: string) => {
     if (!isSafeId(id)) {
@@ -484,10 +511,16 @@ export default function AdminConsole(): JSX.Element {
     setSuccess(null);
 
     try {
+      if (!canApproveActions) {
+        setError('Chỉ quản trị viên mới được phê duyệt yêu cầu thay đổi.');
+        setApprovingId(null);
+        return;
+      }
+
       const res = await fetch(`/api/v1/admin/change-requests/${encodeURIComponent(id)}/approve`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'X-Admin-Token': token,
           'Content-Type': 'application/json',
         },
       });
@@ -549,7 +582,7 @@ export default function AdminConsole(): JSX.Element {
         setSuccess('Đã phê duyệt & kích hoạt thành công');
       }
 
-      await handleFetchData(token);
+      await handleFetchData();
     } catch (err: any) {
       setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
     } finally {
@@ -582,41 +615,39 @@ export default function AdminConsole(): JSX.Element {
       <div className="card border border-slate-100 bg-slate-900 text-white shadow-lg p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="space-y-1">
-            <h2 className="text-xl font-bold tracking-tight text-amber-400">Đăng nhập Quản trị viên</h2>
+            <h2 className="text-xl font-bold tracking-tight text-amber-400">
+              Bảng điều khiển {roleLabel}
+            </h2>
             <p className="text-sm text-slate-300">
-              Nhập mã quản trị để truy cập dữ liệu hệ thống, xem quan trắc AI và xét duyệt thay đổi.
+              {canApproveActions
+                ? 'Phiên đăng nhập cookie — xem dữ liệu hệ thống, quan trắc AI và phê duyệt thay đổi biểu mẫu.'
+                : 'Phiên đăng nhập cookie — xem danh mục thủ tục, quan trắc AI và yêu cầu thay đổi (chỉ đọc).'}
+            </p>
+            <p className="text-xs text-slate-400">
+              Vai trò: <span className="font-semibold text-amber-300">{role}</span>
+              {actorName ? (
+                <>
+                  {' '}
+                  · Phiên: <span className="text-slate-200">{actorName}</span>
+                </>
+              ) : null}
+              {!canApproveActions && ' · không có quyền phê duyệt'}
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch">
-            <input
-              type="password"
-              placeholder="Nhập X-Admin-Token"
-              autoComplete="off"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              className="px-4 py-2 bg-slate-800 text-white border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 animate-none"
-            />
-            <button
-              onClick={() => handleFetchData()}
-              disabled={loading}
-              className="btn bg-amber-500 text-slate-950 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 font-semibold"
-            >
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
-                  Đang tải...
-                </div>
-              ) : (
-                'Tải dữ liệu'
-              )}
-            </button>
-          </div>
-        </div>
-        
-        <div className="mt-4 pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-          <span>
-            💡 <strong>Lưu ý:</strong> Mã quản trị dùng chung để chạy thử, chỉ lưu trong bộ nhớ (memory-only) và sẽ mất khi tải lại trang. Hệ thống thực tế sẽ sử dụng session ở phía máy chủ.
-          </span>
+          <button
+            onClick={() => handleFetchData()}
+            disabled={loading}
+            className="btn bg-amber-500 text-slate-950 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 font-semibold"
+          >
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                Đang tải...
+              </div>
+            ) : (
+              'Làm mới dữ liệu'
+            )}
+          </button>
         </div>
       </div>
 
@@ -859,7 +890,7 @@ export default function AdminConsole(): JSX.Element {
                           }
                         })()}
 
-                        {isPending && (
+                        {isPending && canApproveActions && (
                           <button
                             onClick={() => handleApprove(cr.id)}
                             disabled={approvingId !== null}
@@ -874,6 +905,11 @@ export default function AdminConsole(): JSX.Element {
                               'Phê duyệt & kích hoạt'
                             )}
                           </button>
+                        )}
+                        {isPending && !canApproveActions && (
+                          <span className="text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-3 py-1.5">
+                            Chỉ xem — cần quyền admin để phê duyệt
+                          </span>
                         )}
                       </div>
                     </div>

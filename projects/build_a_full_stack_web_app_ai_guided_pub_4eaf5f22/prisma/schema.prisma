@@ -165,3 +165,62 @@ model IdempotencyRecord {
 
   @@id([principalId, key])
 }
+
+/// Application login identity (citizen / manager / admin).
+model User {
+  id           String         @id @default(cuid())
+  username     String         @unique
+  email        String?        @unique
+  displayName  String
+  /// scrypt-encoded password; null for OAuth/VNID-only accounts
+  passwordHash String?
+  /// user | manager | admin
+  role         String
+  avatarUrl    String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  loginSessions LoginSession[]
+  oauthAccounts OAuthAccount[]
+}
+
+/// Linked social providers (Google, Facebook, …).
+model OAuthAccount {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// google | facebook
+  provider       String
+  providerUserId String
+  email          String?
+  createdAt      DateTime @default(now())
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+/// Browser login session (httpOnly cookie psp_login).
+model LoginSession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+  ipHint    String?
+
+  @@index([userId])
+}
+
+/// VNeID QR login challenge (poll until CONFIRMED).
+model VnidChallenge {
+  id        String   @id @default(cuid())
+  nonce     String   @unique
+  status    String   @default("PENDING")
+  /// set when phone confirms / demo confirm
+  userId    String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([status])
+}

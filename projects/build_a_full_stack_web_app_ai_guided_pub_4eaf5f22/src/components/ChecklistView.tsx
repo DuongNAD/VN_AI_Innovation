@@ -50,50 +50,64 @@ export default function ChecklistView({ guidance, onFillForm }: ChecklistViewPro
   }
 
   const getSubmissionTypeBadge = (type: 'SUBMIT' | 'PRESENT' | 'SYSTEM_LOOKUP') => {
-    switch (type) {
-      case 'SUBMIT':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-            Nộp
-          </span>
-        );
-      case 'PRESENT':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
-            Xuất trình (không nộp)
-          </span>
-        );
-      case 'SYSTEM_LOOKUP':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
-            Cơ quan tự tra cứu CSDL dân cư — bạn không cần nộp
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-100">
-            {type}
-          </span>
-        );
+    const BADGE: Record<
+      'SUBMIT' | 'PRESENT' | 'SYSTEM_LOOKUP',
+      { short: string; full: string; className: string }
+    > = {
+      SUBMIT: {
+        short: 'Nộp',
+        full: 'Cần nộp bản giấy hoặc bản điện tử cho cơ quan',
+        className: 'bg-brand-50 text-brand-800 border-brand-200',
+      },
+      PRESENT: {
+        short: 'Xuất trình',
+        full: 'Mang theo để đối chiếu, không cần nộp bản cứng',
+        className: 'bg-accent-50 text-accent-900 border-accent-200',
+      },
+      SYSTEM_LOOKUP: {
+        short: 'Hệ thống tra cứu',
+        full: 'Cơ quan tự tra cứu CSDL dân cư — bạn không cần nộp',
+        className: 'bg-emerald-50 text-emerald-900 border-emerald-200',
+      },
+    };
+
+    const meta = BADGE[type];
+    if (!meta) {
+      return (
+        <span className="inline-flex items-center rounded-md border border-surface-border bg-surface-muted px-2.5 py-1 text-xs font-semibold text-slate-700">
+          {type}
+        </span>
+      );
     }
+
+    return (
+      <span
+        className={`inline-flex max-w-full items-center rounded-md border px-2.5 py-1 text-xs font-semibold ${meta.className}`}
+        title={meta.full}
+        aria-label={meta.full}
+      >
+        {meta.short}
+        <span className="sr-only">. {meta.full}</span>
+      </span>
+    );
   };
 
   return (
-    <div className="card max-w-4xl mx-auto my-6 p-6 sm:p-8 space-y-8 bg-white border border-slate-100 shadow-sm">
+    <div className="card mx-auto my-6 max-w-4xl space-y-8 border border-surface-border bg-surface p-6 shadow-sm sm:p-8">
       {/* Header Section */}
-      <div className="border-b border-slate-100 pb-6 space-y-2">
+      <div className="space-y-2 border-b border-surface-border pb-6">
         <div className="flex items-center justify-between">
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+          <span className="inline-flex items-center rounded-full border border-surface-border bg-surface-muted px-2.5 py-0.5 text-xs font-semibold text-slate-700">
             Cơ quan thực hiện: {guidance.procedure.agency}
           </span>
         </div>
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight sm:text-3xl">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
           {guidance.procedure.name}
         </h1>
       </div>
 
       {/* Duration and Fees */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 border border-slate-100 rounded-xl p-4">
+      <div className="grid grid-cols-1 gap-4 rounded-xl border border-surface-border bg-surface-muted p-4 sm:grid-cols-2">
         <div className="flex items-center space-x-3 text-slate-700">
           <svg className="w-5 h-5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -121,7 +135,7 @@ export default function ChecklistView({ guidance, onFillForm }: ChecklistViewPro
           {guidance.checklist.map((item, idx) => (
             <div
               key={item.code || idx}
-              className="p-4 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-shadow flex flex-col md:flex-row md:items-start justify-between gap-4"
+              className="flex flex-col justify-between gap-4 rounded-lg border border-surface-border bg-surface p-4 shadow-sm transition-shadow hover:shadow md:flex-row md:items-start"
             >
               <div className="space-y-1.5">
                 <p className="font-bold text-slate-800">{item.name}</p>
@@ -151,7 +165,7 @@ export default function ChecklistView({ guidance, onFillForm }: ChecklistViewPro
         <div className="relative border-l-2 border-slate-200 ml-4 pl-6 space-y-8">
           {guidance.steps.map((step, idx) => (
             <div key={step.order || idx} className="relative">
-              <span className="absolute -left-10 top-0.5 flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm shadow-sm">
+              <span className="absolute -left-10 top-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white shadow-sm">
                 {idx + 1}
               </span>
               <div className="space-y-1">

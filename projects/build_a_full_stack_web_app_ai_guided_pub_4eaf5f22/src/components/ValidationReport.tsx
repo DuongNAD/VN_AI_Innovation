@@ -198,7 +198,7 @@ export default function ValidationReport({
       {/* Action Button Panel */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
         <Link
-          href={`/form/${applicationId}`}
+          href={`/user/form/${applicationId}`}
           className="btn bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md transition-all duration-200 text-center w-full sm:w-auto"
         >
           Quay lại sửa biểu mẫu

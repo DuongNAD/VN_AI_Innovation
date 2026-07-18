@@ -4,7 +4,18 @@
 
 @layer base {
   html {
-    line-height: 1.6;
+    @apply text-body text-slate-900 antialiased;
+    line-height: 1.7;
+  }
+
+  body {
+    @apply min-h-screen bg-surface-muted font-sans text-body text-slate-900 antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply tracking-snugish text-slate-900;
   }
 
   /* Strong focus-visible outline for accessibility */
@@ -21,25 +32,62 @@
     min-width: 44px;
     min-height: 44px;
   }
+
+  /* Tôn trọng prefers-reduced-motion (bổ sung cho motion-safe:*) */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    .motion-safe\:animate-bounce,
+    .motion-safe\:animate-pulse,
+    .motion-safe\:animate-spin {
+      animation: none !important;
+    }
+  }
 }
 
 @layer components {
   /* Button class with large padding, rounded-lg, and font-semibold */
   .btn {
-    @apply px-6 py-3 rounded-lg font-semibold inline-flex items-center justify-center transition-all duration-200;
+    @apply inline-flex items-center justify-center rounded-lg px-6 py-3 font-semibold transition-all duration-200;
   }
 
-  /* Card class: white, rounded-xl, shadow-sm, p-5 */
+  /* Card class: surface token, rounded-xl, shadow-sm, p-5 */
   .card {
-    @apply bg-white rounded-xl shadow-sm p-5;
+    @apply rounded-xl bg-surface p-5 shadow-sm;
+  }
+
+  /* Card premium — bóng + viền sáng + hover lift */
+  .card-premium {
+    @apply relative overflow-hidden rounded-2xl border border-white/80 bg-white/95 p-5 shadow-shell-lg ring-1 ring-slate-900/5 backdrop-blur-sm motion-safe:transition-all motion-safe:duration-300;
+  }
+
+  .card-premium:hover {
+    @apply -translate-y-1 shadow-glow ring-brand-200/80;
+  }
+
+  /* Nút primary với glow */
+  .btn-primary {
+    @apply btn rounded-xl bg-brand-600 text-white shadow-md motion-safe:transition-all motion-safe:duration-200 hover:bg-brand-700 hover:shadow-glow active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
   }
 
   /* Badge-eco class: amber pill, labeled 'Chế độ tiết kiệm' if empty */
   .badge-eco {
-    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200;
+    @apply inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800;
   }
 
   .badge-eco:empty::before {
-    content: "Chế độ tiết kiệm";
+    content: 'Chế độ tiết kiệm';
+  }
+
+  /* Lớp mesh trang trí — chỉ visual, không nhận pointer */
+  .ambient-mesh {
+    @apply pointer-events-none absolute inset-0 overflow-hidden;
   }
 }

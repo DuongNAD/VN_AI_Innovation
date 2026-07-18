@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 import { AppError } from './errors';
-import { getAdminToken } from './config';
+import { getAdminToken, getManagerToken } from './config';
 import { rateLimitCheck, rateLimitConsume } from './rate-limit';
+import { staffSatisfies, type StaffRole } from './roles';
 
 /**
  * Computes the SHA-256 hash of the input as a hex string.
@@ -54,21 +55,79 @@ export function requireSessionToken(req: Request, storedHash: string, expiresAt?
   }
 }
 
+function tokenMatchesSecret(presented: string, secret: string): boolean {
+  const presentedHash = crypto.createHash('sha256').update(presented).digest();
+  const secretHash = crypto.createHash('sha256').update(secret).digest();
+  return crypto.timingSafeEqual(presentedHash, secretHash);
+}
+
 /**
- * Validates the X-Admin-Token header. Enforces rate limits on failures.
- * Throws a 401 Unauthorized AppError on failure, or 429 when rate-limited.
+ * Resolve staff role from request headers.
+ * - X-Admin-Token  → admin (if matches ADMIN_TOKEN)
+ * - X-Manager-Token → manager (if matches MANAGER_TOKEN)
+ * Admin takes precedence when both headers are present and valid.
+ * Returns null when neither credential is valid (does not throw / rate-limit).
+ */
+export function resolveStaffRole(req: Request): StaffRole | null {
+  const adminPresented = req.headers.get('x-admin-token') ?? '';
+  const managerPresented = req.headers.get('x-manager-token') ?? '';
+
+  try {
+    if (adminPresented !== '' && tokenMatchesSecret(adminPresented, getAdminToken())) {
+      return 'admin';
+    }
+  } catch {
+    // Config invalid — treated as non-match at request time; startup already validates.
+  }
+
+  try {
+    if (managerPresented !== '' && tokenMatchesSecret(managerPresented, getManagerToken())) {
+      return 'manager';
+    }
+  } catch {
+    // same as above
+  }
+
+  return null;
+}
+
+/**
+ * Validates legacy shared staff tokens only (X-Admin-Token / X-Manager-Token).
+ * Prefer requireStaffAuth from login-auth.ts for cookie + token.
+ */
+export function requireStaff(req: Request, minRole: StaffRole = 'manager'): StaffRole {
+  rateLimitCheck('staff-auth', req, 5, 900000);
+
+  const role = resolveStaffRole(req);
+
+  if (role === null) {
+    rateLimitConsume('staff-auth', req);
+    throw new AppError(401, 'UNAUTHORIZED', 'Sai mã xác thực. Vui lòng kiểm tra lại.');
+  }
+
+  if (!staffSatisfies(role, minRole)) {
+    throw new AppError(
+      403,
+      'FORBIDDEN',
+      minRole === 'admin'
+        ? 'Chỉ quản trị viên mới được thực hiện thao tác này.'
+        : 'Bạn không có quyền truy cập tài nguyên này.'
+    );
+  }
+
+  return role;
+}
+
+/**
+ * @deprecated Prefer async requireStaffAuth — kept for sync call sites that only use shared tokens.
  */
 export function requireAdmin(req: Request): void {
-  const presented = req.headers.get('x-admin-token') ?? '';
+  requireStaff(req, 'admin');
+}
 
-  // Check rate limit budget first (throws 429 when budget spent)
-  rateLimitCheck('admin-auth', req, 5, 900000);
-
-  const presentedHash = crypto.createHash('sha256').update(presented).digest();
-  const adminTokenHash = crypto.createHash('sha256').update(getAdminToken()).digest();
-
-  if (!crypto.timingSafeEqual(presentedHash, adminTokenHash)) {
-    rateLimitConsume('admin-auth', req);
-    throw new AppError(401, 'UNAUTHORIZED', 'Sai mã quản trị.');
-  }
+/**
+ * @deprecated Prefer async requireStaffAuth
+ */
+export function requireManagerOrAdmin(req: Request): StaffRole {
+  return requireStaff(req, 'manager');
 }
