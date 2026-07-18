@@ -13,22 +13,6 @@ const PORTAL_ROLE: Record<string, AppRole> = {
   admin: 'admin',
 };
 
-function portalForbiddenMessage(portal: string, actualRole: string): string {
-  if (portal === 'admin') {
-    if (actualRole === 'manager') {
-      return 'Tài khoản người quản lý không được đăng nhập cổng quản trị. Dùng /manager/login.';
-    }
-    return 'Tài khoản này không có quyền quản trị.';
-  }
-  if (portal === 'manager') {
-    if (actualRole === 'admin') {
-      return 'Tài khoản quản trị không dùng cổng người quản lý. Dùng /admin/login.';
-    }
-    return 'Tài khoản này không có quyền người quản lý.';
-  }
-  return 'Tài khoản này không dùng được cho cổng người dùng.';
-}
-
 export const POST = handleRoute(async (req: Request) => {
   enforceRateLimit('auth-login', req, { limit: 20, windowMs: 60000 });
   rateLimitCheck('auth-login-fail', req, 10, 900000);
@@ -59,9 +43,13 @@ export const POST = handleRoute(async (req: Request) => {
     throw new AppError(401, 'UNAUTHORIZED', 'Tài khoản hoặc mật khẩu không đúng.');
   }
 
-  // Strict 1:1 portal ↔ role (manager never becomes admin session via /admin/login)
+  // Strict 1:1 portal ↔ role (manager never becomes admin session via /admin/login).
+  // Anti-enumeration: a wrong-portal attempt answers EXACTLY like wrong
+  // credentials — never confirm the account exists, that the password was
+  // right, or which portal it belongs to.
   if (user.role !== requiredRole) {
-    throw new AppError(403, 'FORBIDDEN', portalForbiddenMessage(portalRaw, user.role));
+    rateLimitConsume('auth-login-fail', req);
+    throw new AppError(401, 'UNAUTHORIZED', 'Tài khoản hoặc mật khẩu không đúng.');
   }
 
   const session = await createLoginSession(user.id, req);

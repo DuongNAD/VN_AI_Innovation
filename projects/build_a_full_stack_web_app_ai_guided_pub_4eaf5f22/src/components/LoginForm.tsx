@@ -97,16 +97,11 @@ export default function LoginForm({
       if (!res.ok) {
         throw new Error(data?.error?.message || 'Đăng nhập thất bại.');
       }
-      // Defense in depth: never navigate if server returned a mismatched role
+      // Defense in depth: never navigate if server returned a mismatched role.
+      // Generic message — don't disclose what role the account actually has.
       const role = data?.user?.role as AppRole | undefined;
       if (role !== portal) {
-        throw new Error(
-          portal === 'admin'
-            ? 'Tài khoản không có quyền quản trị.'
-            : portal === 'manager'
-              ? 'Tài khoản không có quyền người quản lý.'
-              : 'Tài khoản không hợp lệ cho cổng này.'
-        );
+        throw new Error('Đăng nhập thất bại.');
       }
       router.replace(portalHome(portal));
       router.refresh();
