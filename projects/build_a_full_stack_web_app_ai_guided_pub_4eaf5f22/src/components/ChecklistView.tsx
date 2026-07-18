@@ -98,6 +98,28 @@ export default function ChecklistView({ guidance, onFillForm }: ChecklistViewPro
     );
   };
 
+  const getDocumentQuantityLabel = (item: DocumentItem): string => {
+    if (item.submissionType === 'SYSTEM_LOOKUP') {
+      return 'Cơ quan tự tra cứu — công dân không cần nộp giấy tờ';
+    }
+
+    const parts: string[] = [];
+    if (item.originals > 0) {
+      parts.push(`Bản chính: ${item.originals}`);
+    }
+    if (item.copies > 0) {
+      parts.push(`Bản sao: ${item.copies}`);
+    }
+
+    if (parts.length === 0) {
+      return item.submissionType === 'PRESENT'
+        ? 'Chỉ xuất trình khi được yêu cầu'
+        : 'Không yêu cầu bản giấy';
+    }
+
+    return parts.join(' · ');
+  };
+
   return (
     <div className="print-area card mx-auto my-6 max-w-4xl space-y-8 border border-surface-border bg-surface p-6 shadow-sm sm:p-8">
       <div className="no-print flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 pb-4 border-b border-surface-border">
@@ -184,9 +206,7 @@ export default function ChecklistView({ guidance, onFillForm }: ChecklistViewPro
             >
               <div className="space-y-1.5">
                 <p className="font-bold text-slate-800">{item.name}</p>
-                <p className="text-sm text-slate-500">
-                  Bản chính: {item.originals} · Bản sao: {item.copies}
-                </p>
+                <p className="text-sm text-slate-500">{getDocumentQuantityLabel(item)}</p>
                 {item.reason && (
                   <div className="mt-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded px-2.5 py-1 inline-flex items-center gap-1.5">
                     <svg className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
