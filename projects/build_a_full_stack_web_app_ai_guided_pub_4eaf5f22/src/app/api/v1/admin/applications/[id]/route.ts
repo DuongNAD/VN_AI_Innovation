@@ -1,4 +1,5 @@
-import { requireStaffAuth } from '@/lib/login-auth';
+import { requireStaffRole } from '@/lib/login-auth';
+import { STAFF_PERMISSIONS } from '@/lib/roles';
 import { prisma } from '@/lib/db';
 import { getProvider } from '@/lib/data-provider';
 import { AppError, handleRoute, jsonOk } from '@/lib/errors';
@@ -12,7 +13,11 @@ import {
  * Staff detail for a single citizen application in the officer queue.
  */
 export const GET = handleRoute(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
-  await requireStaffAuth(req, 'manager');
+  await requireStaffRole(
+    req,
+    STAFF_PERMISSIONS.reviewCitizenApplications,
+    'Xét duyệt hồ sơ công dân thuộc thẩm quyền của cán bộ quản lý.'
+  );
 
   const { id } = await params;
   if (!id || id.length > 64) {

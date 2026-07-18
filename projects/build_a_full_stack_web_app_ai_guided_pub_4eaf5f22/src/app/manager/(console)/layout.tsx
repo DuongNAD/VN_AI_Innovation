@@ -9,10 +9,13 @@ export default async function ManagerConsoleLayout({ children }: { children: Rea
       loginPath="/manager/login"
       renderChrome={(user) => (
         <UserBar
-          displayName={user.displayName}
-          username={user.username}
-          roleLabel="Manager"
           homeHref="/manager"
+          user={{
+            displayName: user.displayName,
+            username: user.username,
+            roleLabel: 'Quản lý',
+            avatarUrl: user.avatarUrl,
+          }}
         />
       )}
     >

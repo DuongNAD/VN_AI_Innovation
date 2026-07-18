@@ -4,7 +4,7 @@ import { prisma } from './db';
 import { AppError } from './errors';
 import { generateAccessToken, hashToken, sha256hex } from './auth';
 import { isProd } from './config';
-import { staffSatisfies, type AppRole, type StaffRole } from './roles';
+import { type AppRole, type StaffRole } from './roles';
 import { getClientIp } from './http';
 
 export const LOGIN_COOKIE = 'psp_login';
@@ -226,9 +226,15 @@ export async function resolveStaffFromRequest(req: Request): Promise<StaffRole |
   return resolveStaffRole(req);
 }
 
-export async function requireStaffAuth(
+/**
+ * Staff auth with an explicit allowed-role list — use for permissions that are
+ * NOT hierarchical (e.g. reviewing citizen applications is manager-exclusive;
+ * an admin outranks a manager but still may not do it).
+ */
+export async function requireStaffRole(
   req: Request,
-  minRole: StaffRole = 'manager'
+  allowed: readonly StaffRole[],
+  forbiddenMessage?: string
 ): Promise<{ role: StaffRole; user: AuthUser | null }> {
   const { rateLimitCheck, rateLimitConsume } = await import('./rate-limit');
   rateLimitCheck('staff-auth', req, 5, 900000);
@@ -238,18 +244,27 @@ export async function requireStaffAuth(
     rateLimitConsume('staff-auth', req);
     throw new AppError(401, 'UNAUTHORIZED', 'Vui lòng đăng nhập hoặc cung cấp mã xác thực.');
   }
-  if (!staffSatisfies(role, minRole)) {
+  if (!allowed.includes(role)) {
     throw new AppError(
       403,
       'FORBIDDEN',
-      minRole === 'admin'
-        ? 'Chỉ quản trị viên mới được thực hiện thao tác này.'
-        : 'Bạn không có quyền truy cập tài nguyên này.'
+      forbiddenMessage ?? 'Bạn không có quyền truy cập tài nguyên này.'
     );
   }
 
   const user = await getAuthUserFromRequest(req);
   return { role, user };
+}
+
+export async function requireStaffAuth(
+  req: Request,
+  minRole: StaffRole = 'manager'
+): Promise<{ role: StaffRole; user: AuthUser | null }> {
+  return requireStaffRole(
+    req,
+    minRole === 'admin' ? ['admin'] : ['manager', 'admin'],
+    minRole === 'admin' ? 'Chỉ quản trị viên mới được thực hiện thao tác này.' : undefined
+  );
 }
 
 export function hashLoginToken(token: string): string {

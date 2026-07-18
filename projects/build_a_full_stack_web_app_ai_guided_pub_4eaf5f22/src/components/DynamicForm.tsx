@@ -417,7 +417,20 @@ export default function DynamicForm({
     } as const;
 
     switch (field.type) {
-      case 'text':
+      case 'text': {
+        const idLower = field.id.toLowerCase();
+        const isIdentity = idLower.includes('identity') || idLower.includes('cccd');
+        // 'number' covers phone_number, marriage_number, etc.
+        const isNumeric = isIdentity || idLower.includes('phone') || idLower.includes('number');
+
+        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+          let val = e.target.value;
+          if (isIdentity) {
+            val = val.replace(/\D/g, '').slice(0, 12);
+          }
+          setField(field.id, val);
+        };
+
         return (
           <input
             id={inputId}
@@ -425,10 +438,13 @@ export default function DynamicForm({
             className={base}
             placeholder={field.placeholder}
             value={asInputString(value)}
-            onChange={(e) => setField(field.id, e.target.value)}
+            onChange={handleChange}
+            maxLength={isIdentity ? 12 : 500}
+            inputMode={isNumeric ? 'numeric' : undefined}
             {...a11y}
           />
         );
+      }
       case 'textarea':
         return (
           <textarea
@@ -438,6 +454,7 @@ export default function DynamicForm({
             placeholder={field.placeholder}
             value={asInputString(value)}
             onChange={(e) => setField(field.id, e.target.value)}
+            maxLength={500}
             {...a11y}
           />
         );

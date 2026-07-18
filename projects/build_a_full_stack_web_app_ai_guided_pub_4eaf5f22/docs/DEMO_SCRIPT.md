@@ -17,9 +17,13 @@ npm run db:seed          # đưa DB về trạng thái demo: form 1.0 ACTIVE, 1 
 npm run dev              # http://localhost:3000
 ```
 
-- **Mở sẵn 2 tab:** Tab A = `http://localhost:3000` · Tab B = `http://localhost:3000/admin`.
-- **Warm cả hai tab** (bấm thử 1 lần) để không dính cold-start giữa demo.
-- Lấy `ADMIN_TOKEN` trong file `.env` (dòng `ADMIN_TOKEN=...`) — dán sẵn vào clipboard cho phần admin.
+- **Mở sẵn 2 tab:** Tab A = `http://localhost:3000` · Tab B = `http://localhost:3000/manager`
+  (đăng nhập sẵn `quanly` / `ManagerDemo123!`). Tùy chọn Tab C = `/admin` (`admin` /
+  `AdminDemo123!`) nếu muốn khoe mục Quản lý tài khoản.
+- **Warm các tab** (bấm thử 1 lần) để không dính cold-start giữa demo.
+- Phân quyền để nói với giám khảo: **manager phụ trách nghiệp vụ** — xét duyệt hồ sơ công dân
+  và quản lý giấy tờ, biểu mẫu (phê duyệt phiên bản); **admin chỉ quản lý tài khoản + kỹ thuật**
+  (cài đặt hệ thống) — admin KHÔNG duyệt hồ sơ, KHÔNG phê duyệt biểu mẫu.
 - Nếu vừa chạy thử xong: chạy lại `npm run db:seed` để reset về v1.0 + CR chờ duyệt.
 - Câu chốt an toàn: nếu một bước lỗi, nói *"phần này em có bản test tự động chứng minh"* rồi đi tiếp — đừng dừng sửa live.
 
@@ -108,27 +112,27 @@ nút nghe bằng giọng nói. Bản nháp đã tự lưu — người dân khô
 
 ## 4. (1:55 – 2:40) Cán bộ duyệt hồ sơ + mô phỏng thay đổi nghị định — *tiêu chí: chính xác + kiến trúc động*
 
-**Thao tác:** chuyển sang **Tab B (`/manager/login`)** → đăng nhập tài khoản manager
-(seed: `quanly` / `ManagerDemo123!`) → vào dashboard.
+**Thao tác:** chuyển sang **Tab B (`/manager`)** → đăng nhập `quanly` / `ManagerDemo123!`.
 
 **Mục đầu tiên: "Hồ sơ công dân chờ xét duyệt"** — hồ sơ vừa nộp nằm đó với badge
 **CHỜ DUYỆT**, xem lại từng trường đã khai → bấm **"✅ Phê duyệt hồ sơ"**.
-> "Manager (cán bộ một cửa) thấy đúng dữ liệu người dân khai, có quyền **duyệt đơn** —
-> phê duyệt hoặc **trả lại kèm lý do**. Nếu trả lại, người dân thấy ngay lý do trên
-> trang trạng thái và sửa để nộp lại. Hệ thống cũng KHÔNG cho phê duyệt hồ sơ còn lỗi
-> theo quy định."
+> "Phân quyền đúng thực tế một cửa: **cán bộ quản lý** phụ trách nghiệp vụ — xét duyệt hồ sơ
+> và quản lý giấy tờ, biểu mẫu; **quản trị viên** chỉ quản lý tài khoản và kỹ thuật hệ thống.
+> Cán bộ thấy đúng dữ liệu người dân khai, có thể **phê duyệt** hoặc **trả lại kèm lý do**
+> — nếu trả lại, người dân thấy ngay lý do trên trang trạng thái và sửa để nộp lại.
+> Hệ thống cũng KHÔNG cho phê duyệt hồ sơ còn lỗi theo quy định."
 
 **Quay lại Tab A** → bấm **"Cập nhật trạng thái"** → thẻ xanh **"✅ Hồ sơ đã được phê duyệt"**
 kèm tên cán bộ + thời điểm duyệt.
 > "Vòng đời khép kín: khai — bắt lỗi — nộp — duyệt — trả kết quả, tất cả trong một luồng."
 
-**Tiếp tục Tab C (`/admin`)** — đăng nhập admin → mục **"Yêu cầu Thay đổi quy định"** → chỉ vào **bảng diff**:
+**Vẫn ở Tab B — kéo xuống mục "Yêu cầu Thay đổi quy định"** → chỉ vào **bảng diff**:
 > "Khi quy định thay đổi, hệ thống KHÔNG sửa đè bản cũ mà tạo phiên bản mới, và
-> **admin** phải phê duyệt — AI không tự ý thay đổi nội dung pháp lý.
+> **cán bộ quản lý (manager)** phải phê duyệt — AI không tự ý thay đổi nội dung pháp lý.
 > Đề xuất v2.0: thêm *nơi thường trú*, *nơi tạm trú*, *số điện thoại*; bỏ *nơi cư trú*."
 
-→ Bấm **"Phê duyệt & kích hoạt"** → báo thành công. **Quay lại Tab A**, mở lại form kết hôn
-(hoặc `/sources`):
+→ Bấm **"Phê duyệt & kích hoạt"** (quyền quản lý biểu mẫu của cán bộ quản lý) → báo thành công.
+**Quay lại Tab A**, mở lại form kết hôn (hoặc `/sources`):
 > "Ngay lập tức form chuyển sang **v2.0 với các trường mới — KHÔNG sửa một dòng code
 > frontend nào**. Đây là bằng chứng kiến trúc thật sự linh hoạt, sẵn sàng cho pilot."
 
@@ -159,7 +163,7 @@ kèm tên cán bộ + thời điểm duyệt.
 | 1 | Hiểu ngôn ngữ tự nhiên + nguồn chính thức | AI-native, UX |
 | 2 | Checklist theo NĐ 104/2022 + căn cứ pháp lý | Chính xác so với quy định |
 | 3 | Chặn đúng 3 lỗi NGAY TẠI FORM (bấm lỗi → nhảy tới trường), AI chỉ thấy mã lỗi; sạch lỗi mới được nộp | Phát hiện lỗi, an toàn/grounding |
-| 4 | Cán bộ duyệt hồ sơ vừa nộp (trả kết quả về người dân) + duyệt v1.0→v2.0 live, không sửa code | Chính xác + kiến trúc động |
+| 4 | Manager duyệt hồ sơ vừa nộp (trả kết quả về người dân) + duyệt v1.0→v2.0 live, không sửa code; admin chỉ quản lý tài khoản & kỹ thuật | Chính xác + kiến trúc động |
 | 5 | Widget nhúng + fallback không cần key | Tích hợp + độ bền |
 
 ## Nếu cháy giờ (rút gọn còn ~2 phút)

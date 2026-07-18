@@ -1,8 +1,6 @@
 'use client';
 
-import Breadcrumb, { ProgressIndicator } from '@/components/Breadcrumb';
-import BackButton from '@/components/BackButton';
-import BrandLogo from '@/components/BrandLogo';
+import { ProgressIndicator } from '@/components/ProgressIndicator';
 
 export const FLOW_STEPS = [
   { key: 'chat', label: 'Tư vấn' },
@@ -16,21 +14,23 @@ export type FlowStepKey = (typeof FLOW_STEPS)[number]['key'];
 
 interface FlowChromeProps {
   current: FlowStepKey;
-  /** Tiêu đề ngắn hiển thị cạnh breadcrumb (tuỳ chọn) */
+  /** Tiêu đề ngắn của bước hiện tại (tuỳ chọn) */
   title?: string;
-  /** Chế độ độc lập cho trang không có UserBar (ví dụ chat khách). */
-  standalone?: boolean;
   className?: string;
 }
 
 /**
- * Chrome điều hướng chung cho luồng hồ sơ:
- * glass sticky header + BrandLogo + breadcrumb + progress stepper.
- * Không xử lý state nghiệp vụ — chỉ nhận `current` và render UI.
+ * Dải tiến trình mảnh cho luồng hồ sơ, nằm ngay dưới UserBar (thanh định danh
+ * đã có logo nên ở đây không lặp lại brand). Sticky top-0 — khi cuộn,
+ * UserBar trôi đi và dải này ghim lại làm mốc ngữ cảnh.
+ * Desktop: tiêu đề + stepper một hàng. Mobile: tiêu đề + chip "Bước x/5"
+ * cùng vạch tiến độ mảnh sát mép dưới.
  */
-export default function FlowChrome({ current, title, standalone = false, className = '' }: FlowChromeProps) {
+export default function FlowChrome({ current, title, className = '' }: FlowChromeProps) {
   const idx = FLOW_STEPS.findIndex((s) => s.key === current);
   const safeIdx = idx < 0 ? 0 : idx;
+  const stepNo = safeIdx + 1;
+  const total = FLOW_STEPS.length;
 
   const steps = FLOW_STEPS.map((s, i) => ({
     label: s.label,
@@ -41,35 +41,41 @@ export default function FlowChrome({ current, title, standalone = false, classNa
   }));
 
   return (
-    <header
-      className={`sticky top-0 z-20 border-b border-white/40 bg-white/70 shadow-shell-lg backdrop-blur-glass supports-[backdrop-filter]:bg-white/55 ${className}`}
+    <div
+      className={`no-print sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 shadow-[0_1px_2px_rgba(15,23,42,0.04)] backdrop-blur-xl supports-[backdrop-filter]:bg-white/80 ${className}`}
     >
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-brand-300/60 to-transparent"
-        aria-hidden="true"
-      />
+      <div className="relative flex h-14 w-full items-center gap-4 px-4 sm:px-6">
+        {title ? (
+          <p
+            className="min-w-0 flex-1 truncate text-[15px] font-semibold tracking-tight text-slate-900 md:flex-none md:max-w-[14rem] xl:max-w-xs"
+            title={title}
+          >
+            {title}
+          </p>
+        ) : null}
 
-      <div className="relative mx-auto w-full max-w-5xl space-y-2 px-3 py-2 sm:px-5 sm:py-2.5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-            {standalone ? <BackButton fallbackHref="/user" /> : null}
-            {standalone ? <BrandLogo size="sm" href="/user" reloadDocument /> : null}
-            {standalone ? (
-              <div className="hidden h-7 w-px bg-slate-200 md:block" aria-hidden="true" />
-            ) : null}
-            <Breadcrumb className="hidden min-w-0 md:flex" />
-          </div>
-          {title ? (
-            <h1 className="shrink-0 text-base font-bold tracking-snugish text-slate-900 sm:text-lg">{title}</h1>
-          ) : null}
+        {/* Stepper đầy đủ — md trở lên */}
+        <div className="hidden min-w-0 flex-1 items-center justify-end md:flex">
+          <ProgressIndicator steps={steps} className="max-w-2xl" />
         </div>
 
-        <ProgressIndicator steps={steps} className="hidden sm:block" />
+        {/* Chip bước hiện tại — mobile */}
+        <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full border border-brand-100 bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 md:hidden">
+          Bước {stepNo}/{total}
+          <span className="text-brand-300" aria-hidden="true">
+            ·
+          </span>
+          {FLOW_STEPS[safeIdx].label}
+        </span>
 
-        <p className="text-sm font-medium tracking-snugish text-brand-700 sm:hidden" aria-live="polite">
-          Bước {safeIdx + 1}/{FLOW_STEPS.length}: {FLOW_STEPS[safeIdx].label}
-        </p>
+        {/* Vạch tiến độ mảnh — mobile */}
+        <div className="absolute inset-x-0 bottom-0 h-0.5 md:hidden" aria-hidden="true">
+          <div
+            className="h-full rounded-r-full bg-brand-600 transition-[width] duration-500"
+            style={{ width: `${(stepNo / total) * 100}%` }}
+          />
+        </div>
       </div>
-    </header>
+    </div>
   );
 }

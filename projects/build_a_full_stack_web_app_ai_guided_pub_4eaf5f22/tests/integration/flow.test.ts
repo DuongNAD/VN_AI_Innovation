@@ -93,6 +93,95 @@ describe.skipIf(!RUN)('integration · citizen flow (needs seeded DB)', () => {
     );
   });
 
+  it('refuses the admin credential on the citizen review queue (manager-only)', async () => {
+    const { GET } = await import('@/app/api/v1/admin/applications/route');
+    const response = await GET(
+      new Request('http://localhost/api/v1/admin/applications', {
+        headers: { 'X-Admin-Token': process.env.ADMIN_TOKEN ?? '' },
+      }),
+      undefined as never
+    );
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error.code).toBe('FORBIDDEN');
+  });
+
+  it('serves the account list to the admin credential', async () => {
+    const { GET } = await import('@/app/api/v1/admin/users/route');
+    const response = await GET(
+      new Request('http://localhost/api/v1/admin/users', {
+        headers: { 'X-Admin-Token': process.env.ADMIN_TOKEN ?? '' },
+      }),
+      undefined as never
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(Array.isArray(body.users)).toBe(true);
+    expect(body.users.length).toBeGreaterThan(0);
+    expect(body.users[0]).not.toHaveProperty('passwordHash');
+  });
+
+  it('moves form-version approval to the manager (admin refused, manager passes the gate)', async () => {
+    const { POST } = await import('@/app/api/v1/admin/change-requests/[id]/approve/route');
+
+    const adminRes = await POST(
+      new Request('http://localhost/api/v1/admin/change-requests/no-such-cr/approve', {
+        method: 'POST',
+        headers: { 'X-Admin-Token': process.env.ADMIN_TOKEN ?? '' },
+      }),
+      { params: Promise.resolve({ id: 'no-such-cr' }) }
+    );
+    expect(adminRes.status).toBe(403);
+    const adminBody = await adminRes.json();
+    expect(adminBody.error.code).toBe('FORBIDDEN');
+
+    const { prisma } = await import('@/lib/db');
+    const { generateAccessToken, hashToken } = await import('@/lib/auth');
+    const manager = await prisma.user.findUniqueOrThrow({ where: { username: 'quanly' } });
+    const token = generateAccessToken();
+    await prisma.loginSession.create({
+      data: {
+        userId: manager.id,
+        tokenHash: hashToken(token),
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+    try {
+      const managerRes = await POST(
+        new Request('http://localhost/api/v1/admin/change-requests/no-such-cr/approve', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        { params: Promise.resolve({ id: 'no-such-cr' }) }
+      );
+      // The manager clears the permission gate; the fake id then 404s without
+      // mutating any real change request.
+      expect(managerRes.status).toBe(404);
+    } finally {
+      await prisma.loginSession.deleteMany({ where: { tokenHash: hashToken(token) } });
+    }
+  });
+
+  it('refuses public self-registration for staff portals', async () => {
+    const { POST } = await import('@/app/api/v1/auth/register/route');
+    const response = await POST(
+      new Request('http://localhost/api/v1/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: `intru${Date.now() % 100000}`,
+          password: 'Password123',
+          displayName: 'Intruder Test',
+          portal: 'admin',
+        }),
+      }),
+      undefined as never
+    );
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error.code).toBe('STAFF_REGISTRATION_CLOSED');
+  });
+
   it('builds guidance for a new session before conditional questions are answered', async () => {
     const { prisma } = await import('@/lib/db');
     const { generateAccessToken, hashToken } = await import('@/lib/auth');

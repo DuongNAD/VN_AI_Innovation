@@ -55,6 +55,7 @@ export class PrismaProcedureDataProvider implements IProcedureDataProvider {
       name: row.name,
       sector: row.sector,
       agency: row.agency,
+      audience: row.audience === 'BUSINESS' ? 'BUSINESS' : 'CITIZEN',
       sourceUrl: validatedUrl,
       version: activeVer.version,
       lastCheckedAt: row.lastCheckedAt,
@@ -87,6 +88,7 @@ export class PrismaProcedureDataProvider implements IProcedureDataProvider {
         name: row.name,
         sector: row.sector,
         agency: row.agency,
+        audience: row.audience === 'BUSINESS' ? 'BUSINESS' : 'CITIZEN',
         sourceUrl: validatedUrl,
         version: activeVer.version,
         lastCheckedAt: row.lastCheckedAt,
@@ -324,4 +326,3 @@ export class PrismaProcedureDataProvider implements IProcedureDataProvider {
     return mapFormVersion(row);
   }
 }
-

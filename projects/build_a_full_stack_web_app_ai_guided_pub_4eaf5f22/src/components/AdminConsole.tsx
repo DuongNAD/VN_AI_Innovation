@@ -1,22 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type ReactElement } from 'react';
 import Link from 'next/link';
+import { visibleFieldsFor } from '@/components/DynamicForm';
 import { DocumentTypeBadge } from '@/components/DocumentTypeSelect';
 import type { FieldDef } from '@/lib/schema-guards';
 import {
-  DOCUMENT_TYPE_CODES,
   DOCUMENT_TYPES,
   getDocumentTypeMeta,
   inferDocumentType,
   isDocumentTypeCode,
   type DocumentTypeCode,
 } from '@/lib/document-types';
-import {
-  canApproveChangeRequests,
-  canReviewApplications,
-  type StaffRole,
-} from '@/lib/roles';
 import { DEFAULT_TTS_MODE, isTtsMode, type TtsMode } from '@/lib/tts-mode';
 
 interface FormVersionOverview {
@@ -132,6 +127,30 @@ interface ApplicationQueueStats {
   returned: number;
   byType: DocumentTypeStat[];
 }
+
+type AccountRole = 'user' | 'manager' | 'admin';
+
+interface AccountUser {
+  id: string;
+  username: string;
+  displayName: string;
+  email: string | null;
+  role: AccountRole;
+  createdAt: string;
+  hasPassword: boolean;
+}
+
+const ROLE_LABELS: Record<AccountRole, string> = {
+  user: 'Công dân',
+  manager: 'Cán bộ quản lý',
+  admin: 'Quản trị viên',
+};
+
+const ROLE_BADGE_CLASS: Record<AccountRole, string> = {
+  user: 'bg-slate-100 text-slate-700 border-slate-200',
+  manager: 'bg-sky-100 text-sky-800 border-sky-200',
+  admin: 'bg-amber-100 text-amber-800 border-amber-200',
+};
 
 // Module-private pure helpers
 function safeHttpsUrl(value: unknown): string | null {
@@ -443,76 +462,6 @@ function parseChangeRequests(body: unknown): ChangeRequest[] | null {
  * schema through loosely — it comes from our own provider and is only used
  * to label values for display.
  */
-function parseApplicationQueueStats(body: unknown): ApplicationQueueStats | null {
-  if (!body || typeof body !== 'object') {
-    return null;
-  }
-  const obj = body as Record<string, unknown>;
-  if (!obj.stats || typeof obj.stats !== 'object') {
-    // Older payload without stats — synthesize empty.
-    return {
-      total: 0,
-      submitted: 0,
-      approved: 0,
-      returned: 0,
-      byType: DOCUMENT_TYPE_CODES.map((code) => {
-        const meta = getDocumentTypeMeta(code);
-        return { code, label: meta.label, icon: meta.icon, total: 0, submitted: 0, approved: 0, returned: 0 };
-      }),
-    };
-  }
-  const s = obj.stats as Record<string, unknown>;
-  if (
-    !isFiniteNumber(s.total) ||
-    !isFiniteNumber(s.submitted) ||
-    !isFiniteNumber(s.approved) ||
-    !isFiniteNumber(s.returned) ||
-    !Array.isArray(s.byType)
-  ) {
-    return null;
-  }
-  const byType: DocumentTypeStat[] = [];
-  for (const row of s.byType) {
-    if (!row || typeof row !== 'object') continue;
-    const r = row as Record<string, unknown>;
-    if (!isDocumentTypeCode(r.code)) continue;
-    if (
-      !isBoundedString(r.label, 200) ||
-      !isBoundedString(r.icon, 16) ||
-      !isFiniteNumber(r.total) ||
-      !isFiniteNumber(r.submitted) ||
-      !isFiniteNumber(r.approved) ||
-      !isFiniteNumber(r.returned)
-    ) {
-      continue;
-    }
-    byType.push({
-      code: r.code,
-      label: r.label,
-      icon: r.icon,
-      total: r.total,
-      submitted: r.submitted,
-      approved: r.approved,
-      returned: r.returned,
-    });
-  }
-  // Ensure every catalog code appears (stable UI order).
-  const map = new Map(byType.map((x) => [x.code, x]));
-  const ordered = DOCUMENT_TYPE_CODES.map((code) => {
-    const existing = map.get(code);
-    if (existing) return existing;
-    const meta = getDocumentTypeMeta(code);
-    return { code, label: meta.label, icon: meta.icon, total: 0, submitted: 0, approved: 0, returned: 0 };
-  });
-  return {
-    total: s.total,
-    submitted: s.submitted,
-    approved: s.approved,
-    returned: s.returned,
-    byType: ordered,
-  };
-}
-
 function parseCitizenApplications(body: unknown): CitizenApplication[] | null {
   if (!body || typeof body !== 'object') {
     return null;
@@ -548,10 +497,6 @@ function parseCitizenApplications(body: unknown): CitizenApplication[] | null {
     ) {
       continue;
     }
-    const documentType = isDocumentTypeCode(a.documentType)
-      ? a.documentType
-      : inferDocumentType(a.formCode);
-    const meta = getDocumentTypeMeta(documentType);
     const data = a.data && typeof a.data === 'object' && !Array.isArray(a.data)
       ? (a.data as Record<string, unknown>)
       : {};
@@ -563,6 +508,10 @@ function parseCitizenApplications(body: unknown): CitizenApplication[] | null {
         }
       }
     }
+    const documentType = isDocumentTypeCode(a.documentType)
+      ? a.documentType
+      : inferDocumentType(a.formCode);
+    const meta = getDocumentTypeMeta(documentType);
     parsed.push({
       id: a.id,
       status: a.status,
@@ -583,7 +532,110 @@ function parseCitizenApplications(body: unknown): CitizenApplication[] | null {
   return parsed;
 }
 
-function errorMessageFor(status: number, code: string | null): string {
+
+function parseApplicationQueueStats(body: unknown): ApplicationQueueStats | null {
+  if (!body || typeof body !== 'object') return null;
+  const obj = body as Record<string, unknown>;
+  if (!obj.stats || typeof obj.stats !== 'object') {
+    return {
+      total: 0, submitted: 0, approved: 0, returned: 0,
+      byType: DOCUMENT_TYPES.map((m) => ({
+        code: m.code, label: m.label, icon: m.icon, total: 0, submitted: 0, approved: 0, returned: 0,
+      })),
+    };
+  }
+  const s = obj.stats as Record<string, unknown>;
+  if (!isFiniteNumber(s.total) || !isFiniteNumber(s.submitted) || !isFiniteNumber(s.approved) || !isFiniteNumber(s.returned) || !Array.isArray(s.byType)) {
+    return null;
+  }
+  const map = new Map<DocumentTypeCode, DocumentTypeStat>();
+  for (const row of s.byType) {
+    if (!row || typeof row !== 'object') continue;
+    const r = row as Record<string, unknown>;
+    if (!isDocumentTypeCode(r.code)) continue;
+    if (!isBoundedString(r.label, 200) || !isBoundedString(r.icon, 16)) continue;
+    if (!isFiniteNumber(r.total) || !isFiniteNumber(r.submitted) || !isFiniteNumber(r.approved) || !isFiniteNumber(r.returned)) continue;
+    map.set(r.code, {
+      code: r.code, label: r.label, icon: r.icon,
+      total: r.total, submitted: r.submitted, approved: r.approved, returned: r.returned,
+    });
+  }
+  return {
+    total: s.total, submitted: s.submitted, approved: s.approved, returned: s.returned,
+    byType: DOCUMENT_TYPES.map((m) => map.get(m.code) ?? {
+      code: m.code, label: m.label, icon: m.icon, total: 0, submitted: 0, approved: 0, returned: 0,
+    }),
+  };
+}
+
+/** Account list from the admin-only users API — strictly bounded like the other parsers. */
+function parseAccounts(body: unknown): AccountUser[] | null {
+  if (!body || typeof body !== 'object') {
+    return null;
+  }
+  const obj = body as Record<string, unknown>;
+  if (!Array.isArray(obj.users) || obj.users.length > 500) {
+    return null;
+  }
+  const parsed: AccountUser[] = [];
+  for (const raw of obj.users) {
+    if (!raw || typeof raw !== 'object') {
+      continue;
+    }
+    const u = raw as Record<string, unknown>;
+    if (!isSafeId(u.id)) {
+      continue;
+    }
+    if (!isBoundedString(u.username, 100) || !isBoundedString(u.displayName, 200)) {
+      continue;
+    }
+    if (!isNullableBoundedString(u.email, 200)) {
+      continue;
+    }
+    if (u.role !== 'user' && u.role !== 'manager' && u.role !== 'admin') {
+      continue;
+    }
+    if (!isBoundedString(u.createdAt, 500)) {
+      continue;
+    }
+    parsed.push({
+      id: u.id,
+      username: u.username,
+      displayName: u.displayName,
+      email: u.email ?? null,
+      role: u.role,
+      createdAt: u.createdAt,
+      hasPassword: u.hasPassword === true,
+    });
+  }
+  return parsed;
+}
+
+/** Human-readable value for the officer's review table (option labels, Có/Không, dd/mm/yyyy). */
+function fmtFieldValue(field: FieldDef, value: unknown): string {
+  if (value === undefined || value === null || value === '') {
+    return '(trống)';
+  }
+  if (field.options && field.options.length > 0) {
+    const match = field.options.find((o) => o.value === value || String(o.value) === String(value));
+    if (match) {
+      return match.label;
+    }
+  }
+  if (typeof value === 'boolean') {
+    return value ? 'Có' : 'Không';
+  }
+  if (field.type === 'date' && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+function errorMessageFor(status: number, code: string | null, serverMessage?: string | null): string {
   if (status === 401) {
     return 'Sai mã quản trị';
   }
@@ -594,6 +646,9 @@ function errorMessageFor(status: number, code: string | null): string {
     if (code === 'CONCURRENT_UPDATE') {
       return 'Đang có thao tác khác, thử lại';
     }
+    if (code === 'CONFLICT') {
+      return 'Tên tài khoản hoặc email đã được sử dụng';
+    }
   }
   if (status === 400) {
     if (code === 'INVALID_TARGET_VERSION') {
@@ -602,6 +657,9 @@ function errorMessageFor(status: number, code: string | null): string {
     if (code === 'NOTE_REQUIRED') {
       return 'Vui lòng nhập lý do trả lại để người dân biết cần bổ sung gì';
     }
+    if (code === 'SELF_ROLE_FORBIDDEN') {
+      return 'Không thể tự thay đổi vai trò của chính mình';
+    }
   }
   if (status === 422 && code === 'VALIDATION_FAILED') {
     return 'Hồ sơ còn lỗi theo quy định nên không thể phê duyệt';
@@ -609,38 +667,49 @@ function errorMessageFor(status: number, code: string | null): string {
   if (status === 429) {
     return 'Quá nhiều lần thử, chờ ít phút';
   }
+  // Our own API sends short Vietnamese messages — surface them when we have
+  // no specific mapping (e.g. 403 "thuộc thẩm quyền của cán bộ quản lý").
+  if (typeof serverMessage === 'string' && serverMessage.length > 0 && serverMessage.length <= 300) {
+    return serverMessage;
+  }
   return 'Có lỗi xảy ra, vui lòng thử lại';
 }
 
-const getErrorFromResponse = async (res: Response): Promise<{ status: number; code: string | null }> => {
+const getErrorFromResponse = async (
+  res: Response
+): Promise<{ status: number; code: string | null; message: string | null }> => {
   let code: string | null = null;
+  let message: string | null = null;
   try {
     const data = await res.json();
     if (data && data.error && typeof data.error.code === 'string') {
       code = data.error.code;
     }
+    if (data && data.error && typeof data.error.message === 'string') {
+      message = data.error.message;
+    }
   } catch (_) {
     // ignore
   }
-  return { status: res.status, code };
+  return { status: res.status, code, message };
 };
 
-export type StaffConsoleRole = StaffRole;
+export type StaffConsoleRole = 'manager' | 'admin';
 
 export interface StaffConsoleProps {
   /**
-   * manager — xét duyệt hồ sơ công dân (duyệt đơn), xem overview + change requests
-   *           (không phê duyệt phiên bản biểu mẫu, không đổi cài đặt)
-   * admin — đầy đủ quyền, gồm phê duyệt & kích hoạt phiên bản
+   * manager — toàn bộ nghiệp vụ: xét duyệt hồ sơ công dân + quản lý giấy tờ,
+   *           biểu mẫu (phê duyệt & kích hoạt phiên bản)
+   * admin — quản lý tài khoản và cài đặt kỹ thuật hệ thống (KHÔNG xét duyệt
+   *         hồ sơ, KHÔNG phê duyệt biểu mẫu)
    */
   role?: StaffConsoleRole;
 }
 
 export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): ReactElement {
-  // Duyệt đơn (hồ sơ công dân): manager + admin
-  const canReviewApps = canReviewApplications(role);
-  // Phê duyệt change request / cài đặt TTS: chỉ admin
-  const canApproveActions = canApproveChangeRequests(role);
+  const isAdmin = role === 'admin';
+  const canApproveForms = role === 'manager';
+  const canReviewApps = role === 'manager';
   const roleLabel = role === 'admin' ? 'Quản trị viên' : 'Người quản lý';
   const portalHome = role === 'admin' ? '/admin' : '/manager';
 
@@ -656,10 +725,24 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
   const [citizenApps, setCitizenApps] = useState<CitizenApplication[]>([]);
   const [appStats, setAppStats] = useState<ApplicationQueueStats | null>(null);
   const [docTypeFilter, setDocTypeFilter] = useState<DocumentTypeCode | 'ALL'>('ALL');
-  // Default: show pending queue first (CHỜ DUYỆT)
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'SUBMITTED' | 'APPROVED' | 'RETURNED'>('SUBMITTED');
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [ttsMode, setTtsMode] = useState<TtsMode>(DEFAULT_TTS_MODE);
   const [savingTtsMode, setSavingTtsMode] = useState<boolean>(false);
+  const [accounts, setAccounts] = useState<AccountUser[]>([]);
+  const [actorId, setActorId] = useState<string | null>(null);
+  const [roleDrafts, setRoleDrafts] = useState<Record<string, AccountRole>>({});
+  const [pwDrafts, setPwDrafts] = useState<Record<string, string>>({});
+  const [accountBusyId, setAccountBusyId] = useState<string | null>(null);
+  const [newAccount, setNewAccount] = useState({
+    username: '',
+    displayName: '',
+    email: '',
+    password: '',
+    role: 'manager' as AccountRole,
+  });
+  const [creatingAccount, setCreatingAccount] = useState<boolean>(false);
 
   const handleFetchData = async (opts?: { silent?: boolean }) => {
     setLoading(true);
@@ -669,62 +752,72 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
     }
 
     try {
-      // Citizen queue is staff-wide (manager + admin) — only form-version
-      // change requests and settings stay admin-only.
-      const appsQuery = new URLSearchParams();
-      // Always load full queue for client-side filter + stable stats; server
-      // still returns stats for the whole officer queue.
-      appsQuery.set('documentType', 'ALL');
-      appsQuery.set('status', 'ALL');
-      const [overviewRes, crRes, appsRes] = await Promise.all([
+      // The third dataset is role-specific: managers work the citizen queue,
+      // admins manage accounts. Neither may fetch the other's (API enforces it).
+      const extraUrl = role === 'manager' ? '/api/v1/admin/applications?documentType=ALL&status=ALL' : '/api/v1/admin/users';
+      const [overviewRes, crRes, extraRes] = await Promise.all([
         fetch('/api/v1/admin/overview', {
           credentials: 'include',
         }),
         fetch('/api/v1/admin/change-requests', {
           credentials: 'include',
         }),
-        fetch(`/api/v1/admin/applications?${appsQuery.toString()}`, {
+        fetch(extraUrl, {
           credentials: 'include',
         }),
       ]);
 
       if (!overviewRes.ok) {
-        const { status, code } = await getErrorFromResponse(overviewRes);
-        throw new Error(errorMessageFor(status, code));
+        const { status, code, message } = await getErrorFromResponse(overviewRes);
+        throw new Error(errorMessageFor(status, code, message));
       }
       if (!crRes.ok) {
-        const { status, code } = await getErrorFromResponse(crRes);
-        throw new Error(errorMessageFor(status, code));
+        const { status, code, message } = await getErrorFromResponse(crRes);
+        throw new Error(errorMessageFor(status, code, message));
       }
-      if (!appsRes.ok) {
-        const { status, code } = await getErrorFromResponse(appsRes);
-        throw new Error(errorMessageFor(status, code));
+      if (!extraRes.ok) {
+        const { status, code, message } = await getErrorFromResponse(extraRes);
+        throw new Error(errorMessageFor(status, code, message));
       }
 
       let rawOverview: unknown;
       let rawCRs: unknown;
-      let rawApps: unknown;
+      let rawExtra: unknown;
       try {
         rawOverview = await overviewRes.json();
         rawCRs = await crRes.json();
-        rawApps = await appsRes.json();
+        rawExtra = await extraRes.json();
       } catch (_) {
         throw new Error(errorMessageFor(500, 'JSON_PARSE_FAILURE'));
       }
 
       const parsedOverview = parseOverview(rawOverview);
       const parsedCRs = parseChangeRequests(rawCRs);
-      const parsedApps = parseCitizenApplications(rawApps);
-      const parsedStats = parseApplicationQueueStats(rawApps);
 
-      if (parsedOverview === null || parsedCRs === null || parsedApps === null || parsedStats === null) {
+      if (parsedOverview === null || parsedCRs === null) {
         throw new Error(errorMessageFor(500, 'PARSER_FAILURE'));
+      }
+
+      if (role === 'manager') {
+        const parsedApps = parseCitizenApplications(rawExtra);
+        const parsedStats = parseApplicationQueueStats(rawExtra);
+        if (parsedApps === null || parsedStats === null) {
+          throw new Error(errorMessageFor(500, 'PARSER_FAILURE'));
+        }
+        setCitizenApps(parsedApps);
+        setAppStats(parsedStats);
+        setAccounts([]);
+      } else {
+        const parsedAccounts = parseAccounts(rawExtra);
+        if (parsedAccounts === null) {
+          throw new Error(errorMessageFor(500, 'PARSER_FAILURE'));
+        }
+        setAccounts(parsedAccounts);
+        setCitizenApps([]);
       }
 
       setOverview(parsedOverview);
       setChangeRequests(parsedCRs);
-      setCitizenApps(parsedApps);
-      setAppStats(parsedStats);
       setTtsMode(parsedOverview.ttsMode);
 
       if (rawOverview && typeof rawOverview === 'object') {
@@ -732,6 +825,8 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
         if (actor && typeof actor === 'object') {
           const dn = (actor as Record<string, unknown>).displayName;
           if (typeof dn === 'string') setActorName(dn);
+          const aid = (actor as Record<string, unknown>).id;
+          if (isSafeId(aid)) setActorId(aid);
         }
       }
 
@@ -739,7 +834,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
         setSuccess(
           role === 'admin'
             ? 'Tải dữ liệu quản trị thành công.'
-            : 'Tải dữ liệu manager thành công — có thể duyệt / trả lại hồ sơ công dân.'
+            : 'Tải dữ liệu người quản lý thành công.'
         );
       }
     } catch (err: any) {
@@ -784,12 +879,159 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
     }
   };
 
+  const handleReviewApplication = async (id: string, decision: 'APPROVE' | 'RETURN') => {
+    if (!isSafeId(id)) {
+      setError('Mã hồ sơ không hợp lệ.');
+      return;
+    }
+    const note = (reviewNotes[id] ?? '').trim();
+    if (decision === 'RETURN' && note === '') {
+      setError(errorMessageFor(400, 'NOTE_REQUIRED'));
+      return;
+    }
+
+    setReviewingId(id);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch(`/api/v1/admin/applications/${encodeURIComponent(id)}/review`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ decision, note: note === '' ? undefined : note }),
+      });
+
+      if (!res.ok) {
+        const { status, code } = await getErrorFromResponse(res);
+        throw new Error(errorMessageFor(status, code));
+      }
+
+      setSuccess(
+        decision === 'APPROVE'
+          ? 'Đã phê duyệt hồ sơ. Người dân sẽ thấy kết quả ngay trên trang trạng thái.'
+          : 'Đã trả lại hồ sơ kèm lý do để người dân bổ sung.'
+      );
+      setReviewNotes((prev) => ({ ...prev, [id]: '' }));
+      await handleFetchData({ silent: true });
+    } catch (err: any) {
+      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
+    } finally {
+      setReviewingId(null);
+    }
+  };
+
+  const handleCreateAccount = async (e: FormEvent) => {
+    e.preventDefault();
+    if (creatingAccount) return;
+    setCreatingAccount(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const payload: Record<string, string> = {
+        username: newAccount.username.trim(),
+        displayName: newAccount.displayName.trim(),
+        password: newAccount.password,
+        role: newAccount.role,
+      };
+      if (newAccount.email.trim() !== '') {
+        payload.email = newAccount.email.trim();
+      }
+      const res = await fetch('/api/v1/admin/users', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const { status, code, message } = await getErrorFromResponse(res);
+        throw new Error(errorMessageFor(status, code, message));
+      }
+      setSuccess(`Đã tạo tài khoản ${payload.username} (${ROLE_LABELS[newAccount.role]}).`);
+      setNewAccount({ username: '', displayName: '', email: '', password: '', role: 'manager' });
+      await handleFetchData({ silent: true });
+    } catch (err: any) {
+      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
+    } finally {
+      setCreatingAccount(false);
+    }
+  };
+
+  const handleAccountRoleChange = async (id: string) => {
+    if (!isSafeId(id)) {
+      setError('Mã tài khoản không hợp lệ.');
+      return;
+    }
+    const nextRole = roleDrafts[id];
+    if (!nextRole) return;
+    setAccountBusyId(id);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch(`/api/v1/admin/users/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: nextRole }),
+      });
+      if (!res.ok) {
+        const { status, code, message } = await getErrorFromResponse(res);
+        throw new Error(errorMessageFor(status, code, message));
+      }
+      setSuccess(`Đã đổi vai trò tài khoản sang ${ROLE_LABELS[nextRole]}.`);
+      setRoleDrafts((prev) => {
+        const { [id]: _removed, ...rest } = prev;
+        return rest;
+      });
+      await handleFetchData({ silent: true });
+    } catch (err: any) {
+      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
+    } finally {
+      setAccountBusyId(null);
+    }
+  };
+
+  const handleAccountPasswordReset = async (id: string) => {
+    if (!isSafeId(id)) {
+      setError('Mã tài khoản không hợp lệ.');
+      return;
+    }
+    const nextPassword = (pwDrafts[id] ?? '').trim();
+    if (nextPassword === '') return;
+    setAccountBusyId(id);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch(`/api/v1/admin/users/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: nextPassword }),
+      });
+      if (!res.ok) {
+        const { status, code, message } = await getErrorFromResponse(res);
+        throw new Error(errorMessageFor(status, code, message));
+      }
+      setSuccess('Đã đặt lại mật khẩu — mọi phiên đăng nhập cũ của tài khoản đã bị thu hồi.');
+      setPwDrafts((prev) => {
+        const { [id]: _removed, ...rest } = prev;
+        return rest;
+      });
+      await handleFetchData({ silent: true });
+    } catch (err: any) {
+      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
+    } finally {
+      setAccountBusyId(null);
+    }
+  };
+
   useEffect(() => {
     void handleFetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
 
-  // Flash toast after returning from detail approve/return (?flash=approved|returned)
+  // Flash toast after returning from detail approve/return
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
@@ -811,12 +1053,8 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
 
   const filteredCitizenApps = useMemo(() => {
     return citizenApps.filter((app) => {
-      if (docTypeFilter !== 'ALL' && app.documentType !== docTypeFilter) {
-        return false;
-      }
-      if (statusFilter !== 'ALL' && app.status !== statusFilter) {
-        return false;
-      }
+      if (docTypeFilter !== 'ALL' && app.documentType !== docTypeFilter) return false;
+      if (statusFilter !== 'ALL' && app.status !== statusFilter) return false;
       return true;
     });
   }, [citizenApps, docTypeFilter, statusFilter]);
@@ -832,8 +1070,8 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
     setSuccess(null);
 
     try {
-      if (!canApproveActions) {
-        setError('Chỉ quản trị viên mới được phê duyệt yêu cầu thay đổi.');
+      if (!canApproveForms) {
+        setError('Phê duyệt phiên bản biểu mẫu thuộc thẩm quyền của cán bộ quản lý.');
         setApprovingId(null);
         return;
       }
@@ -933,37 +1171,47 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-slate-800">
-      <div className="card border border-slate-100 bg-slate-900 text-white shadow-lg p-6">
+      <div className="card border border-slate-200/80 bg-white p-6 shadow-shell">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="space-y-1">
-            <h2 className="text-xl font-bold tracking-tight text-amber-400">
+          <div className="min-w-0 space-y-2">
+            <h2 className="text-xl font-bold tracking-tight text-slate-900">
               Bảng điều khiển {roleLabel}
             </h2>
-            <p className="text-sm text-slate-300">
-              {canApproveActions
-                ? 'Phiên đăng nhập cookie — duyệt hồ sơ công dân, quan trắc AI và phê duyệt thay đổi biểu mẫu.'
-                : 'Phiên đăng nhập cookie — duyệt hồ sơ công dân (APPROVE/RETURN), xem danh mục thủ tục, quan trắc AI và yêu cầu thay đổi.'}
+            <p className="text-sm text-slate-600">
+              {isAdmin
+                ? 'Phiên đăng nhập cookie — quản lý tài khoản và cài đặt kỹ thuật hệ thống.'
+                : 'Phiên đăng nhập cookie — xét duyệt hồ sơ công dân, quản lý giấy tờ & biểu mẫu, phê duyệt phiên bản khi quy định thay đổi.'}
             </p>
-            <p className="text-xs text-slate-400">
-              Vai trò: <span className="font-semibold text-amber-300">{role}</span>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span
+                className={`inline-flex items-center rounded-full border px-2.5 py-1 font-semibold ${
+                  role === 'admin'
+                    ? 'border-amber-200/70 bg-amber-50 text-amber-800'
+                    : 'border-sky-200/70 bg-sky-50 text-sky-700'
+                }`}
+              >
+                Vai trò: {role}
+              </span>
               {actorName ? (
-                <>
-                  {' '}
-                  · Phiên: <span className="text-slate-200">{actorName}</span>
-                </>
+                <span className="inline-flex max-w-[16rem] items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-semibold text-slate-600">
+                  <span className="truncate">Phiên: {actorName}</span>
+                </span>
               ) : null}
-              {canReviewApps && ' · được duyệt đơn'}
-              {!canApproveActions && ' · không phê duyệt phiên bản biểu mẫu'}
-            </p>
+              {isAdmin && (
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium text-slate-500">
+                  Hồ sơ &amp; biểu mẫu do cán bộ quản lý phụ trách
+                </span>
+              )}
+            </div>
           </div>
           <button
             onClick={() => handleFetchData()}
             disabled={loading}
-            className="btn bg-amber-500 text-slate-950 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 font-semibold"
+            className="btn shrink-0 bg-brand-600 font-semibold text-white hover:bg-brand-700 disabled:bg-slate-300 disabled:text-slate-500"
           >
             {loading ? (
               <div className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                 Đang tải...
               </div>
             ) : (
@@ -1142,7 +1390,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
         </div>
       )}
 
-      {overview && canApproveActions && (
+      {overview && isAdmin && (
         <div className="card space-y-4 border border-slate-100 shadow-sm">
           <div className="space-y-1">
             <h3 className="text-lg font-bold text-slate-900 border-b pb-2">Chế độ đọc nội dung (Text-to-Speech)</h3>
@@ -1190,26 +1438,23 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
         </div>
       )}
 
-      {overview && (
+      {overview && role === 'manager' && (
         <div className="space-y-6">
           <div className="border-b pb-4">
             <h3 className="text-xl font-bold text-slate-900">
               Hồ sơ công dân chờ xét duyệt
               {canReviewApps ? (
                 <span className="ml-2 align-middle text-xs font-semibold uppercase tracking-wide text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
-                  {role === 'manager' ? 'Manager được duyệt đơn' : 'Admin được duyệt đơn'}
+                  Manager được duyệt đơn
                 </span>
               ) : null}
             </h3>
             <p className="text-sm text-slate-500">
-              Hồ sơ người dân đã kiểm tra hợp lệ và nộp trực tuyến — phân loại theo loại đơn.
-              {canReviewApps
-                ? ' Phê duyệt hoặc trả lại kèm lý do — kết quả hiển thị ngay trên trang trạng thái của người dân.'
-                : ' Chỉ xem — không có quyền quyết định trên hồ sơ.'}
+              Phân loại theo loại đơn. Nhấn vào hồ sơ để xem chi tiết, phê duyệt hoặc trả lại
+              (cần bổ sung) — kết quả hiển thị ngay cho người dân.
             </p>
           </div>
 
-          {/* Stats by document type */}
           {appStats && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -1226,7 +1471,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                   <p className="mt-1 text-2xl font-bold text-emerald-900">{appStats.approved}</p>
                 </div>
                 <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-rose-700">Trả lại</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-rose-700">Cần bổ sung</p>
                   <p className="mt-1 text-2xl font-bold text-rose-900">{appStats.returned}</p>
                 </div>
               </div>
@@ -1239,34 +1484,26 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                     <button
                       key={stat.code}
                       type="button"
-                      onClick={() =>
-                        setDocTypeFilter((prev) => (prev === stat.code ? 'ALL' : stat.code))
-                      }
+                      onClick={() => setDocTypeFilter((prev) => (prev === stat.code ? 'ALL' : stat.code))}
                       className={
                         'rounded-xl border p-3 text-left shadow-sm transition ' +
                         (docTypeFilter === stat.code
                           ? meta.accentClass + ' ring-2 ring-slate-400'
                           : 'border-slate-100 bg-white hover:border-slate-300')
                       }
-                      title={`Lọc ${stat.label}`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-semibold">
-                          <span className="mr-1" aria-hidden>
-                            {stat.icon}
-                          </span>
+                          <span className="mr-1" aria-hidden>{stat.icon}</span>
                           {stat.label}
                         </span>
                         <span className="text-lg font-bold">{stat.total}</span>
                       </div>
                       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/5">
-                        <div
-                          className="h-full rounded-full bg-slate-700/40"
-                          style={{ width: `${pct}%` }}
-                        />
+                        <div className="h-full rounded-full bg-slate-700/40" style={{ width: `${pct}%` }} />
                       </div>
                       <p className="mt-1.5 text-[11px] text-slate-500">
-                        Chờ {stat.submitted} · Duyệt {stat.approved} · Trả {stat.returned}
+                        Chờ {stat.submitted} · Duyệt {stat.approved} · Bổ sung {stat.returned}
                       </p>
                     </button>
                   );
@@ -1275,7 +1512,6 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
             </div>
           )}
 
-          {/* Filter tabs by document type */}
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
               <button
@@ -1291,21 +1527,21 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                 Tất cả loại
                 <span className="ml-1 opacity-70">({appStats?.total ?? citizenApps.length})</span>
               </button>
-              {DOCUMENT_TYPES.map((t) => {
-                const count = appStats?.byType.find((x) => x.code === t.code)?.total ?? 0;
+              {DOCUMENT_TYPES.map((dt) => {
+                const count = appStats?.byType.find((x) => x.code === dt.code)?.total ?? 0;
                 return (
                   <button
-                    key={t.code}
+                    key={dt.code}
                     type="button"
-                    onClick={() => setDocTypeFilter(t.code)}
+                    onClick={() => setDocTypeFilter(dt.code)}
                     className={
                       'rounded-full border px-3 py-1.5 text-xs font-semibold transition ' +
-                      (docTypeFilter === t.code
-                        ? t.badgeClass + ' ring-1 ring-offset-1 ring-slate-400'
+                      (docTypeFilter === dt.code
+                        ? dt.badgeClass + ' ring-1 ring-offset-1 ring-slate-400'
                         : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50')
                     }
                   >
-                    {t.icon} {t.label}
+                    {dt.icon} {dt.label}
                     <span className="ml-1 opacity-70">({count})</span>
                   </button>
                 );
@@ -1314,11 +1550,11 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
             <div className="flex flex-wrap gap-2">
               {(
                 [
-                  { key: 'SUBMITTED', label: 'Chờ duyệt' },
-                  { key: 'APPROVED', label: 'Đã duyệt' },
-                  { key: 'RETURNED', label: 'Cần bổ sung' },
-                  { key: 'ALL', label: 'Mọi trạng thái' },
-                ] as const
+                  { key: 'SUBMITTED' as const, label: 'Chờ duyệt' },
+                  { key: 'APPROVED' as const, label: 'Đã duyệt' },
+                  { key: 'RETURNED' as const, label: 'Cần bổ sung' },
+                  { key: 'ALL' as const, label: 'Mọi trạng thái' },
+                ]
               ).map((s) => (
                 <button
                   key={s.key}
@@ -1347,29 +1583,17 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-xs text-slate-500">
-                Nhấn vào một hồ sơ để xem chi tiết và phê duyệt / trả lại.
-              </p>
+              <p className="text-xs text-slate-500">Nhấn vào một hồ sơ để xem chi tiết và phê duyệt / trả lại.</p>
               {filteredCitizenApps.map((app) => {
                 const typeMeta = getDocumentTypeMeta(app.documentType);
-                const title =
-                  app.documentTypeLabel || typeMeta.label || app.procedureName;
+                const title = app.documentTypeLabel || typeMeta.label || app.procedureName;
                 const detailHref = `${portalHome}/applications/${encodeURIComponent(app.id)}`;
                 const statusUi =
                   app.status === 'SUBMITTED'
-                    ? {
-                        text: 'CHỜ DUYỆT',
-                        className: 'bg-amber-100 text-amber-800 border-amber-200',
-                      }
+                    ? { text: 'CHỜ DUYỆT', className: 'bg-amber-100 text-amber-800 border-amber-200' }
                     : app.status === 'APPROVED'
-                      ? {
-                          text: 'ĐÃ DUYỆT',
-                          className: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-                        }
-                      : {
-                          text: 'CẦN BỔ SUNG',
-                          className: 'bg-rose-100 text-rose-800 border-rose-200',
-                        };
+                      ? { text: 'ĐÃ DUYỆT', className: 'bg-emerald-100 text-emerald-800 border-emerald-200' }
+                      : { text: 'CẦN BỔ SUNG', className: 'bg-rose-100 text-rose-800 border-rose-200' };
                 return (
                   <Link
                     key={app.id}
@@ -1380,18 +1604,11 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                       <div className="min-w-0 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-bold text-slate-900">
-                            <span className="mr-1" aria-hidden>
-                              {typeMeta.icon}
-                            </span>
+                            <span className="mr-1" aria-hidden>{typeMeta.icon}</span>
                             {title}
                           </span>
                           <DocumentTypeBadge code={app.documentType} />
-                          <span
-                            className={
-                              'inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ' +
-                              statusUi.className
-                            }
-                          >
+                          <span className={'inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ' + statusUi.className}>
                             {statusUi.text}
                           </span>
                         </div>
@@ -1403,21 +1620,221 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                           {app.reviewedBy ? ` · ${app.reviewedBy}` : ''}
                         </p>
                         {app.status === 'RETURNED' && app.reviewNote ? (
-                          <p className="line-clamp-1 text-xs text-amber-800">
-                            Lý do: {app.reviewNote}
-                          </p>
+                          <p className="line-clamp-1 text-xs text-amber-800">Lý do: {app.reviewNote}</p>
                         ) : null}
                       </div>
-                      <span className="shrink-0 text-sm font-semibold text-sky-700">
-                        Xem chi tiết →
-                      </span>
+                      <span className="shrink-0 text-sm font-semibold text-sky-700">Xem chi tiết →</span>
                     </div>
                   </Link>
                 );
               })}
             </div>
           )}
+        </div>
+      )}
 
+      {overview && isAdmin && (
+        <div className="space-y-6">
+          <div className="border-b pb-4">
+            <h3 className="text-xl font-bold text-slate-900">Quản lý tài khoản</h3>
+            <p className="text-sm text-slate-500">
+              Cấp tài khoản cán bộ, đổi vai trò và đặt lại mật khẩu. Tài khoản quản lý/quản trị
+              chỉ được cấp tại đây — không thể tự đăng ký. Hồ sơ công dân và giấy tờ, biểu mẫu
+              do cán bộ quản lý phụ trách tại cổng người quản lý.
+            </p>
+          </div>
+
+          <form
+            onSubmit={handleCreateAccount}
+            className="card border border-slate-100 shadow-sm space-y-4 p-6"
+          >
+            <h4 className="text-sm font-bold text-slate-700">Tạo tài khoản mới</h4>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <input
+                value={newAccount.username}
+                onChange={(e) => setNewAccount((p) => ({ ...p, username: e.target.value }))}
+                placeholder="Tên đăng nhập (a-z, 0-9, . _)"
+                required
+                minLength={3}
+                maxLength={50}
+                disabled={creatingAccount}
+                autoComplete="off"
+                aria-label="Tên đăng nhập"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+              />
+              <input
+                value={newAccount.displayName}
+                onChange={(e) => setNewAccount((p) => ({ ...p, displayName: e.target.value }))}
+                placeholder="Họ và tên hiển thị"
+                required
+                maxLength={100}
+                disabled={creatingAccount}
+                aria-label="Họ và tên hiển thị"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+              />
+              <input
+                type="email"
+                value={newAccount.email}
+                onChange={(e) => setNewAccount((p) => ({ ...p, email: e.target.value }))}
+                placeholder="Email (không bắt buộc)"
+                maxLength={200}
+                disabled={creatingAccount}
+                autoComplete="off"
+                aria-label="Email"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+              />
+              <input
+                type="password"
+                value={newAccount.password}
+                onChange={(e) => setNewAccount((p) => ({ ...p, password: e.target.value }))}
+                placeholder="Mật khẩu tạm (≥8, có chữ và số)"
+                required
+                minLength={8}
+                maxLength={128}
+                disabled={creatingAccount}
+                autoComplete="new-password"
+                aria-label="Mật khẩu tạm"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+              />
+              <select
+                value={newAccount.role}
+                onChange={(e) => setNewAccount((p) => ({ ...p, role: e.target.value as AccountRole }))}
+                disabled={creatingAccount}
+                aria-label="Vai trò"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+              >
+                {(['user', 'manager', 'admin'] as const).map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="submit"
+              disabled={creatingAccount}
+              className="btn bg-slate-900 hover:bg-slate-700 text-white text-sm py-2 px-4 disabled:bg-slate-200 disabled:text-slate-400"
+            >
+              {creatingAccount ? 'Đang tạo...' : '➕ Tạo tài khoản'}
+            </button>
+          </form>
+
+          <div className="card border border-slate-100 shadow-sm p-0 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-600">Tài khoản</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-600">Email</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-600">Vai trò</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-600">Ngày tạo</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-600">Đặt lại mật khẩu</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {accounts.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-slate-400 italic">
+                        Chưa có tài khoản nào.
+                      </td>
+                    </tr>
+                  ) : (
+                    accounts.map((acc) => {
+                      const isSelf = actorId !== null && acc.id === actorId;
+                      const busy = accountBusyId !== null;
+                      const draftRole = roleDrafts[acc.id] ?? acc.role;
+                      return (
+                        <tr key={acc.id} className="hover:bg-slate-50 align-top">
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-slate-900">{acc.displayName}</div>
+                            <div className="text-xs text-slate-400 font-mono">
+                              {acc.username}
+                              {isSelf && (
+                                <span className="ml-1 font-sans font-semibold text-amber-600">(bạn)</span>
+                              )}
+                              {!acc.hasPassword && (
+                                <span className="ml-1 font-sans text-sky-600">· OAuth</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">{acc.email ?? '—'}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span
+                                className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full border ${ROLE_BADGE_CLASS[acc.role]}`}
+                              >
+                                {ROLE_LABELS[acc.role]}
+                              </span>
+                              {!isSelf && (
+                                <>
+                                  <select
+                                    value={draftRole}
+                                    onChange={(e) =>
+                                      setRoleDrafts((prev) => ({
+                                        ...prev,
+                                        [acc.id]: e.target.value as AccountRole,
+                                      }))
+                                    }
+                                    disabled={busy}
+                                    aria-label={`Vai trò mới cho ${acc.username}`}
+                                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                                  >
+                                    {(['user', 'manager', 'admin'] as const).map((r) => (
+                                      <option key={r} value={r}>
+                                        {ROLE_LABELS[r]}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <button
+                                    onClick={() => handleAccountRoleChange(acc.id)}
+                                    disabled={busy || draftRole === acc.role}
+                                    className="btn bg-slate-700 hover:bg-slate-600 text-white text-xs py-1 px-2.5 disabled:bg-slate-200 disabled:text-slate-400"
+                                  >
+                                    {accountBusyId === acc.id ? 'Đang lưu...' : 'Đổi vai trò'}
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-slate-500 font-mono text-xs">
+                            {formatDate(acc.createdAt)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <input
+                                type="password"
+                                value={pwDrafts[acc.id] ?? ''}
+                                onChange={(e) =>
+                                  setPwDrafts((prev) => ({ ...prev, [acc.id]: e.target.value }))
+                                }
+                                placeholder="Mật khẩu mới"
+                                disabled={busy}
+                                autoComplete="new-password"
+                                aria-label={`Mật khẩu mới cho ${acc.username}`}
+                                className="w-40 rounded-lg border border-slate-300 px-2 py-1 text-xs focus:border-amber-500 focus:outline-none"
+                              />
+                              <button
+                                onClick={() => handleAccountPasswordReset(acc.id)}
+                                disabled={busy || (pwDrafts[acc.id] ?? '').trim() === ''}
+                                className="btn bg-amber-600 hover:bg-amber-500 text-white text-xs py-1 px-2.5 disabled:bg-slate-200 disabled:text-slate-400"
+                              >
+                                {accountBusyId === acc.id ? 'Đang lưu...' : 'Đặt lại'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {overview && (
+        <div className="space-y-6">
           <div className="border-b pb-4">
             <h3 className="text-xl font-bold text-slate-900">Yêu cầu Thay đổi quy định & Biểu mẫu (Change Requests)</h3>
             <p className="text-sm text-slate-500">
@@ -1486,7 +1903,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                           }
                         })()}
 
-                        {isPending && canApproveActions && (
+                        {isPending && canApproveForms && (
                           <button
                             onClick={() => handleApprove(cr.id)}
                             disabled={approvingId !== null}
@@ -1502,9 +1919,9 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                             )}
                           </button>
                         )}
-                        {isPending && !canApproveActions && (
+                        {isPending && !canApproveForms && (
                           <span className="text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-3 py-1.5">
-                            Chỉ xem — cần quyền admin để phê duyệt
+                            Chỉ xem — biểu mẫu do cán bộ quản lý phê duyệt
                           </span>
                         )}
                       </div>

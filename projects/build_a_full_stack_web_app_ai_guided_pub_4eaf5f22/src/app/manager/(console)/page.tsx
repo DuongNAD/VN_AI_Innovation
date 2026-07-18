@@ -6,12 +6,11 @@ export default function ManagerPage() {
       <div className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-wider text-sky-700">Cổng người quản lý</p>
         <h1 className="text-2xl font-bold text-slate-800">
-          Manager — duyệt đơn &amp; theo dõi hệ thống
+          Manager — duyệt đơn &amp; quản lý biểu mẫu
         </h1>
         <p className="mt-1 text-sm text-slate-600">
-          Tài khoản vai trò <strong>manager</strong> được <strong>phê duyệt / trả lại hồ sơ công dân</strong>
-          (duyệt đơn). Không được phê duyệt phiên bản biểu mẫu hay đổi cài đặt hệ thống — các thao tác
-          đó dành cho admin.
+          Tài khoản <strong>manager</strong>: xét duyệt hồ sơ công dân (duyệt đơn theo loại),
+          quản lý giấy tờ / biểu mẫu và phê duyệt &amp; kích hoạt phiên bản khi quy định thay đổi.
         </p>
       </div>
       <AdminConsole role="manager" />

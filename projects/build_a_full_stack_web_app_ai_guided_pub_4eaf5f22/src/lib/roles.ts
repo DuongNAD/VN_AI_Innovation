@@ -1,9 +1,10 @@
 /**
  * Application role model and route prefixes.
  * - user: citizen self-service flow (public + session token)
- * - manager: staff console — xét duyệt hồ sơ công dân (APPROVE/RETURN),
- *            xem overview + change requests (không phê duyệt phiên bản biểu mẫu)
- * - admin: full staff console including approve/activate form versions + settings
+ * - manager: business domain — citizen queue (review/approve/return
+ *   applications) AND forms/documents (approve & activate form versions)
+ * - admin: accounts + technical config (settings, monitoring) — does NOT
+ *   review citizen applications, does NOT approve form versions
  */
 
 export type AppRole = 'user' | 'manager' | 'admin';
@@ -24,6 +25,7 @@ export const ROUTES = {
   portal: '/',
   user: {
     home: '/user',
+    procedures: '/user/procedures',
     chat: '/user/chat',
     checklist: '/user/checklist',
     form: (applicationId: string) => `/user/form/${encodeURIComponent(applicationId)}`,
@@ -43,16 +45,20 @@ export const ROUTES = {
 /**
  * Staff permission matrix (enforced on API; UI only mirrors it).
  *
- * - reviewApplications: manager + admin — day-to-day officer work (duyệt đơn)
- * - approveChangeRequests / manageSettings: admin only
+ * From main (v1): manager owns citizen queue + form versions;
+ * admin owns accounts + settings. Document-type classification
+ * is an orthogonal feature used by the manager queue UI.
  */
 export const STAFF_PERMISSIONS = {
   viewOverview: ['manager', 'admin'] as const satisfies readonly StaffRole[],
   viewChangeRequests: ['manager', 'admin'] as const satisfies readonly StaffRole[],
-  /** Xét duyệt hồ sơ công dân (APPROVE / RETURN). */
-  reviewApplications: ['manager', 'admin'] as const satisfies readonly StaffRole[],
-  /** Phê duyệt & kích hoạt phiên bản biểu mẫu (change request). */
-  approveChangeRequests: ['admin'] as const satisfies readonly StaffRole[],
+  /** Forms & documents are the manager's domain. */
+  approveChangeRequests: ['manager'] as const satisfies readonly StaffRole[],
+  /** Citizen queue is the manager's job. */
+  reviewCitizenApplications: ['manager'] as const satisfies readonly StaffRole[],
+  /** Alias used by UI helpers (same as reviewCitizenApplications). */
+  reviewApplications: ['manager'] as const satisfies readonly StaffRole[],
+  manageAccounts: ['admin'] as const satisfies readonly StaffRole[],
   manageSettings: ['admin'] as const satisfies readonly StaffRole[],
 } as const;
 
@@ -63,12 +69,12 @@ export function roleHasPermission(
   return (STAFF_PERMISSIONS[permission] as readonly StaffRole[]).includes(role);
 }
 
-/** Manager + admin may approve/return citizen applications. */
+/** Manager may approve/return citizen applications. */
 export function canReviewApplications(role: StaffRole): boolean {
   return roleHasPermission(role, 'reviewApplications');
 }
 
-/** Only admin may approve form-version change requests. */
+/** Manager may approve form-version change requests. */
 export function canApproveChangeRequests(role: StaffRole): boolean {
   return roleHasPermission(role, 'approveChangeRequests');
 }

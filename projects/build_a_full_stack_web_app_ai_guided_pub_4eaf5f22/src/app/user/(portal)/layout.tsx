@@ -8,10 +8,13 @@ export default function UserPortalLayout({ children }: { children: React.ReactNo
       loginPath="/user/login"
       renderChrome={(user) => (
         <UserBar
-          displayName={user.displayName}
-          username={user.username}
-          roleLabel="Công dân"
           homeHref="/user"
+          user={{
+            displayName: user.displayName,
+            username: user.username,
+            roleLabel: 'Công dân',
+            avatarUrl: user.avatarUrl,
+          }}
         />
       )}
     >

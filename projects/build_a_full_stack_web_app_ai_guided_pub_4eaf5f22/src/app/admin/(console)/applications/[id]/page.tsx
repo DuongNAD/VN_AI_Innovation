@@ -16,7 +16,7 @@ export default async function AdminApplicationDetailPage({ params }: Props) {
           Admin cũng có thể phê duyệt hoặc trả lại hồ sơ công dân.
         </p>
       </div>
-      <ApplicationReviewDetail applicationId={id} listHref="/admin" canReview />
+      <ApplicationReviewDetail applicationId={id} listHref="/admin" canReview={false} />
     </main>
   );
 }
