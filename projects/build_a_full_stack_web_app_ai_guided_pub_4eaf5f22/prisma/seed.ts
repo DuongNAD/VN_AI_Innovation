@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { parseFieldDefs, parseRuleDefs, parseMigrationHints } from '../src/lib/schema-guards';
+import { OFFICIAL_PROCEDURE_SOURCE_URLS } from '../src/lib/official-procedures';
 import { fileURLToPath } from 'url';
 
 const prisma = new PrismaClient();
@@ -287,7 +288,7 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
       'Hộ tịch',
       'UBND cấp xã',
       'CITIZEN',
-      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-hanh-chinh.html?ma_thu_tuc=1.000894',
+      OFFICIAL_PROCEDURE_SOURCE_URLS.MARRIAGE_REGISTRATION,
       [
         {
           version: '1.0',
@@ -426,7 +427,7 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
       'Hộ tịch',
       'UBND cấp xã',
       'CITIZEN',
-      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-hanh-chinh.html?ma_thu_tuc=1.001193',
+      OFFICIAL_PROCEDURE_SOURCE_URLS.BIRTH_REGISTRATION,
       [
         {
           version: '1.0',
@@ -499,7 +500,7 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
       'Cư trú',
       'Công an cấp xã',
       'CITIZEN',
-      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-nganh-doc.html?ma_thu_tuc=1.004194',
+      OFFICIAL_PROCEDURE_SOURCE_URLS.TEMP_RESIDENCE_REGISTRATION,
       [
         {
           version: '1.0',
@@ -538,7 +539,7 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
       'Căn cước',
       'Công an cấp huyện',
       'CITIZEN',
-      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-nganh-doc.html?ma_thu_tuc=2.000200',
+      OFFICIAL_PROCEDURE_SOURCE_URLS.CITIZEN_ID_ISSUANCE,
       [
         {
           version: '1.0',
@@ -578,7 +579,7 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
       'Xuất nhập cảnh',
       'Phòng Quản lý xuất nhập cảnh Công an cấp tỉnh',
       'CITIZEN',
-      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-nganh-doc.html?ma_thu_tuc=1.001456',
+      OFFICIAL_PROCEDURE_SOURCE_URLS.PASSPORT_ISSUANCE,
       [
         {
           version: '1.0',
@@ -621,7 +622,7 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
       'Đăng ký kinh doanh',
       'Cơ quan đăng ký kinh doanh cấp xã',
       'BUSINESS',
-      'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-nganh-doc.html?ma_thu_tuc=1.001612',
+      OFFICIAL_PROCEDURE_SOURCE_URLS.HOUSEHOLD_BUSINESS_REGISTRATION,
       [
         {
           version: '1.0',
@@ -706,7 +707,7 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
         status: 'PENDING',
         reviewedBy: null,
         reviewedAt: null,
-        sourceUrl: 'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-hanh-chinh.html?ma_thu_tuc=1.000894',
+        sourceUrl: OFFICIAL_PROCEDURE_SOURCE_URLS.MARRIAGE_REGISTRATION,
         diffJson: {
           summary: 'Cập nhật biểu mẫu theo quy định mới về cư trú',
           added: ['permanent_address', 'temporary_address', 'phone_number'],
@@ -721,7 +722,7 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
         id: 'cr_marriage_v2',
         oldVersionId: mActiveFormV1.id,
         status: 'PENDING',
-        sourceUrl: 'https://dichvucong.gov.vn/p/home/dvc-chi-tiet-thu-tuc-hanh-chinh.html?ma_thu_tuc=1.000894',
+        sourceUrl: OFFICIAL_PROCEDURE_SOURCE_URLS.MARRIAGE_REGISTRATION,
         diffJson: {
           summary: 'Cập nhật biểu mẫu theo quy định mới về cư trú',
           added: ['permanent_address', 'temporary_address', 'phone_number'],

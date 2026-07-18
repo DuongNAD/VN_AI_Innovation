@@ -1,46 +1,17 @@
 import { prisma } from '@/lib/db';
 import { getProvider } from '@/lib/data-provider';
 import { AppError, jsonOk, handleRoute } from '@/lib/errors';
-import { requireSessionToken } from '@/lib/auth';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { compareVersions } from '@/lib/form-migration';
 import { sanitizeFormData } from '@/lib/rule-engine';
 import { readJsonBody } from '@/lib/http';
-
-async function getValidatedApplicationAndSession(id: string, req: Request) {
-  const application = await prisma.application.findUnique({
-    where: { id },
-    include: { session: true },
-  });
-
-  if (!application || !application.session) {
-    throw new AppError(404, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ.');
-  }
-
-  const provider = getProvider();
-  const pinned = await provider.getFormVersionById(application.formVersionId);
-  if (!pinned) {
-    throw new AppError(404, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ.');
-  }
-
-  if (application.session.expiresAt.getTime() < Date.now()) {
-    throw new AppError(404, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ.');
-  }
-
-  try {
-    requireSessionToken(req, application.session.accessTokenHash);
-  } catch (err) {
-    throw new AppError(404, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ.');
-  }
-
-  return { application, session: application.session, pinned };
-}
+import { loadOwnedApplication, EDITABLE_STATUSES } from '@/lib/application-access';
 
 export const GET = handleRoute(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   enforceRateLimit('applications-id', req);
 
   const { id } = await params;
-  const { application, pinned } = await getValidatedApplicationAndSession(id, req);
+  const { application, pinned } = await loadOwnedApplication(id, req);
   const formCode = pinned.formCode;
 
   const provider = getProvider();
@@ -61,6 +32,10 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
     status: application.status,
     data: application.dataJson,
     revision: application.revision,
+    submittedAt: application.submittedAt,
+    reviewedAt: application.reviewedAt,
+    reviewedBy: application.reviewedBy,
+    reviewNote: application.reviewNote,
     fields: pinned.fields,
     rules,
     updateAvailable,
@@ -82,15 +57,18 @@ export const PUT = handleRoute(async (req: Request, { params }: { params: Promis
   enforceRateLimit('applications-id', req);
 
   const { id } = await params;
-  const { application, pinned } = await getValidatedApplicationAndSession(id, req);
+  const { application, pinned } = await loadOwnedApplication(id, req);
   const formCode = pinned.formCode;
 
-  // FIX 1a status gate
-  if (application.status !== 'DRAFT') {
+  // FIX 1a status gate: only drafts and applications the officer returned for
+  // correction can be edited; submitted/approved ones are frozen.
+  if (!(EDITABLE_STATUSES as readonly string[]).includes(application.status)) {
     throw new AppError(
       409,
       'APPLICATION_NOT_EDITABLE',
-      'Hồ sơ không còn ở trạng thái nháp nên không thể chỉnh sửa.'
+      application.status === 'SUBMITTED'
+        ? 'Hồ sơ đã nộp và đang chờ cán bộ xét duyệt nên không thể chỉnh sửa.'
+        : 'Hồ sơ đã được duyệt nên không thể chỉnh sửa.'
     );
   }
 
@@ -139,7 +117,7 @@ export const PUT = handleRoute(async (req: Request, { params }: { params: Promis
     where: {
       id: application.id,
       revision: revision,
-      status: 'DRAFT',
+      status: { in: [...EDITABLE_STATUSES] },
     },
     data: {
       dataJson: sanitized as any,

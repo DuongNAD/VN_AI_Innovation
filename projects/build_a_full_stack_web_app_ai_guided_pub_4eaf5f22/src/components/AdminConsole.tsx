@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { visibleFieldsFor } from '@/components/DynamicForm';
+import type { FieldDef } from '@/lib/schema-guards';
+import { DEFAULT_TTS_MODE, isTtsMode, type TtsMode } from '@/lib/tts-mode';
 
 interface FormVersionOverview {
   version: string;
@@ -42,6 +45,7 @@ interface UsageSummary {
 interface OverviewResponse {
   procedures: ProcedureOverview[];
   usage: UsageSummary;
+  ttsMode: TtsMode;
 }
 
 interface DiffItem {
@@ -78,6 +82,20 @@ interface ApprovalResult {
   activatedVersion: string;
   closedVersion: string | null;
   effectiveFrom: string;
+}
+
+interface CitizenApplication {
+  id: string;
+  status: 'SUBMITTED' | 'APPROVED' | 'RETURNED';
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  reviewNote: string | null;
+  formCode: string;
+  formVersion: string;
+  procedureName: string;
+  data: Record<string, unknown>;
+  fields: FieldDef[];
 }
 
 // Module-private pure helpers
@@ -239,9 +257,18 @@ function parseOverview(body: unknown): OverviewResponse | null {
     }
   }
 
+  let ttsMode: TtsMode = DEFAULT_TTS_MODE;
+  if (obj.settings && typeof obj.settings === 'object') {
+    const s = obj.settings as Record<string, unknown>;
+    if (isTtsMode(s.ttsMode)) {
+      ttsMode = s.ttsMode;
+    }
+  }
+
   return {
     procedures: parsedProcedures,
     usage,
+    ttsMode,
   };
 }
 
@@ -376,6 +403,98 @@ function parseChangeRequests(body: unknown): ChangeRequest[] | null {
   return parsedCRs;
 }
 
+/**
+ * Officer-queue payload: keep ids/statuses strictly validated, pass the field
+ * schema through loosely — it comes from our own provider and is only used
+ * to label values for display.
+ */
+function parseCitizenApplications(body: unknown): CitizenApplication[] | null {
+  if (!body || typeof body !== 'object') {
+    return null;
+  }
+  const obj = body as Record<string, unknown>;
+  if (!Array.isArray(obj.applications) || obj.applications.length > 500) {
+    return null;
+  }
+
+  const parsed: CitizenApplication[] = [];
+  for (const raw of obj.applications) {
+    if (!raw || typeof raw !== 'object') {
+      continue;
+    }
+    const a = raw as Record<string, unknown>;
+    if (!isSafeId(a.id)) {
+      continue;
+    }
+    if (a.status !== 'SUBMITTED' && a.status !== 'APPROVED' && a.status !== 'RETURNED') {
+      continue;
+    }
+    if (!isBoundedString(a.formCode, 500) || !isBoundedString(a.procedureName, 500)) {
+      continue;
+    }
+    if (!isBoundedString(a.formVersion, 32) || !/^[A-Za-z0-9._ -]{1,32}$/.test(a.formVersion)) {
+      continue;
+    }
+    if (
+      !isNullableBoundedString(a.submittedAt, 500) ||
+      !isNullableBoundedString(a.reviewedAt, 500) ||
+      !isNullableBoundedString(a.reviewedBy, 500) ||
+      !isNullableBoundedString(a.reviewNote, 2000)
+    ) {
+      continue;
+    }
+    const data = a.data && typeof a.data === 'object' && !Array.isArray(a.data)
+      ? (a.data as Record<string, unknown>)
+      : {};
+    const fields: FieldDef[] = [];
+    if (Array.isArray(a.fields) && a.fields.length <= 500) {
+      for (const f of a.fields) {
+        if (f && typeof f === 'object' && isBoundedString((f as any).id, 500) && isBoundedString((f as any).label, 500)) {
+          fields.push(f as FieldDef);
+        }
+      }
+    }
+    parsed.push({
+      id: a.id,
+      status: a.status,
+      submittedAt: a.submittedAt ?? null,
+      reviewedAt: a.reviewedAt ?? null,
+      reviewedBy: a.reviewedBy ?? null,
+      reviewNote: a.reviewNote ?? null,
+      formCode: a.formCode,
+      formVersion: a.formVersion,
+      procedureName: a.procedureName,
+      data,
+      fields,
+    });
+  }
+  return parsed;
+}
+
+/** Human-readable value for the officer's review table (option labels, Có/Không, dd/mm/yyyy). */
+function fmtFieldValue(field: FieldDef, value: unknown): string {
+  if (value === undefined || value === null || value === '') {
+    return '(trống)';
+  }
+  if (field.options && field.options.length > 0) {
+    const match = field.options.find((o) => o.value === value || String(o.value) === String(value));
+    if (match) {
+      return match.label;
+    }
+  }
+  if (typeof value === 'boolean') {
+    return value ? 'Có' : 'Không';
+  }
+  if (field.type === 'date' && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
 function errorMessageFor(status: number, code: string | null): string {
   if (status === 401) {
     return 'Sai mã quản trị';
@@ -392,6 +511,12 @@ function errorMessageFor(status: number, code: string | null): string {
     if (code === 'INVALID_TARGET_VERSION') {
       return 'Phiên bản đích không hợp lệ';
     }
+    if (code === 'NOTE_REQUIRED') {
+      return 'Vui lòng nhập lý do trả lại để người dân biết cần bổ sung gì';
+    }
+  }
+  if (status === 422 && code === 'VALIDATION_FAILED') {
+    return 'Hồ sơ còn lỗi theo quy định nên không thể phê duyệt';
   }
   if (status === 429) {
     return 'Quá nhiều lần thử, chờ ít phút';
@@ -422,6 +547,11 @@ export default function AdminConsole(): React.ReactElement {
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [approvalResults, setApprovalResults] = useState<Record<string, ApprovalResult>>({});
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [citizenApps, setCitizenApps] = useState<CitizenApplication[]>([]);
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [ttsMode, setTtsMode] = useState<TtsMode>(DEFAULT_TTS_MODE);
+  const [savingTtsMode, setSavingTtsMode] = useState<boolean>(false);
 
   const handleFetchData = async (activeToken = token, opts?: { silent?: boolean }) => {
     if (!activeToken.trim()) {
@@ -435,11 +565,14 @@ export default function AdminConsole(): React.ReactElement {
     }
 
     try {
-      const [overviewRes, crRes] = await Promise.all([
+      const [overviewRes, crRes, appsRes] = await Promise.all([
         fetch('/api/v1/admin/overview', {
           headers: { 'X-Admin-Token': activeToken },
         }),
         fetch('/api/v1/admin/change-requests', {
+          headers: { 'X-Admin-Token': activeToken },
+        }),
+        fetch('/api/v1/admin/applications', {
           headers: { 'X-Admin-Token': activeToken },
         }),
       ]);
@@ -452,25 +585,34 @@ export default function AdminConsole(): React.ReactElement {
         const { status, code } = await getErrorFromResponse(crRes);
         throw new Error(errorMessageFor(status, code));
       }
+      if (!appsRes.ok) {
+        const { status, code } = await getErrorFromResponse(appsRes);
+        throw new Error(errorMessageFor(status, code));
+      }
 
       let rawOverview: unknown;
       let rawCRs: unknown;
+      let rawApps: unknown;
       try {
         rawOverview = await overviewRes.json();
         rawCRs = await crRes.json();
+        rawApps = await appsRes.json();
       } catch (_) {
         throw new Error(errorMessageFor(500, 'JSON_PARSE_FAILURE'));
       }
 
       const parsedOverview = parseOverview(rawOverview);
       const parsedCRs = parseChangeRequests(rawCRs);
+      const parsedApps = parseCitizenApplications(rawApps);
 
-      if (parsedOverview === null || parsedCRs === null) {
+      if (parsedOverview === null || parsedCRs === null || parsedApps === null) {
         throw new Error(errorMessageFor(500, 'PARSER_FAILURE'));
       }
 
       setOverview(parsedOverview);
       setChangeRequests(parsedCRs);
+      setCitizenApps(parsedApps);
+      setTtsMode(parsedOverview.ttsMode);
       if (!opts?.silent) {
         setSuccess('Tải dữ liệu quản trị thành công.');
       }
@@ -478,6 +620,84 @@ export default function AdminConsole(): React.ReactElement {
       setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSetTtsMode = async (mode: TtsMode) => {
+    if (mode === ttsMode || savingTtsMode) {
+      return;
+    }
+    setSavingTtsMode(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch('/api/v1/admin/settings', {
+        method: 'POST',
+        headers: {
+          'X-Admin-Token': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ttsMode: mode }),
+      });
+
+      if (!res.ok) {
+        const { status, code } = await getErrorFromResponse(res);
+        throw new Error(errorMessageFor(status, code));
+      }
+
+      setTtsMode(mode);
+      setSuccess(
+        mode === 'fpt'
+          ? 'Đã chuyển sang giọng đọc FPT (chất lượng cao) cho toàn hệ thống.'
+          : 'Đã chuyển sang giọng trình duyệt (miễn phí); tự dùng FPT khi thiết bị không hỗ trợ.'
+      );
+    } catch (err: any) {
+      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
+    } finally {
+      setSavingTtsMode(false);
+    }
+  };
+
+  const handleReviewApplication = async (id: string, decision: 'APPROVE' | 'RETURN') => {
+    if (!isSafeId(id)) {
+      setError('Mã hồ sơ không hợp lệ.');
+      return;
+    }
+    const note = (reviewNotes[id] ?? '').trim();
+    if (decision === 'RETURN' && note === '') {
+      setError(errorMessageFor(400, 'NOTE_REQUIRED'));
+      return;
+    }
+
+    setReviewingId(id);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch(`/api/v1/admin/applications/${encodeURIComponent(id)}/review`, {
+        method: 'POST',
+        headers: {
+          'X-Admin-Token': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ decision, note: note === '' ? undefined : note }),
+      });
+
+      if (!res.ok) {
+        const { status, code } = await getErrorFromResponse(res);
+        throw new Error(errorMessageFor(status, code));
+      }
+
+      setSuccess(
+        decision === 'APPROVE'
+          ? 'Đã phê duyệt hồ sơ. Người dân sẽ thấy kết quả ngay trên trang trạng thái.'
+          : 'Đã trả lại hồ sơ kèm lý do để người dân bổ sung.'
+      );
+      setReviewNotes((prev) => ({ ...prev, [id]: '' }));
+      await handleFetchData(token, { silent: true });
+    } catch (err: any) {
+      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
+    } finally {
+      setReviewingId(null);
     }
   };
 
@@ -804,7 +1024,187 @@ export default function AdminConsole(): React.ReactElement {
       )}
 
       {overview && (
+        <div className="card space-y-4 border border-slate-100 shadow-sm">
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-slate-900 border-b pb-2">Chế độ đọc nội dung (Text-to-Speech)</h3>
+            <p className="text-sm text-slate-500">
+              Chọn cách hệ thống đọc nội dung cho người dân. Giọng FPT chất lượng cao hơn nhưng tính phí
+              theo ký tự — chi phí cho nội dung lặp lại được giảm gần như bằng 0 nhờ bộ nhớ đệm bền vững.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(['browser', 'fpt'] as const).map((mode) => {
+              const active = ttsMode === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => handleSetTtsMode(mode)}
+                  disabled={savingTtsMode}
+                  aria-pressed={active}
+                  className={`text-left rounded-xl border p-4 transition-all disabled:opacity-60 ${
+                    active
+                      ? 'border-amber-400 bg-amber-50 ring-2 ring-amber-200'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-slate-900">
+                      {mode === 'browser' ? '🌐 Trình duyệt (miễn phí)' : '⭐ Giọng FPT (cao cấp)'}
+                    </span>
+                    {active && (
+                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-0.5">
+                        ĐANG DÙNG
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {mode === 'browser'
+                      ? 'Đọc bằng giọng có sẵn của trình duyệt. Thiết bị không hỗ trợ sẽ tự chuyển sang giọng FPT.'
+                      : 'Luôn đọc bằng giọng FPT chất lượng cao. Nội dung lặp lại phát từ cache, gần như $0.'}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+          {savingTtsMode && <p className="text-xs text-slate-400">Đang lưu thay đổi…</p>}
+        </div>
+      )}
+
+      {overview && (
         <div className="space-y-6">
+          <div className="border-b pb-4">
+            <h3 className="text-xl font-bold text-slate-900">Hồ sơ công dân chờ xét duyệt</h3>
+            <p className="text-sm text-slate-500">
+              Hồ sơ người dân đã kiểm tra hợp lệ và nộp trực tuyến. Phê duyệt hoặc trả lại kèm lý
+              do — kết quả hiển thị ngay trên trang trạng thái của người dân.
+            </p>
+          </div>
+
+          {citizenApps.length === 0 ? (
+            <div className="card text-center py-12 text-slate-400 border border-dashed border-slate-200">
+              Chưa có hồ sơ nào được nộp.
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {citizenApps.map((app) => {
+                const isPendingReview = app.status === 'SUBMITTED';
+                const reviewFields = visibleFieldsFor(app.fields, app.data).filter((f) => {
+                  const v = app.data[f.id];
+                  return v !== undefined && v !== null && v !== '';
+                });
+                return (
+                  <div key={app.id} className="card border border-slate-100 shadow-sm space-y-4 p-6">
+                    <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold text-slate-900">{app.procedureName}</span>
+                          <span
+                            className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full border ${
+                              app.status === 'SUBMITTED'
+                                ? 'bg-amber-100 text-amber-800 border-amber-200'
+                                : app.status === 'APPROVED'
+                                ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                : 'bg-rose-100 text-rose-800 border-rose-200'
+                            }`}
+                          >
+                            {app.status === 'SUBMITTED'
+                              ? 'CHỜ DUYỆT'
+                              : app.status === 'APPROVED'
+                              ? 'ĐÃ DUYỆT'
+                              : 'ĐÃ TRẢ LẠI'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400">
+                          Biểu mẫu {app.formCode} · phiên bản {app.formVersion} · nộp lúc:{' '}
+                          {formatDate(app.submittedAt)}
+                          {app.reviewedAt
+                            ? ` · xử lý lúc: ${formatDate(app.reviewedAt)}${app.reviewedBy ? ' bởi ' + app.reviewedBy : ''}`
+                            : ''}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="border border-slate-100 rounded-lg overflow-hidden">
+                      <table className="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th className="px-4 py-2 text-left font-semibold text-slate-500 w-1/3">Trường thông tin</th>
+                            <th className="px-4 py-2 text-left font-semibold text-slate-500">Nội dung khai</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {reviewFields.length === 0 ? (
+                            <tr>
+                              <td colSpan={2} className="px-4 py-4 text-center text-slate-400 italic">
+                                Hồ sơ không có dữ liệu hiển thị.
+                              </td>
+                            </tr>
+                          ) : (
+                            reviewFields.map((f) => (
+                              <tr key={f.id} className="hover:bg-slate-50">
+                                <td className="px-4 py-2 text-slate-600">{f.label}</td>
+                                <td className="px-4 py-2 font-medium text-slate-900">
+                                  {fmtFieldValue(f, app.data[f.id])}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {app.status === 'RETURNED' && app.reviewNote && (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-900">
+                        <span className="font-semibold">Lý do trả lại:</span> {app.reviewNote}
+                      </div>
+                    )}
+                    {app.status === 'APPROVED' && (
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-900">
+                        🎉 Hồ sơ đã được phê duyệt{app.reviewNote ? ` — ghi chú: ${app.reviewNote}` : '.'}
+                      </div>
+                    )}
+
+                    {isPendingReview && (
+                      <div className="space-y-3">
+                        <label className="block text-sm font-semibold text-slate-700" htmlFor={`note-${app.id}`}>
+                          Ghi chú cho người dân (bắt buộc khi trả lại)
+                        </label>
+                        <textarea
+                          id={`note-${app.id}`}
+                          rows={2}
+                          maxLength={1000}
+                          value={reviewNotes[app.id] ?? ''}
+                          onChange={(e) =>
+                            setReviewNotes((prev) => ({ ...prev, [app.id]: e.target.value }))
+                          }
+                          placeholder="Ví dụ: Bổ sung bản chụp trang thông tin CCCD của bên nữ."
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                        />
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            onClick={() => handleReviewApplication(app.id, 'APPROVE')}
+                            disabled={reviewingId !== null}
+                            className="btn bg-emerald-600 hover:bg-emerald-500 text-white text-sm py-2 px-4 disabled:bg-slate-200 disabled:text-slate-400"
+                          >
+                            {reviewingId === app.id ? 'Đang xử lý...' : '✅ Phê duyệt hồ sơ'}
+                          </button>
+                          <button
+                            onClick={() => handleReviewApplication(app.id, 'RETURN')}
+                            disabled={reviewingId !== null || (reviewNotes[app.id] ?? '').trim() === ''}
+                            className="btn bg-amber-600 hover:bg-amber-500 text-white text-sm py-2 px-4 disabled:bg-slate-200 disabled:text-slate-400"
+                          >
+                            ↩ Trả lại để bổ sung
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <div className="border-b pb-4">
             <h3 className="text-xl font-bold text-slate-900">Yêu cầu Thay đổi quy định & Biểu mẫu (Change Requests)</h3>
             <p className="text-sm text-slate-500">

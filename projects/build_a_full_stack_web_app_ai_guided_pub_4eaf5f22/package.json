@@ -12,6 +12,7 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:bootstrap": "tsx prisma/bootstrap.ts",
+    "pregen:tts": "tsx prisma/pregen-tts.ts",
     "seed": "npm run db:seed",
     "test": "vitest run",
     "test:unit": "vitest run --exclude tests/integration/**",

@@ -43,6 +43,9 @@ export const LIMITS = {
   AUDIO_PREPARSE_MAX_BYTES: 11534336,
   AUDIO_MAX_SECONDS: 60,
   TTS_TEXT_MAX: 5000,
+  // Max characters the client sends to the TTS endpoint per request. Shared by
+  // the SpeechButton and the pre-generation CLI so their cache keys match.
+  TTS_CLIENT_MAX: 500,
   ANSWER_TEXT_MAX: 500,
   FIELD_VALUE_MAX: 2000
 } as const;

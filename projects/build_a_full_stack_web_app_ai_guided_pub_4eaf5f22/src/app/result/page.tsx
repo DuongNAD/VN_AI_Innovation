@@ -6,10 +6,16 @@ import ValidationReport from '@/components/ValidationReport';
 import SourceFooter from '@/components/SourceFooter';
 import DocumentPreview from '@/components/DocumentPreview';
 import FlowProgress from '@/components/FlowProgress';
+import SubmissionPanel from '@/components/SubmissionPanel';
 
 interface ApplicationData {
   formCode: string;
   formVersion: string;
+  status?: string;
+  submittedAt?: string | Date | null;
+  reviewedAt?: string | Date | null;
+  reviewedBy?: string | null;
+  reviewNote?: string | null;
   data: Record<string, any>;
   fields?: any[];
   procedure?: {
@@ -47,6 +53,7 @@ function ResultPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [appData, setAppData] = useState<ApplicationData | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResponse | null>(null);
+  const [sessionToken, setSessionToken] = useState<string>('');
 
   useEffect(() => {
     if (!applicationId) {
@@ -71,6 +78,7 @@ function ResultPageContent() {
       setLoading(false);
       return;
     }
+    setSessionToken(token);
 
     async function performValidation() {
       try {
@@ -141,26 +149,66 @@ function ResultPageContent() {
     return null;
   }
 
+  const appStatus = appData.status ?? 'DRAFT';
+  const lifecycleActive = appStatus === 'SUBMITTED' || appStatus === 'APPROVED' || appStatus === 'RETURNED';
+
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
       <main className="max-w-3xl mx-auto space-y-6">
-        <FlowProgress current="result" />
+        <FlowProgress current={lifecycleActive ? 'approval' : 'result'} />
 
         {validationResult.valid && (
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
-            Kết quả kiểm tra hồ sơ
+            {lifecycleActive ? 'Trạng thái hồ sơ' : 'Kết quả kiểm tra hồ sơ'}
           </h1>
         )}
 
-        <ValidationReport
-          valid={validationResult.valid}
-          errors={validationResult.errors}
-          aiExplanation={validationResult.aiExplanation}
-          applicationId={applicationId!}
-          formVersion={validationResult.formVersion || appData.formVersion}
-          aiMode={validationResult.aiMode}
-          degraded={validationResult.degraded}
-        />
+        {/* Officer decision / submission — the headline once the citizen has handed the file over. */}
+        {lifecycleActive && (
+          <SubmissionPanel
+            applicationId={applicationId!}
+            token={sessionToken}
+            status={appStatus}
+            valid={validationResult.valid}
+            submittedAt={appData.submittedAt}
+            reviewedAt={appData.reviewedAt}
+            reviewedBy={appData.reviewedBy}
+            reviewNote={appData.reviewNote}
+            onStatusChange={(next) =>
+              setAppData((prev) => (prev ? { ...prev, ...next } : prev))
+            }
+          />
+        )}
+
+        {/* Once submitted, the status panel is the headline; repeating the green
+            "ready to submit" card underneath would contradict it. */}
+        {!(lifecycleActive && validationResult.valid) && (
+          <ValidationReport
+            valid={validationResult.valid}
+            errors={validationResult.errors}
+            aiExplanation={validationResult.aiExplanation}
+            applicationId={applicationId!}
+            formVersion={validationResult.formVersion || appData.formVersion}
+            aiMode={validationResult.aiMode}
+            degraded={validationResult.degraded}
+          />
+        )}
+
+        {!lifecycleActive && (
+          <SubmissionPanel
+            applicationId={applicationId!}
+            token={sessionToken}
+            status={appStatus}
+            valid={validationResult.valid}
+            submittedAt={appData.submittedAt}
+            reviewedAt={appData.reviewedAt}
+            reviewedBy={appData.reviewedBy}
+            reviewNote={appData.reviewNote}
+            onStatusChange={(next) =>
+              setAppData((prev) => (prev ? { ...prev, ...next } : prev))
+            }
+          />
+        )}
 
         {validationResult.valid && Array.isArray(appData.fields) && appData.fields.length > 0 && (
           <DocumentPreview

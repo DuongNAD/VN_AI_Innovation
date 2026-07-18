@@ -13,6 +13,9 @@ interface ApplicationData {
   status: string;
   data: Record<string, unknown>;
   revision: number;
+  reviewNote?: string | null;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
   fields: any[];
   rules: any[];
   updateAvailable: boolean;
@@ -166,11 +169,16 @@ export default function ApplicationFormPage() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8">
           <ApplicationFormRunner
             applicationId={data.applicationId}
+            formCode={data.formCode}
             fields={data.fields}
             rules={data.rules}
             initialData={data.data}
             revision={data.revision}
             formVersion={data.formVersion}
+            status={data.status}
+            reviewNote={data.reviewNote}
+            reviewedBy={data.reviewedBy}
+            reviewedAt={data.reviewedAt}
             updateAvailable={data.updateAvailable}
             newVersion={data.newVersion}
             token={token}

@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { getToken } from '@/lib/session';
+import { LIMITS } from '@/lib/constants';
+import { useTtsMode } from '@/components/useTtsMode';
 
 interface SpeechButtonProps {
   text: string;
@@ -12,6 +14,7 @@ export default function SpeechButton({ text, label = 'Nghe nội dung' }: Speech
   const [state, setState] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle');
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const cancelFetchRef = useRef<(() => void) | null>(null);
+  const ttsMode = useTtsMode();
 
   useEffect(() => {
     return () => {
@@ -44,7 +47,12 @@ export default function SpeechButton({ text, label = 'Nghe nội dung' }: Speech
       return;
     }
 
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
+    // 'fpt' mode always uses the server (premium) voice; 'browser' mode prefers
+    // the free built-in voice and only reaches the API when the browser has none.
+    const useBrowserTts =
+      ttsMode === 'browser' && typeof window !== 'undefined' && !!window.speechSynthesis;
+
+    if (useBrowserTts) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'vi-VN';
@@ -76,7 +84,7 @@ export default function SpeechButton({ text, label = 'Nghe nội dung' }: Speech
             'Content-Type': 'application/json',
             ...(token ? { 'X-Session-Token': token } : {}),
           },
-          body: JSON.stringify({ text: text.slice(0, 500) }),
+          body: JSON.stringify({ text: text.slice(0, LIMITS.TTS_CLIENT_MAX) }),
         });
 
         if (!active) return;

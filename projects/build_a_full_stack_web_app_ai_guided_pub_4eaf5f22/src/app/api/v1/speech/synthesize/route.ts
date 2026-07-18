@@ -3,9 +3,9 @@ import { enforceRateLimit } from '@/lib/rate-limit';
 import { readJsonBody, requireString, optionalString } from '@/lib/http';
 import { requireLiveSession } from '@/lib/auth';
 import { LIMITS } from '@/lib/constants';
-import { TTS_VOICES, getTtsProvider, makeTtsCacheKey } from '@/lib/ai/tts';
+import { TTS_VOICES, getTtsProvider, makeSynthesisCacheKey } from '@/lib/ai/tts';
+import { ttsCacheGet, ttsCacheSet } from '@/lib/ai/tts-cache';
 import { UpstreamError } from '@/lib/ai/upstream';
-import { cacheGet, cacheSet } from '@/lib/cache';
 import { logAiUsage } from '@/lib/ai/usage';
 
 export const POST = handleRoute(async (req: Request) => {
@@ -15,9 +15,6 @@ export const POST = handleRoute(async (req: Request) => {
   await requireLiveSession(req);
 
   const provider = getTtsProvider();
-  const configuredModel = provider.name === 'openai'
-    ? (process.env.TTS_MODEL?.trim() || 'tts-1')
-    : 'mock-tts';
   const body = await readJsonBody(req);
 
   let text: string;
@@ -47,40 +44,29 @@ export const POST = handleRoute(async (req: Request) => {
     throw new AppError(400, 'INVALID_INPUT', 'Ngôn ngữ không được hỗ trợ.', { field: 'language' });
   }
 
-  const key = `${provider.name}:${configuredModel}:${makeTtsCacheKey(text, voice, speed, language)}`;
+  const key = makeSynthesisCacheKey({ text, voice, speed, language });
 
-  const cached = cacheGet(key);
+  const cached = await ttsCacheGet(key);
   if (cached) {
-    try {
-      const parsed = JSON.parse(cached);
-      if (
-        parsed &&
-        typeof parsed.b64 === 'string' &&
-        typeof parsed.mimeType === 'string' &&
-        typeof parsed.model === 'string'
-      ) {
-        const latencyMs = Date.now() - startTime;
-        logAiUsage({
-          serviceType: 'tts',
-          model: parsed.model,
-          cacheHit: true,
-          latencyMs,
-        });
+    const latencyMs = Date.now() - startTime;
+    logAiUsage({
+      serviceType: 'tts',
+      model: cached.model,
+      cacheHit: true,
+      latencyMs,
+    });
 
-        return new Response(Buffer.from(parsed.b64, 'base64'), {
-          status: 200,
-          headers: {
-            'Content-Type': parsed.mimeType,
-            'X-Cache-Hit': 'true',
-            'X-Model': parsed.model,
-            'Cache-Control': 'no-store, private',
-            'Pragma': 'no-cache',
-          },
-        });
-      }
-    } catch (_) {
-      // Treat as cache miss
-    }
+    return new Response(cached.audio as unknown as BodyInit, {
+      status: 200,
+      headers: {
+        'Content-Type': cached.mimeType,
+        'X-Cache-Hit': 'true',
+        'X-Cache-Tier': cached.tier,
+        'X-Model': cached.model,
+        'Cache-Control': 'no-store, private',
+        'Pragma': 'no-cache',
+      },
+    });
   }
 
   let result: { audio: Buffer; mimeType: string; model: string };
@@ -98,26 +84,20 @@ export const POST = handleRoute(async (req: Request) => {
     throw err;
   }
 
-  const b64 = result.audio.toString('base64');
-  // The in-process cache caps entries, not bytes; real TTS audio can reach
-  // ~13MB base64 per entry, so only cache small responses to bound memory.
-  if (b64.length <= 1_000_000) {
-    cacheSet(
-      key,
-      JSON.stringify({
-        b64,
-        mimeType: result.mimeType,
-        model: result.model,
-      }),
-      3600
-    );
-  }
+  // Persist to the durable (Postgres) + in-process cache. The module bounds entry
+  // size and storage, and swallows DB errors so caching never breaks the response.
+  await ttsCacheSet(key, {
+    audio: result.audio,
+    mimeType: result.mimeType,
+    model: result.model,
+  });
 
   return new Response(result.audio as unknown as BodyInit, {
     status: 200,
     headers: {
       'Content-Type': result.mimeType,
       'X-Cache-Hit': 'false',
+      'X-Cache-Tier': 'miss',
       'X-Model': result.model,
       'Cache-Control': 'no-store, private',
       'Pragma': 'no-cache',

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test chất lượng STT — FPT.AI Whisper</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #0f172a; color: #e2e8f0;
+    min-height: 100vh; padding: 32px 16px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: #94a3b8; font-size: 14px; margin-bottom: 24px; }
+  .card {
+    background: #1e293b; border: 1px solid #334155;
+    border-radius: 14px; padding: 20px; margin-bottom: 16px;
+  }
+  #recBtn {
+    display: block; width: 100%; padding: 22px; font-size: 20px; font-weight: 700;
+    border: 0; border-radius: 12px; cursor: pointer;
+    background: #f59e0b; color: #0f172a; transition: background .15s;
+  }
+  #recBtn:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; }
+  #recBtn.recording { background: #ef4444; color: #fff; }
+  #status { text-align: center; margin-top: 10px; font-size: 14px; color: #94a3b8; min-height: 20px; }
+  .phrase {
+    display: block; width: 100%; text-align: left; margin: 6px 0; padding: 10px 12px;
+    background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+    color: #cbd5e1; font-size: 14.5px; cursor: pointer;
+  }
+  .phrase.selected { border-color: #f59e0b; background: #292524; }
+  .hint { font-size: 12.5px; color: #64748b; margin-top: 8px; }
+  .result-text { font-size: 19px; line-height: 1.5; color: #fff; margin: 6px 0 10px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12.5px; }
+  .chip { background: #0f172a; border: 1px solid #334155; border-radius: 999px; padding: 3px 10px; color: #94a3b8; }
+  .chip.ok { border-color: #16a34a; color: #4ade80; }
+  .chip.warn { border-color: #f59e0b; color: #fbbf24; }
+  .chip.bad { border-color: #ef4444; color: #f87171; }
+  #history .item { border-top: 1px dashed #334155; padding: 12px 0; }
+  #history .item:first-child { border-top: 0; }
+  .ref { font-size: 13px; color: #64748b; margin-bottom: 4px; }
+  h2 { font-size: 15px; color: #cbd5e1; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎙️ Test chất lượng nhận dạng giọng nói</h1>
+  <div class="sub">Model: <b id="modelName">FPT.AI-whisper-large-v3-turbo</b> — gọi qua endpoint thật của app (<code>/api/v1/speech/transcribe</code>)</div>
+
+  <div class="card">
+    <h2>1. (Tuỳ chọn) Chọn câu mẫu để đo độ chính xác</h2>
+    <div id="phrases"></div>
+    <div class="hint">Chọn một câu rồi đọc đúng câu đó — hệ thống sẽ tự chấm % khớp. Không chọn thì nói tự do.</div>
+  </div>
+
+  <div class="card">
+    <button id="recBtn" disabled>Đang kết nối…</button>
+    <div id="status"></div>
+  </div>
+
+  <div class="card" id="historyCard" style="display:none">
+    <h2>Kết quả (mới nhất trên cùng)</h2>
+    <div id="history"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const PHRASES = [
+    'Tôi muốn đăng ký kết hôn tại phường Bến Nghé, Quận 1, Thành phố Hồ Chí Minh',
+    'Số căn cước công dân của tôi là 079 088 123 456',
+    'Tôi sinh ngày 25 tháng 12 năm 1988 tại huyện Củ Chi',
+    'Vợ tôi tên là Nguyễn Thị Hồng Nhung, quê ở Buôn Ma Thuột, Đắk Lắk',
+    'Thủ tục cấp hộ chiếu phổ thông mất bao lâu và lệ phí bao nhiêu?',
+  ];
+  const recBtn = document.getElementById('recBtn');
+  const statusEl = document.getElementById('status');
+  const historyEl = document.getElementById('history');
+  const historyCard = document.getElementById('historyCard');
+  const phrasesEl = document.getElementById('phrases');
+
+  let token = null;
+  let mediaRecorder = null;
+  let chunks = [];
+  let timerId = null;
+  let startedAt = 0;
+  let selectedPhrase = null;
+  let count = 0;
+
+  PHRASES.forEach((p) => {
+    const b = document.createElement('button');
+    b.className = 'phrase';
+    b.textContent = p;
+    b.onclick = () => {
+      const was = b.classList.contains('selected');
+      document.querySelectorAll('.phrase').forEach((x) => x.classList.remove('selected'));
+      selectedPhrase = was ? null : p;
+      if (!was) b.classList.add('selected');
+    };
+    phrasesEl.appendChild(b);
+  });
+
+  function setStatus(msg) { statusEl.textContent = msg; }
+
+  async function ensureSession() {
+    if (token) return token;
+    const res = await fetch('/api/v1/guided-intake/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ procedureCode: 'MARRIAGE_REGISTRATION' }),
+    });
+    if (!res.ok) throw new Error('Không tạo được phiên (' + res.status + ')');
+    const j = await res.json();
+    token = j.accessToken || j.token || (j.session && j.session.token);
+    if (!token) throw new Error('Phản hồi phiên không có token');
+    return token;
+  }
+
+  // Char-level Levenshtein on normalized text -> % match
+  function similarity(a, b) {
+    const norm = (s) => s.toLowerCase().replace(/[.,!?;:"'()\-]/g, ' ').replace(/\s+/g, ' ').trim();
+    a = norm(a); b = norm(b);
+    if (!a.length || !b.length) return 0;
+    const m = a.length, n = b.length;
+    let prev = Array.from({ length: n + 1 }, (_, j) => j);
+    for (let i = 1; i <= m; i++) {
+      const cur = [i];
+      for (let j = 1; j <= n; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+      prev = cur;
+    }
+    return Math.max(0, Math.round(100 * (1 - prev[n] / Math.max(m, n))));
+  }
+
+  function addResult({ ref, text, model, audioSeconds, latencyMs, degraded, aiMode, error }) {
+    count++;
+    historyCard.style.display = '';
+    const item = document.createElement('div');
+    item.className = 'item';
+    let html = '';
+    if (ref) html += '<div class="ref">Câu mẫu: ' + ref + '</div>';
+    if (error) {
+      html += '<div class="result-text" style="color:#f87171">' + error + '</div>';
+    } else {
+      html += '<div class="result-text">«' + (text || '(rỗng)') + '»</div>';
+      const chips = [];
+      if (ref) {
+        const pct = similarity(ref, text || '');
+        const cls = pct >= 90 ? 'ok' : pct >= 70 ? 'warn' : 'bad';
+        chips.push('<span class="chip ' + cls + '">Độ khớp ' + pct + '%</span>');
+      }
+      chips.push('<span class="chip">' + model + '</span>');
+      chips.push('<span class="chip">' + (audioSeconds || 0).toFixed(1) + 's audio</span>');
+      chips.push('<span class="chip">xử lý ' + (latencyMs / 1000).toFixed(1) + 's</span>');
+      chips.push(degraded
+        ? '<span class="chip bad">FALLBACK MOCK — FPT lỗi!</span>'
+        : '<span class="chip ok">' + aiMode + ' • không fallback</span>');
+      html += '<div class="meta">' + chips.join('') + '</div>';
+    }
+    item.innerHTML = html;
+    historyEl.prepend(item);
+  }
+
+  async function upload(blob, mime) {
+    setStatus('Đang gửi ' + Math.round(blob.size / 1024) + ' KB lên FPT Whisper…');
+    recBtn.disabled = true;
+    const ref = selectedPhrase;
+    const t0 = performance.now();
+    try {
+      const tk = await ensureSession();
+      const fd = new FormData();
+      fd.append('audio', new File([blob], 'voice.wav', { type: 'audio/wav' }));
+      const res = await fetch('/api/v1/speech/transcribe', {
+        method: 'POST',
+        headers: { 'X-Session-Token': tk },
+        body: fd,
+      });
+      const latencyMs = performance.now() - t0;
+      if (res.status === 401) { token = null; throw new Error('Phiên hết hạn — bấm ghi âm lại.'); }
+      if (res.status === 429) throw new Error('Vượt giới hạn 10 lần/phút — chờ một lát rồi thử lại.');
+      if (!res.ok) {
+        let msg = 'Lỗi ' + res.status;
+        try {
+          const e = await res.json();
+          const detail = (e.error && (e.error.message || e.error.code)) || e.message || e.code || '';
+          if (detail) msg += ': ' + detail;
+        } catch (_) {}
+        throw new Error(msg);
+      }
+      const j = await res.json();
+      addResult({ ref, text: j.text, model: j.model, audioSeconds: j.audioSeconds, latencyMs, degraded: j.degraded, aiMode: j.aiMode });
+      document.getElementById('modelName').textContent = j.model;
+      setStatus('Xong. Bấm để thử lại — thử cả nói nhanh, giọng miền, có tiếng ồn…');
+    } catch (err) {
+      addResult({ ref, error: String(err.message || err) });
+      setStatus('');
+    } finally {
+      recBtn.disabled = false;
+      recBtn.textContent = '🎙️ Bấm để nói';
+    }
+  }
+
+  // WAV (16-bit / 16 kHz / mono) thay vì MediaRecorder webm/opus:
+  // FPT whisper từ chối container opus, chỉ nhận wav/mp3/m4a.
+  function encodeWav16k(f32chunks, inputRate) {
+    let total = 0;
+    f32chunks.forEach((c) => { total += c.length; });
+    if (!total) return new Blob([], { type: 'audio/wav' });
+    const merged = new Float32Array(total);
+    let off = 0;
+    f32chunks.forEach((c) => { merged.set(c, off); off += c.length; });
+    const TARGET = 16000;
+    let samples = merged, rate = inputRate;
+    if (inputRate > TARGET) {
+      const ratio = inputRate / TARGET;
+      const outLen = Math.floor(merged.length / ratio);
+      samples = new Float32Array(outLen);
+      for (let i = 0; i < outLen; i++) {
+        const a = Math.floor(i * ratio), b = Math.min(Math.floor((i + 1) * ratio), merged.length);
+        let sum = 0;
+        for (let j = a; j < b; j++) sum += merged[j];
+        samples[i] = b > a ? sum / (b - a) : 0;
+      }
+      rate = TARGET;
+    }
+    const buf = new ArrayBuffer(44 + samples.length * 2);
+    const v = new DataView(buf);
+    const ws = (p, s) => { for (let i = 0; i < s.length; i++) v.setUint8(p + i, s.charCodeAt(i)); };
+    ws(0, 'RIFF'); v.setUint32(4, 36 + samples.length * 2, true); ws(8, 'WAVE');
+    ws(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    ws(36, 'data'); v.setUint32(40, samples.length * 2, true);
+    let p = 44;
+    for (let i = 0; i < samples.length; i++) {
+      const s = Math.max(-1, Math.min(1, samples[i]));
+      v.setInt16(p, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      p += 2;
+    }
+    return new Blob([buf], { type: 'audio/wav' });
+  }
+
+  let audioCtx = null, procNode = null, srcNode = null, micStream = null;
+
+  async function startRecording() {
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      setStatus('Không truy cập được micro — hãy cho phép quyền micro cho localhost rồi thử lại.');
+      return;
+    }
+    micStream = stream;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new Ctx();
+    srcNode = audioCtx.createMediaStreamSource(stream);
+    procNode = audioCtx.createScriptProcessor(4096, 1, 1);
+    chunks = [];
+    procNode.onaudioprocess = (e) => { chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+    srcNode.connect(procNode);
+    procNode.connect(audioCtx.destination);
+
+    startedAt = Date.now();
+    recBtn.classList.add('recording');
+    timerId = setInterval(() => {
+      const s = Math.floor((Date.now() - startedAt) / 1000);
+      recBtn.textContent = '⏹ Dừng ghi âm (' + s + 's)';
+      if (s >= 55) stopRecording(); // route rejects > 60s
+    }, 250);
+    recBtn.textContent = '⏹ Dừng ghi âm (0s)';
+    setStatus('Đang ghi âm — đọc câu mẫu hoặc nói tự do, xong bấm Dừng.');
+  }
+
+  function stopRecording() {
+    recBtn.classList.remove('recording');
+    if (!audioCtx) return;
+    clearInterval(timerId);
+    try { procNode.disconnect(); srcNode.disconnect(); } catch (e) {}
+    const rate = audioCtx.sampleRate;
+    audioCtx.close().catch(() => {});
+    audioCtx = null; procNode = null; srcNode = null;
+    if (micStream) { micStream.getTracks().forEach((t) => t.stop()); micStream = null; }
+    const blob = encodeWav16k(chunks, rate);
+    chunks = [];
+    if (blob.size === 0) { setStatus('Không thu được âm thanh.'); recBtn.textContent = '🎙️ Bấm để nói'; return; }
+    upload(blob, 'audio/wav');
+  }
+
+  recBtn.onclick = () => {
+    if (recBtn.classList.contains('recording')) stopRecording();
+    else startRecording();
+  };
+
+  ensureSession()
+    .then(() => { recBtn.disabled = false; recBtn.textContent = '🎙️ Bấm để nói'; setStatus('Sẵn sàng. Cho phép quyền micro khi trình duyệt hỏi.'); })
+    .catch((e) => { setStatus('Lỗi kết nối app: ' + e.message + ' — server có đang chạy không?'); });
+})();
+</script>
+</body>
+</html>

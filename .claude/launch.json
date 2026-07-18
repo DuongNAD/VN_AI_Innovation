@@ -5,7 +5,8 @@
       "name": "psp-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "projects/build_a_full_stack_web_app_ai_guided_pub_4eaf5f22", "run", "dev"],
-      "port": 3000
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }

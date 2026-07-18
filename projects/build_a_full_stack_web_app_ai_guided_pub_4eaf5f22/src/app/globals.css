@@ -43,7 +43,7 @@
     content: "Chế độ tiết kiệm";
   }
 }
-/* Print styles: "Xuất PDF" prints only the document sheet on A4 */
+/* Print styles: PDF actions print only the selected guide or document on A4 */
 @page {
   size: A4;
   margin: 16mm;
@@ -67,6 +67,15 @@
   }
 
   .print-area .document-sheet {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .print-area.card {
+    max-width: none;
+    margin: 0;
     border: none;
     border-radius: 0;
     box-shadow: none;

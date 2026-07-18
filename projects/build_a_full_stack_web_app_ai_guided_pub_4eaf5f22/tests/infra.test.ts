@@ -10,6 +10,10 @@ import { enforceRateLimit, _resetRateLimitForTests } from '@/lib/rate-limit';
 import { AppError } from '@/lib/errors';
 import { safeHttpsUrl } from '@/lib/schema-guards';
 import { assertSeedAllowed } from '../prisma/seed';
+import {
+  getOfficialProcedureSourceUrl,
+  OFFICIAL_PROCEDURE_SOURCE_URLS,
+} from '@/lib/official-procedures';
 
 function reqFrom(ip: string): Request {
   return new Request('http://localhost/api', {
@@ -95,6 +99,19 @@ describe('official source URL guard', () => {
   it('rejects lookalike and unrelated HTTPS domains', () => {
     expect(safeHttpsUrl('https://dichvucong.gov.vn.attacker.example/path')).toBeNull();
     expect(safeHttpsUrl('https://example.com/dichvucong.gov.vn')).toBeNull();
+  });
+
+  it('uses current information pages instead of retired or submission-case URLs', () => {
+    for (const sourceUrl of Object.values(OFFICIAL_PROCEDURE_SOURCE_URLS)) {
+      expect(safeHttpsUrl(sourceUrl)).toBe(sourceUrl);
+      expect(sourceUrl).not.toContain('/p/home/');
+      expect(sourceUrl).not.toContain('formalityCaseId=');
+    }
+
+    expect(getOfficialProcedureSourceUrl('BIRTH_REGISTRATION')).toContain(
+      '/thu-tuc-hanh-chinh/'
+    );
+    expect(getOfficialProcedureSourceUrl('UNKNOWN')).toBeNull();
   });
 });
 

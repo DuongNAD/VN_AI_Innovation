@@ -2,17 +2,19 @@
 
 import Breadcrumb, { ProgressIndicator } from '@/components/Breadcrumb';
 
-const STEPS = ['chat', 'checklist', 'form', 'result'] as const;
+const STEPS = ['chat', 'checklist', 'form', 'result', 'approval'] as const;
 
 const LABELS: Record<(typeof STEPS)[number], string> = {
   chat: 'Trò chuyện',
   checklist: 'Giấy tờ',
   form: 'Biểu mẫu',
   result: 'Kiểm tra',
+  approval: 'Nộp & duyệt',
 };
 
 /**
- * Shared header strip for the citizen flow: breadcrumb + 4-step progress.
+ * Shared header strip for the citizen flow: breadcrumb + 5-step progress
+ * (the last step covers submission and the officer's decision).
  * Keeps checklist/form/result visually coherent with the chat header.
  */
 export default function FlowProgress({ current }: { current: (typeof STEPS)[number] }) {

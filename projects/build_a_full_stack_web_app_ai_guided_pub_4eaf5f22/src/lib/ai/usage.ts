@@ -71,10 +71,17 @@ function calculateLogCost(log: {
       const completionCost = (log.completionTokens ?? 0) * 0.00000060; // $0.60 / 1M tokens
       return promptCost + completionCost;
     }
+    if (modelLower.includes('deepseek-v4-flash')) {
+      // FPT AI Marketplace listed rates: $0.14 / $0.28 per 1M tokens
+      const promptCost = (log.promptTokens ?? 0) * 0.00000014;
+      const completionCost = (log.completionTokens ?? 0) * 0.00000028;
+      return promptCost + completionCost;
+    }
   } else if (log.serviceType === 'stt') {
     if (modelLower.includes('whisper-1')) {
       return (log.audioSeconds ?? 0) * 0.0001; // $0.006 / 60 seconds
     }
+    // FPT.AI-whisper-* rates are not published per second; left unmodeled (0).
   } else if (log.serviceType === 'tts') {
     if (modelLower.includes('tts-1-hd')) {
       const estimatedChars = (log.audioSeconds ?? 0) / 0.05;
@@ -82,6 +89,10 @@ function calculateLogCost(log: {
     } else if (modelLower.includes('tts-1')) {
       const estimatedChars = (log.audioSeconds ?? 0) / 0.05;
       return estimatedChars * 0.000015; // $15 / 1M characters
+    } else if (modelLower.includes('vits')) {
+      // FPT.AI-VITs marketplace rate $16.5 / 1M input tokens, approximated as characters.
+      const estimatedChars = (log.audioSeconds ?? 0) / 0.05;
+      return estimatedChars * 0.0000165;
     }
   }
 
