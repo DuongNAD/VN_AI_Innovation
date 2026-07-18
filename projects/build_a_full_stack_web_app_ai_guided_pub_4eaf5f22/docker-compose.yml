@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     ports:
       - "127.0.0.1:5432:5432"
     environment:
@@ -11,10 +12,21 @@ services:
       - db_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-      start_period: 5s
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    # Reduce idle disconnect surprises on Windows Docker Desktop
+    command:
+      - postgres
+      - -c
+      - idle_session_timeout=0
+      - -c
+      - tcp_keepalives_idle=30
+      - -c
+      - tcp_keepalives_interval=10
+      - -c
+      - tcp_keepalives_count=5
 
 volumes:
   db_data:

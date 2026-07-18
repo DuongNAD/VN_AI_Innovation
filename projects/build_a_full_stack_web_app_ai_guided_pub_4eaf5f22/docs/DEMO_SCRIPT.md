@@ -108,21 +108,23 @@ nút nghe bằng giọng nói. Bản nháp đã tự lưu — người dân khô
 
 ## 4. (1:55 – 2:40) Cán bộ duyệt hồ sơ + mô phỏng thay đổi nghị định — *tiêu chí: chính xác + kiến trúc động*
 
-**Thao tác:** chuyển sang **Tab B (`/admin`)** → dán `ADMIN_TOKEN` → **"Tải dữ liệu"**.
+**Thao tác:** chuyển sang **Tab B (`/manager/login`)** → đăng nhập tài khoản manager
+(seed: `quanly` / `ManagerDemo123!`) → vào dashboard.
 
 **Mục đầu tiên: "Hồ sơ công dân chờ xét duyệt"** — hồ sơ vừa nộp nằm đó với badge
 **CHỜ DUYỆT**, xem lại từng trường đã khai → bấm **"✅ Phê duyệt hồ sơ"**.
-> "Cán bộ thấy đúng dữ liệu người dân khai, có thể **phê duyệt** hoặc **trả lại kèm lý do**
-> — nếu trả lại, người dân thấy ngay lý do trên trang trạng thái và sửa để nộp lại.
-> Hệ thống cũng KHÔNG cho phê duyệt hồ sơ còn lỗi theo quy định."
+> "Manager (cán bộ một cửa) thấy đúng dữ liệu người dân khai, có quyền **duyệt đơn** —
+> phê duyệt hoặc **trả lại kèm lý do**. Nếu trả lại, người dân thấy ngay lý do trên
+> trang trạng thái và sửa để nộp lại. Hệ thống cũng KHÔNG cho phê duyệt hồ sơ còn lỗi
+> theo quy định."
 
 **Quay lại Tab A** → bấm **"Cập nhật trạng thái"** → thẻ xanh **"✅ Hồ sơ đã được phê duyệt"**
 kèm tên cán bộ + thời điểm duyệt.
 > "Vòng đời khép kín: khai — bắt lỗi — nộp — duyệt — trả kết quả, tất cả trong một luồng."
 
-**Tiếp tục ở Tab B — mục "Yêu cầu Thay đổi quy định"** → chỉ vào **bảng diff**:
+**Tiếp tục Tab C (`/admin`)** — đăng nhập admin → mục **"Yêu cầu Thay đổi quy định"** → chỉ vào **bảng diff**:
 > "Khi quy định thay đổi, hệ thống KHÔNG sửa đè bản cũ mà tạo phiên bản mới, và
-> cán bộ phải phê duyệt — AI không tự ý thay đổi nội dung pháp lý.
+> **admin** phải phê duyệt — AI không tự ý thay đổi nội dung pháp lý.
 > Đề xuất v2.0: thêm *nơi thường trú*, *nơi tạm trú*, *số điện thoại*; bỏ *nơi cư trú*."
 
 → Bấm **"Phê duyệt & kích hoạt"** → báo thành công. **Quay lại Tab A**, mở lại form kết hôn

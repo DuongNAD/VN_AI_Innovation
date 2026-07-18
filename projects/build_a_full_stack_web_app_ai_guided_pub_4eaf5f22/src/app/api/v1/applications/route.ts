@@ -6,6 +6,11 @@ import { requireSessionToken } from '@/lib/auth';
 import { getProvider } from '@/lib/data-provider';
 import { sanitizeFormData } from '@/lib/rule-engine';
 import { buildIdempotencyKey, withIdempotency } from '@/lib/idempotency';
+import {
+  inferDocumentType,
+  parseDocumentTypeInput,
+  type DocumentTypeCode,
+} from '@/lib/document-types';
 
 export const POST = handleRoute(async (req: Request) => {
   enforceRateLimit('applications', req);
@@ -32,6 +37,16 @@ export const POST = handleRoute(async (req: Request) => {
   const active = await provider.getActiveFormVersion(session.procedureCode);
   if (!active) {
     throw new AppError(404, 'FORM_NOT_FOUND', 'Không tìm thấy biểu mẫu hoạt động cho thủ tục này.');
+  }
+
+  // Loại đơn: client chọn (dropdown) hoặc suy ra từ mã thủ tục của phiên chat.
+  let documentType: DocumentTypeCode = inferDocumentType(session.procedureCode);
+  if (body.documentType !== undefined && body.documentType !== null && body.documentType !== '') {
+    const parsed = parseDocumentTypeInput(body.documentType);
+    if (!parsed) {
+      throw new AppError(400, 'INVALID_INPUT', 'Loại đơn không hợp lệ.', { field: 'documentType' });
+    }
+    documentType = parsed;
   }
 
   const answers = (session.answersJson && typeof session.answersJson === 'object' && !Array.isArray(session.answersJson))
@@ -80,6 +95,7 @@ export const POST = handleRoute(async (req: Request) => {
         sessionId,
         formVersionId: active.id,
         status: 'DRAFT',
+        documentType,
         dataJson: prefill as any,
       },
     });
@@ -90,6 +106,7 @@ export const POST = handleRoute(async (req: Request) => {
         applicationId: app.id,
         formCode: active.formCode,
         formVersion: active.version,
+        documentType: app.documentType,
         status: 'DRAFT',
         data: prefill,
         revision: 0,

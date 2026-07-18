@@ -149,17 +149,30 @@ export async function revokeLoginSessionByToken(token: string | null): Promise<v
 
 export async function getAuthUserFromToken(token: string | null): Promise<AuthUser | null> {
   if (!token) return null;
-  const tokenHash = hashToken(token);
-  const session = await prisma.loginSession.findUnique({
-    where: { tokenHash },
-    include: { user: true },
-  });
-  if (!session) return null;
-  if (session.expiresAt.getTime() < Date.now()) {
-    await prisma.loginSession.deleteMany({ where: { id: session.id } });
+  const { isDbConnectivityError, withDbRetry } = await import('./db');
+  try {
+    return await withDbRetry(async () => {
+      const tokenHash = hashToken(token);
+      const session = await prisma.loginSession.findUnique({
+        where: { tokenHash },
+        include: { user: true },
+      });
+      if (!session) return null;
+      if (session.expiresAt.getTime() < Date.now()) {
+        await prisma.loginSession.deleteMany({ where: { id: session.id } }).catch(() => undefined);
+        return null;
+      }
+      return publicUser(session.user);
+    }, { retries: 3, delayMs: 350, label: 'getAuthUserFromToken' });
+  } catch (err) {
+    // Propagate connectivity errors so AuthGate can keep the cookie/session
+    // instead of bouncing the user to login.
+    if (isDbConnectivityError(err)) {
+      throw err;
+    }
+    console.error('[auth] getAuthUserFromToken failed:', err);
     return null;
   }
-  return publicUser(session.user);
 }
 
 export async function getAuthUserFromRequest(req: Request): Promise<AuthUser | null> {
@@ -168,11 +181,22 @@ export async function getAuthUserFromRequest(req: Request): Promise<AuthUser | n
 
 /**
  * Server Component helper — reads the login cookie via next/headers.
+ * Soft-fails to null on DB connectivity issues (optional chrome such as chat).
+ * AuthGate uses getAuthUserFromToken directly so it can show a reconnect UI.
  */
 export async function getAuthUserFromCookies(): Promise<AuthUser | null> {
   const jar = await cookies();
   const token = jar.get(LOGIN_COOKIE)?.value ?? null;
-  return getAuthUserFromToken(token);
+  try {
+    return await getAuthUserFromToken(token);
+  } catch (err) {
+    const { isDbConnectivityError } = await import('./db');
+    if (isDbConnectivityError(err)) {
+      console.error('[auth] getAuthUserFromCookies: database temporarily unavailable');
+      return null;
+    }
+    throw err;
+  }
 }
 
 export async function requireAuthUser(

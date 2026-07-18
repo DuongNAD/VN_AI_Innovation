@@ -42,7 +42,7 @@ function portalTheme(homeHref: string): PortalTheme {
   if (homeHref === '/manager') {
     return {
       title: 'Cổng quản lý',
-      caption: 'Theo dõi & xét duyệt',
+      caption: 'Duyệt đơn & theo dõi',
       badge: 'border-violet-200 bg-violet-50 text-violet-700',
       avatar: 'from-violet-500 to-indigo-600 shadow-violet-500/25',
       panel: 'from-violet-50 via-white to-indigo-50',

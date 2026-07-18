@@ -4,6 +4,13 @@ import { AppError, jsonOk, handleRoute } from '@/lib/errors';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { sanitizeFormData, runRules } from '@/lib/rule-engine';
 import { loadOwnedApplication, EDITABLE_STATUSES } from '@/lib/application-access';
+import { readJsonBody } from '@/lib/http';
+import {
+  getDocumentTypeMeta,
+  inferDocumentType,
+  parseDocumentTypeInput,
+  type DocumentTypeCode,
+} from '@/lib/document-types';
 
 /**
  * Citizen hands the application over to the receiving agency. The rule engine
@@ -21,6 +28,37 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
       throw new AppError(409, 'ALREADY_SUBMITTED', 'Hồ sơ đã được nộp và đang chờ xét duyệt.');
     }
     throw new AppError(409, 'ALREADY_PROCESSED', 'Hồ sơ đã được cán bộ xử lý.');
+  }
+
+  // Optional JSON body: { documentType } — required classification for the queue.
+  let body: Record<string, unknown> = {};
+  try {
+    const raw = await readJsonBody(req);
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      body = raw as Record<string, unknown>;
+    }
+  } catch {
+    body = {};
+  }
+
+  let documentType: DocumentTypeCode =
+    (application.documentType && parseDocumentTypeInput(application.documentType)) ||
+    inferDocumentType(pinned.formCode);
+
+  if (body.documentType !== undefined && body.documentType !== null && body.documentType !== '') {
+    const parsed = parseDocumentTypeInput(body.documentType);
+    if (!parsed) {
+      throw new AppError(400, 'INVALID_INPUT', 'Vui lòng chọn loại đơn hợp lệ trước khi nộp.', {
+        field: 'documentType',
+      });
+    }
+    documentType = parsed;
+  }
+
+  if (!documentType) {
+    throw new AppError(400, 'INVALID_INPUT', 'Vui lòng chọn loại đơn trước khi nộp hồ sơ.', {
+      field: 'documentType',
+    });
   }
 
   const storedData =
@@ -56,6 +94,7 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
     },
     data: {
       status: 'SUBMITTED',
+      documentType,
       submittedAt: now,
       reviewedAt: null,
       reviewedBy: null,
@@ -67,10 +106,13 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
     throw new AppError(409, 'CONCURRENT_UPDATE', 'Hồ sơ vừa thay đổi ở nơi khác. Vui lòng tải lại và thử lại.');
   }
 
+  const meta = getDocumentTypeMeta(documentType);
   return jsonOk({
     applicationId: application.id,
     formCode: pinned.formCode,
     formVersion: pinned.version,
+    documentType,
+    documentTypeLabel: meta.label,
     status: 'SUBMITTED',
     submittedAt: now,
   });

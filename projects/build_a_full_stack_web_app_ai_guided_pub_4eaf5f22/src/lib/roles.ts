@@ -1,8 +1,9 @@
 /**
  * Application role model and route prefixes.
  * - user: citizen self-service flow (public + session token)
- * - manager: read-only staff console (overview + change requests)
- * - admin: full staff console including approve/activate
+ * - manager: staff console — xét duyệt hồ sơ công dân (APPROVE/RETURN),
+ *            xem overview + change requests (không phê duyệt phiên bản biểu mẫu)
+ * - admin: full staff console including approve/activate form versions + settings
  */
 
 export type AppRole = 'user' | 'manager' | 'admin';
@@ -39,13 +40,43 @@ export const ROUTES = {
   architecture: '/architecture',
 } as const;
 
-/** Staff permission matrix (enforced on API; UI only mirrors it). */
+/**
+ * Staff permission matrix (enforced on API; UI only mirrors it).
+ *
+ * - reviewApplications: manager + admin — day-to-day officer work (duyệt đơn)
+ * - approveChangeRequests / manageSettings: admin only
+ */
 export const STAFF_PERMISSIONS = {
   viewOverview: ['manager', 'admin'] as const satisfies readonly StaffRole[],
   viewChangeRequests: ['manager', 'admin'] as const satisfies readonly StaffRole[],
+  /** Xét duyệt hồ sơ công dân (APPROVE / RETURN). */
+  reviewApplications: ['manager', 'admin'] as const satisfies readonly StaffRole[],
+  /** Phê duyệt & kích hoạt phiên bản biểu mẫu (change request). */
   approveChangeRequests: ['admin'] as const satisfies readonly StaffRole[],
+  manageSettings: ['admin'] as const satisfies readonly StaffRole[],
 } as const;
 
+export function roleHasPermission(
+  role: StaffRole,
+  permission: keyof typeof STAFF_PERMISSIONS
+): boolean {
+  return (STAFF_PERMISSIONS[permission] as readonly StaffRole[]).includes(role);
+}
+
+/** Manager + admin may approve/return citizen applications. */
+export function canReviewApplications(role: StaffRole): boolean {
+  return roleHasPermission(role, 'reviewApplications');
+}
+
+/** Only admin may approve form-version change requests. */
+export function canApproveChangeRequests(role: StaffRole): boolean {
+  return roleHasPermission(role, 'approveChangeRequests');
+}
+
+/**
+ * @deprecated Prefer canApproveChangeRequests — name was ambiguous with
+ * citizen-application review. Kept so older call sites keep compiling.
+ */
 export function canApprove(role: StaffRole): boolean {
-  return role === 'admin';
+  return canApproveChangeRequests(role);
 }

@@ -28,12 +28,13 @@ Thực hiện theo kịch bản đường dẫn trải nghiệm mẫu dưới đ
 7. **Kiểm tra và nộp hồ sơ (`/result`):**
    - Khi đã sửa hết lỗi, hệ thống mới cho chuyển sang trang kết quả: thẻ xanh **"Hồ sơ hợp lệ"** cùng **tờ khai điền sẵn theo đúng thể thức văn bản hành chính** (quốc hiệu, bảng bên nam/bên nữ, chữ ký) và nút **"Xuất PDF"** để in/tải tờ khai khổ A4.
    - Bấm **"Nộp hồ sơ để cán bộ duyệt"** — hồ sơ chuyển trạng thái **"Đã nộp — chờ cán bộ xét duyệt"** và bị khóa chỉnh sửa trong thời gian chờ.
-8. **Cán bộ xét duyệt hồ sơ (`/admin`):**
+8. **Cán bộ (manager) xét duyệt hồ sơ (`/manager`):**
+   - Đăng nhập cổng **manager** (tài khoản seed ví dụ `quanly` / `ManagerDemo123!`).
    - Mục **"Hồ sơ công dân chờ xét duyệt"** hiển thị hồ sơ vừa nộp với đầy đủ dữ liệu đã khai theo nhãn trường.
-   - Cán bộ **"Phê duyệt hồ sơ"** hoặc **"Trả lại để bổ sung"** (bắt buộc ghi lý do). Hệ thống không cho phê duyệt hồ sơ còn lỗi theo quy định.
+   - Manager **"Phê duyệt hồ sơ"** hoặc **"Trả lại để bổ sung"** (bắt buộc ghi lý do). Hệ thống không cho phê duyệt hồ sơ còn lỗi theo quy định.
    - Người dân bấm **"Cập nhật trạng thái"** trên trang kết quả để nhận kết quả ngay: thẻ xanh **"Hồ sơ đã được phê duyệt"** (kèm tên cán bộ, thời điểm) hoặc thẻ vàng kèm **lý do trả lại** — sửa xong nộp lại được ngay.
-9. **Phê duyệt thay đổi cấu hình (`/admin`):** 
-   - Đăng nhập bằng mã `ADMIN_TOKEN` bạn đã tự cấu hình trong tệp `.env` hoặc trên Render dashboard (không bao giờ sử dụng hoặc công khai giá trị mặc định của nhà phát triển).
+9. **Admin phê duyệt thay đổi cấu hình (`/admin`):** 
+   - Đăng nhập cổng **admin** (hoặc mã `ADMIN_TOKEN` trong `.env` / Render — không công khai giá trị mặc định).
    - Tìm yêu cầu thay đổi (Change Request) đang chờ xử lý và nhấn phê duyệt để kích hoạt biểu mẫu phiên bản `v2.0` ngay lập tức.
 10. **Thông báo cập nhật:** 
    - Quay lại biểu mẫu đang điền của người dùng. Hệ thống hiển thị banner thông báo biểu mẫu đã có phiên bản cập nhật mới (`v2.0`).

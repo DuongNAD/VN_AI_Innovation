@@ -202,9 +202,20 @@ export default function LoginForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        recordFailedAttempt(
-          typeof data?.error?.message === 'string' ? data.error.message : GENERIC_AUTH_ERROR
-        );
+        const serverMsg =
+          typeof data?.error?.message === 'string' ? data.error.message : GENERIC_AUTH_ERROR;
+        const code = typeof data?.error?.code === 'string' ? data.error.code : '';
+        // Infrastructure failures (DB down, 5xx) must not burn lockout attempts.
+        if (
+          res.status >= 500 ||
+          code === 'SERVICE_UNAVAILABLE' ||
+          code === 'INTERNAL_ERROR' ||
+          code === 'RATE_LIMITED'
+        ) {
+          setError(serverMsg);
+          return;
+        }
+        recordFailedAttempt(serverMsg);
         return;
       }
       // Defense in depth: never navigate if server returned a mismatched role.

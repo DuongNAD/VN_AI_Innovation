@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/db';
+import { isDbConnectivityError, prisma, withDbRetry } from '@/lib/db';
 import { AppError, handleRoute, jsonOk } from '@/lib/errors';
 import { readJsonBody, requireString } from '@/lib/http';
 import { createLoginSession, publicUser } from '@/lib/login-auth';
@@ -28,11 +28,27 @@ export const POST = handleRoute(async (req: Request) => {
     throw new AppError(400, 'INVALID_INPUT', 'Cổng đăng nhập không hợp lệ.', { field: 'portal' });
   }
 
-  const user = await prisma.user.findFirst({
-    where: {
-      OR: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
-    },
-  });
+  let user;
+  try {
+    user = await withDbRetry(
+      () =>
+        prisma.user.findFirst({
+          where: {
+            OR: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
+          },
+        }),
+      { retries: 3, delayMs: 400, label: 'auth-login-findUser' }
+    );
+  } catch (err) {
+    console.error('[auth/login] database unreachable:', err);
+    throw new AppError(
+      503,
+      'SERVICE_UNAVAILABLE',
+      isDbConnectivityError(err)
+        ? 'Không kết nối được cơ sở dữ liệu. Hãy chạy Docker (postgres) rồi thử lại: docker compose up -d db'
+        : 'Không kết nối được cơ sở dữ liệu. Vui lòng thử lại sau.'
+    );
+  }
 
   if (!user || !user.passwordHash) {
     rateLimitConsume('auth-login-fail', req);
@@ -54,7 +70,21 @@ export const POST = handleRoute(async (req: Request) => {
     throw new AppError(401, 'UNAUTHORIZED', GENERIC_AUTH_ERROR);
   }
 
-  const session = await createLoginSession(user.id, req);
+  let session;
+  try {
+    session = await withDbRetry(() => createLoginSession(user.id, req), {
+      retries: 3,
+      delayMs: 400,
+      label: 'auth-login-session',
+    });
+  } catch (err) {
+    console.error('[auth/login] createLoginSession failed:', err);
+    throw new AppError(
+      503,
+      'SERVICE_UNAVAILABLE',
+      'Không tạo được phiên đăng nhập (lỗi cơ sở dữ liệu). Kiểm tra PostgreSQL đang chạy: docker compose up -d db'
+    );
+  }
   const pub = publicUser(user);
 
   return jsonOk(

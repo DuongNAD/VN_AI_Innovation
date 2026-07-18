@@ -11,6 +11,8 @@ import SubmissionPanel from '@/components/SubmissionPanel';
 interface ApplicationData {
   formCode: string;
   formVersion: string;
+  documentType?: string | null;
+  documentTypeLabel?: string | null;
   status?: string;
   submittedAt?: string | Date | null;
   reviewedAt?: string | Date | null;
@@ -175,6 +177,8 @@ function ResultPageContent() {
             token={sessionToken}
             status={appStatus}
             valid={validationResult.valid}
+            formCode={appData.formCode}
+            documentType={appData.documentType}
             submittedAt={appData.submittedAt}
             reviewedAt={appData.reviewedAt}
             reviewedBy={appData.reviewedBy}
@@ -205,6 +209,8 @@ function ResultPageContent() {
             token={sessionToken}
             status={appStatus}
             valid={validationResult.valid}
+            formCode={appData.formCode}
+            documentType={appData.documentType}
             submittedAt={appData.submittedAt}
             reviewedAt={appData.reviewedAt}
             reviewedBy={appData.reviewedBy}

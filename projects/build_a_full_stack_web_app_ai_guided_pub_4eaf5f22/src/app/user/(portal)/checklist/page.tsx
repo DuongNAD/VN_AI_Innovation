@@ -3,10 +3,15 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import ChecklistView from '@/components/ChecklistView';
+import DocumentTypeSelect from '@/components/DocumentTypeSelect';
 import SpeechButton from '@/components/SpeechButton';
 import FlowChrome from '@/components/FlowChrome';
 import { randomUUID } from '@/lib/uuid';
 import { buildChecklistSummary } from '@/lib/checklist-summary';
+import {
+  inferDocumentType,
+  type DocumentTypeCode,
+} from '@/lib/document-types';
 
 function ChecklistContent() {
   const searchParams = useSearchParams();
@@ -22,6 +27,7 @@ function ChecklistContent() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  const [documentType, setDocumentType] = useState<DocumentTypeCode>('OTHER');
 
   useEffect(() => {
     if (!sessionId) {
@@ -73,6 +79,12 @@ function ChecklistContent() {
         }
         const data = await res.json();
         setGuidance(data);
+        const procedureCode =
+          (typeof data?.procedureCode === 'string' && data.procedureCode) ||
+          (typeof data?.procedure?.code === 'string' && data.procedure.code) ||
+          (typeof data?.formCode === 'string' && data.formCode) ||
+          '';
+        setDocumentType(inferDocumentType(procedureCode));
       } catch (err: any) {
         setError(err.message || 'Đã xảy ra lỗi khi kết nối hệ thống.');
       } finally {
@@ -85,6 +97,10 @@ function ChecklistContent() {
 
   const handleCreateApplication = async () => {
     if (submitting || !sessionId || !token) return;
+    if (!documentType) {
+      setSubmitError('Vui lòng chọn loại đơn trước khi điền biểu mẫu.');
+      return;
+    }
     try {
       setSubmitting(true);
       setSubmitError(null);
@@ -97,6 +113,7 @@ function ChecklistContent() {
         body: JSON.stringify({
           sessionId,
           messageId: randomUUID(),
+          documentType,
         }),
       });
 
@@ -227,8 +244,19 @@ function ChecklistContent() {
                     Sẵn sàng tiến hành nộp hồ sơ?
                   </h3>
                   <p className="text-sm leading-relaxed text-slate-600">
-                    Nhấn nút bên dưới để chuyển sang bước điền tờ khai trực tuyến. Các thông tin bạn đã trả lời trước đó sẽ tự động được điền trước.
+                    Chọn loại đơn, rồi chuyển sang bước điền tờ khai trực tuyến. Các thông tin bạn đã trả lời trước đó sẽ tự động được điền trước.
                   </p>
+                </div>
+
+                <div className="mx-auto max-w-2xl rounded-xl border border-slate-100 bg-slate-50 p-4 text-left">
+                  <DocumentTypeSelect
+                    value={documentType}
+                    onChange={setDocumentType}
+                    disabled={submitting}
+                    variant="cards"
+                    label="Bước 1 — Chọn loại đơn"
+                    helpText="Phân loại giúp cán bộ một cửa lọc và xử lý hồ sơ đúng nhóm thủ tục."
+                  />
                 </div>
 
                 {submitError && (
@@ -242,7 +270,7 @@ function ChecklistContent() {
 
                 <button
                   onClick={handleCreateApplication}
-                  disabled={submitting}
+                  disabled={submitting || !documentType}
                   className="btn min-w-[220px] bg-blue-600 px-10 py-4 text-lg font-bold text-white shadow-lg shadow-blue-200 transition-all duration-200 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-75"
                 >
                   {submitting ? (

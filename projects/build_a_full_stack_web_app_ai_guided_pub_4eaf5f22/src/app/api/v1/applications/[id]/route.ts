@@ -6,6 +6,11 @@ import { compareVersions } from '@/lib/form-migration';
 import { sanitizeFormData } from '@/lib/rule-engine';
 import { readJsonBody } from '@/lib/http';
 import { loadOwnedApplication, EDITABLE_STATUSES } from '@/lib/application-access';
+import {
+  getDocumentTypeMeta,
+  inferDocumentType,
+  parseDocumentTypeInput,
+} from '@/lib/document-types';
 
 export const GET = handleRoute(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   enforceRateLimit('applications-id', req);
@@ -25,10 +30,18 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
   const newer = await provider.getActiveFormVersion(formCode);
   const updateAvailable = !!newer && compareVersions(newer.version, pinned.version) > 0;
 
+  const documentType =
+    application.documentType && application.documentType !== 'OTHER'
+      ? application.documentType
+      : inferDocumentType(formCode);
+  const documentTypeMeta = getDocumentTypeMeta(documentType);
+
   const responseBody: any = {
     applicationId: application.id,
     formCode,
     formVersion: pinned.version,
+    documentType,
+    documentTypeLabel: documentTypeMeta.label,
     status: application.status,
     data: application.dataJson,
     revision: application.revision,
@@ -100,6 +113,15 @@ export const PUT = handleRoute(async (req: Request, { params }: { params: Promis
     });
   }
 
+  let documentTypeUpdate: string | undefined;
+  if (body.documentType !== undefined && body.documentType !== null) {
+    const parsed = parseDocumentTypeInput(body.documentType);
+    if (!parsed) {
+      throw new AppError(400, 'INVALID_INPUT', 'Loại đơn không hợp lệ.', { field: 'documentType' });
+    }
+    documentTypeUpdate = parsed;
+  }
+
   const sanitizeResult = sanitizeFormData(pinned.fields, data);
   if (!sanitizeResult.ok) {
     throw new AppError(400, 'INVALID_FORM_DATA', 'Dữ liệu biểu mẫu không hợp lệ.', {
@@ -122,6 +144,7 @@ export const PUT = handleRoute(async (req: Request, { params }: { params: Promis
     data: {
       dataJson: sanitized as any,
       revision: revision + 1,
+      ...(documentTypeUpdate ? { documentType: documentTypeUpdate } : {}),
     },
   });
 
@@ -133,10 +156,16 @@ export const PUT = handleRoute(async (req: Request, { params }: { params: Promis
     );
   }
 
+  const nextDocumentType =
+    documentTypeUpdate ??
+    application.documentType ??
+    inferDocumentType(formCode);
+
   return jsonOk({
     applicationId: application.id,
     formCode,
     formVersion: pinned.version,
+    documentType: nextDocumentType,
     status: application.status,
     data: sanitized,
     revision: revision + 1,

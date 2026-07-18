@@ -1,8 +1,22 @@
 'use client';
 
-import { useEffect, useState, type ReactElement } from 'react';
-import { visibleFieldsFor } from '@/components/DynamicForm';
+import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import Link from 'next/link';
+import { DocumentTypeBadge } from '@/components/DocumentTypeSelect';
 import type { FieldDef } from '@/lib/schema-guards';
+import {
+  DOCUMENT_TYPE_CODES,
+  DOCUMENT_TYPES,
+  getDocumentTypeMeta,
+  inferDocumentType,
+  isDocumentTypeCode,
+  type DocumentTypeCode,
+} from '@/lib/document-types';
+import {
+  canApproveChangeRequests,
+  canReviewApplications,
+  type StaffRole,
+} from '@/lib/roles';
 import { DEFAULT_TTS_MODE, isTtsMode, type TtsMode } from '@/lib/tts-mode';
 
 interface FormVersionOverview {
@@ -94,8 +108,29 @@ interface CitizenApplication {
   formCode: string;
   formVersion: string;
   procedureName: string;
+  documentType: DocumentTypeCode;
+  documentTypeLabel: string;
+  documentTypeIcon: string;
   data: Record<string, unknown>;
   fields: FieldDef[];
+}
+
+interface DocumentTypeStat {
+  code: DocumentTypeCode;
+  label: string;
+  icon: string;
+  total: number;
+  submitted: number;
+  approved: number;
+  returned: number;
+}
+
+interface ApplicationQueueStats {
+  total: number;
+  submitted: number;
+  approved: number;
+  returned: number;
+  byType: DocumentTypeStat[];
 }
 
 // Module-private pure helpers
@@ -408,6 +443,76 @@ function parseChangeRequests(body: unknown): ChangeRequest[] | null {
  * schema through loosely — it comes from our own provider and is only used
  * to label values for display.
  */
+function parseApplicationQueueStats(body: unknown): ApplicationQueueStats | null {
+  if (!body || typeof body !== 'object') {
+    return null;
+  }
+  const obj = body as Record<string, unknown>;
+  if (!obj.stats || typeof obj.stats !== 'object') {
+    // Older payload without stats — synthesize empty.
+    return {
+      total: 0,
+      submitted: 0,
+      approved: 0,
+      returned: 0,
+      byType: DOCUMENT_TYPE_CODES.map((code) => {
+        const meta = getDocumentTypeMeta(code);
+        return { code, label: meta.label, icon: meta.icon, total: 0, submitted: 0, approved: 0, returned: 0 };
+      }),
+    };
+  }
+  const s = obj.stats as Record<string, unknown>;
+  if (
+    !isFiniteNumber(s.total) ||
+    !isFiniteNumber(s.submitted) ||
+    !isFiniteNumber(s.approved) ||
+    !isFiniteNumber(s.returned) ||
+    !Array.isArray(s.byType)
+  ) {
+    return null;
+  }
+  const byType: DocumentTypeStat[] = [];
+  for (const row of s.byType) {
+    if (!row || typeof row !== 'object') continue;
+    const r = row as Record<string, unknown>;
+    if (!isDocumentTypeCode(r.code)) continue;
+    if (
+      !isBoundedString(r.label, 200) ||
+      !isBoundedString(r.icon, 16) ||
+      !isFiniteNumber(r.total) ||
+      !isFiniteNumber(r.submitted) ||
+      !isFiniteNumber(r.approved) ||
+      !isFiniteNumber(r.returned)
+    ) {
+      continue;
+    }
+    byType.push({
+      code: r.code,
+      label: r.label,
+      icon: r.icon,
+      total: r.total,
+      submitted: r.submitted,
+      approved: r.approved,
+      returned: r.returned,
+    });
+  }
+  // Ensure every catalog code appears (stable UI order).
+  const map = new Map(byType.map((x) => [x.code, x]));
+  const ordered = DOCUMENT_TYPE_CODES.map((code) => {
+    const existing = map.get(code);
+    if (existing) return existing;
+    const meta = getDocumentTypeMeta(code);
+    return { code, label: meta.label, icon: meta.icon, total: 0, submitted: 0, approved: 0, returned: 0 };
+  });
+  return {
+    total: s.total,
+    submitted: s.submitted,
+    approved: s.approved,
+    returned: s.returned,
+    byType: ordered,
+  };
+}
+
 function parseCitizenApplications(body: unknown): CitizenApplication[] | null {
   if (!body || typeof body !== 'object') {
     return null;
@@ -443,6 +548,10 @@ function parseCitizenApplications(body: unknown): CitizenApplication[] | null {
     ) {
       continue;
     }
+    const documentType = isDocumentTypeCode(a.documentType)
+      ? a.documentType
+      : inferDocumentType(a.formCode);
+    const meta = getDocumentTypeMeta(documentType);
     const data = a.data && typeof a.data === 'object' && !Array.isArray(a.data)
       ? (a.data as Record<string, unknown>)
       : {};
@@ -464,35 +573,14 @@ function parseCitizenApplications(body: unknown): CitizenApplication[] | null {
       formCode: a.formCode,
       formVersion: a.formVersion,
       procedureName: a.procedureName,
+      documentType,
+      documentTypeLabel: isBoundedString(a.documentTypeLabel, 200) ? a.documentTypeLabel : meta.label,
+      documentTypeIcon: isBoundedString(a.documentTypeIcon, 16) ? a.documentTypeIcon : meta.icon,
       data,
       fields,
     });
   }
   return parsed;
-}
-
-/** Human-readable value for the officer's review table (option labels, Có/Không, dd/mm/yyyy). */
-function fmtFieldValue(field: FieldDef, value: unknown): string {
-  if (value === undefined || value === null || value === '') {
-    return '(trống)';
-  }
-  if (field.options && field.options.length > 0) {
-    const match = field.options.find((o) => o.value === value || String(o.value) === String(value));
-    if (match) {
-      return match.label;
-    }
-  }
-  if (typeof value === 'boolean') {
-    return value ? 'Có' : 'Không';
-  }
-  if (field.type === 'date' && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const [y, m, d] = value.split('-');
-    return `${d}/${m}/${y}`;
-  }
-  if (typeof value === 'object') {
-    return JSON.stringify(value);
-  }
-  return String(value);
 }
 
 function errorMessageFor(status: number, code: string | null): string {
@@ -537,11 +625,11 @@ const getErrorFromResponse = async (res: Response): Promise<{ status: number; co
   return { status: res.status, code };
 };
 
-export type StaffConsoleRole = 'manager' | 'admin';
+export type StaffConsoleRole = StaffRole;
 
 export interface StaffConsoleProps {
   /**
-   * manager — xem overview + change requests, xét duyệt hồ sơ công dân
+   * manager — xét duyệt hồ sơ công dân (duyệt đơn), xem overview + change requests
    *           (không phê duyệt phiên bản biểu mẫu, không đổi cài đặt)
    * admin — đầy đủ quyền, gồm phê duyệt & kích hoạt phiên bản
    */
@@ -549,8 +637,12 @@ export interface StaffConsoleProps {
 }
 
 export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): ReactElement {
-  const canApproveActions = role === 'admin';
+  // Duyệt đơn (hồ sơ công dân): manager + admin
+  const canReviewApps = canReviewApplications(role);
+  // Phê duyệt change request / cài đặt TTS: chỉ admin
+  const canApproveActions = canApproveChangeRequests(role);
   const roleLabel = role === 'admin' ? 'Quản trị viên' : 'Người quản lý';
+  const portalHome = role === 'admin' ? '/admin' : '/manager';
 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -562,8 +654,10 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
   const [approvalResults, setApprovalResults] = useState<Record<string, ApprovalResult>>({});
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [citizenApps, setCitizenApps] = useState<CitizenApplication[]>([]);
-  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
-  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [appStats, setAppStats] = useState<ApplicationQueueStats | null>(null);
+  const [docTypeFilter, setDocTypeFilter] = useState<DocumentTypeCode | 'ALL'>('ALL');
+  // Default: show pending queue first (CHỜ DUYỆT)
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'SUBMITTED' | 'APPROVED' | 'RETURNED'>('SUBMITTED');
   const [ttsMode, setTtsMode] = useState<TtsMode>(DEFAULT_TTS_MODE);
   const [savingTtsMode, setSavingTtsMode] = useState<boolean>(false);
 
@@ -577,6 +671,11 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
     try {
       // Citizen queue is staff-wide (manager + admin) — only form-version
       // change requests and settings stay admin-only.
+      const appsQuery = new URLSearchParams();
+      // Always load full queue for client-side filter + stable stats; server
+      // still returns stats for the whole officer queue.
+      appsQuery.set('documentType', 'ALL');
+      appsQuery.set('status', 'ALL');
       const [overviewRes, crRes, appsRes] = await Promise.all([
         fetch('/api/v1/admin/overview', {
           credentials: 'include',
@@ -584,7 +683,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
         fetch('/api/v1/admin/change-requests', {
           credentials: 'include',
         }),
-        fetch('/api/v1/admin/applications', {
+        fetch(`/api/v1/admin/applications?${appsQuery.toString()}`, {
           credentials: 'include',
         }),
       ]);
@@ -616,14 +715,16 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
       const parsedOverview = parseOverview(rawOverview);
       const parsedCRs = parseChangeRequests(rawCRs);
       const parsedApps = parseCitizenApplications(rawApps);
+      const parsedStats = parseApplicationQueueStats(rawApps);
 
-      if (parsedOverview === null || parsedCRs === null || parsedApps === null) {
+      if (parsedOverview === null || parsedCRs === null || parsedApps === null || parsedStats === null) {
         throw new Error(errorMessageFor(500, 'PARSER_FAILURE'));
       }
 
       setOverview(parsedOverview);
       setChangeRequests(parsedCRs);
       setCitizenApps(parsedApps);
+      setAppStats(parsedStats);
       setTtsMode(parsedOverview.ttsMode);
 
       if (rawOverview && typeof rawOverview === 'object') {
@@ -638,7 +739,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
         setSuccess(
           role === 'admin'
             ? 'Tải dữ liệu quản trị thành công.'
-            : 'Tải dữ liệu người quản lý thành công.'
+            : 'Tải dữ liệu manager thành công — có thể duyệt / trả lại hồ sơ công dân.'
         );
       }
     } catch (err: any) {
@@ -683,53 +784,42 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
     }
   };
 
-  const handleReviewApplication = async (id: string, decision: 'APPROVE' | 'RETURN') => {
-    if (!isSafeId(id)) {
-      setError('Mã hồ sơ không hợp lệ.');
-      return;
-    }
-    const note = (reviewNotes[id] ?? '').trim();
-    if (decision === 'RETURN' && note === '') {
-      setError(errorMessageFor(400, 'NOTE_REQUIRED'));
-      return;
-    }
-
-    setReviewingId(id);
-    setError(null);
-    setSuccess(null);
-    try {
-      const res = await fetch(`/api/v1/admin/applications/${encodeURIComponent(id)}/review`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ decision, note: note === '' ? undefined : note }),
-      });
-
-      if (!res.ok) {
-        const { status, code } = await getErrorFromResponse(res);
-        throw new Error(errorMessageFor(status, code));
-      }
-
-      setSuccess(
-        decision === 'APPROVE'
-          ? 'Đã phê duyệt hồ sơ. Người dân sẽ thấy kết quả ngay trên trang trạng thái.'
-          : 'Đã trả lại hồ sơ kèm lý do để người dân bổ sung.'
-      );
-      setReviewNotes((prev) => ({ ...prev, [id]: '' }));
-      await handleFetchData({ silent: true });
-    } catch (err: any) {
-      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
-    } finally {
-      setReviewingId(null);
-    }
-  };
-
   useEffect(() => {
     void handleFetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
+
+  // Flash toast after returning from detail approve/return (?flash=approved|returned)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const flash = url.searchParams.get('flash');
+    if (flash === 'approved') {
+      setSuccess('Đã phê duyệt hồ sơ thành công');
+      setStatusFilter('SUBMITTED');
+    } else if (flash === 'returned') {
+      setSuccess('Đã trả lại hồ sơ để người dân bổ sung');
+      setStatusFilter('SUBMITTED');
+    } else {
+      return;
+    }
+    url.searchParams.delete('flash');
+    window.history.replaceState({}, '', url.pathname + (url.search || ''));
+    void handleFetchData({ silent: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role]);
+
+  const filteredCitizenApps = useMemo(() => {
+    return citizenApps.filter((app) => {
+      if (docTypeFilter !== 'ALL' && app.documentType !== docTypeFilter) {
+        return false;
+      }
+      if (statusFilter !== 'ALL' && app.status !== statusFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [citizenApps, docTypeFilter, statusFilter]);
 
   const handleApprove = async (id: string) => {
     if (!isSafeId(id)) {
@@ -851,8 +941,8 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
             </h2>
             <p className="text-sm text-slate-300">
               {canApproveActions
-                ? 'Phiên đăng nhập cookie — xem dữ liệu hệ thống, quan trắc AI và phê duyệt thay đổi biểu mẫu.'
-                : 'Phiên đăng nhập cookie — xét duyệt hồ sơ công dân, xem danh mục thủ tục, quan trắc AI và yêu cầu thay đổi.'}
+                ? 'Phiên đăng nhập cookie — duyệt hồ sơ công dân, quan trắc AI và phê duyệt thay đổi biểu mẫu.'
+                : 'Phiên đăng nhập cookie — duyệt hồ sơ công dân (APPROVE/RETURN), xem danh mục thủ tục, quan trắc AI và yêu cầu thay đổi.'}
             </p>
             <p className="text-xs text-slate-400">
               Vai trò: <span className="font-semibold text-amber-300">{role}</span>
@@ -862,6 +952,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                   · Phiên: <span className="text-slate-200">{actorName}</span>
                 </>
               ) : null}
+              {canReviewApps && ' · được duyệt đơn'}
               {!canApproveActions && ' · không phê duyệt phiên bản biểu mẫu'}
             </p>
           </div>
@@ -1102,132 +1193,226 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
       {overview && (
         <div className="space-y-6">
           <div className="border-b pb-4">
-            <h3 className="text-xl font-bold text-slate-900">Hồ sơ công dân chờ xét duyệt</h3>
+            <h3 className="text-xl font-bold text-slate-900">
+              Hồ sơ công dân chờ xét duyệt
+              {canReviewApps ? (
+                <span className="ml-2 align-middle text-xs font-semibold uppercase tracking-wide text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                  {role === 'manager' ? 'Manager được duyệt đơn' : 'Admin được duyệt đơn'}
+                </span>
+              ) : null}
+            </h3>
             <p className="text-sm text-slate-500">
-              Hồ sơ người dân đã kiểm tra hợp lệ và nộp trực tuyến. Phê duyệt hoặc trả lại kèm lý
-              do — kết quả hiển thị ngay trên trang trạng thái của người dân.
+              Hồ sơ người dân đã kiểm tra hợp lệ và nộp trực tuyến — phân loại theo loại đơn.
+              {canReviewApps
+                ? ' Phê duyệt hoặc trả lại kèm lý do — kết quả hiển thị ngay trên trang trạng thái của người dân.'
+                : ' Chỉ xem — không có quyền quyết định trên hồ sơ.'}
             </p>
           </div>
 
-          {citizenApps.length === 0 ? (
+          {/* Stats by document type */}
+          {appStats && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tổng hồ sơ</p>
+                  <p className="mt-1 text-2xl font-bold text-slate-900">{appStats.total}</p>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Chờ duyệt</p>
+                  <p className="mt-1 text-2xl font-bold text-amber-900">{appStats.submitted}</p>
+                </div>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Đã duyệt</p>
+                  <p className="mt-1 text-2xl font-bold text-emerald-900">{appStats.approved}</p>
+                </div>
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-rose-700">Trả lại</p>
+                  <p className="mt-1 text-2xl font-bold text-rose-900">{appStats.returned}</p>
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {appStats.byType.map((stat) => {
+                  const meta = getDocumentTypeMeta(stat.code);
+                  const maxBar = Math.max(1, ...appStats.byType.map((x) => x.total));
+                  const pct = Math.round((stat.total / maxBar) * 100);
+                  return (
+                    <button
+                      key={stat.code}
+                      type="button"
+                      onClick={() =>
+                        setDocTypeFilter((prev) => (prev === stat.code ? 'ALL' : stat.code))
+                      }
+                      className={
+                        'rounded-xl border p-3 text-left shadow-sm transition ' +
+                        (docTypeFilter === stat.code
+                          ? meta.accentClass + ' ring-2 ring-slate-400'
+                          : 'border-slate-100 bg-white hover:border-slate-300')
+                      }
+                      title={`Lọc ${stat.label}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold">
+                          <span className="mr-1" aria-hidden>
+                            {stat.icon}
+                          </span>
+                          {stat.label}
+                        </span>
+                        <span className="text-lg font-bold">{stat.total}</span>
+                      </div>
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/5">
+                        <div
+                          className="h-full rounded-full bg-slate-700/40"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <p className="mt-1.5 text-[11px] text-slate-500">
+                        Chờ {stat.submitted} · Duyệt {stat.approved} · Trả {stat.returned}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Filter tabs by document type */}
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setDocTypeFilter('ALL')}
+                className={
+                  'rounded-full border px-3 py-1.5 text-xs font-semibold transition ' +
+                  (docTypeFilter === 'ALL'
+                    ? 'border-slate-800 bg-slate-900 text-white'
+                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50')
+                }
+              >
+                Tất cả loại
+                <span className="ml-1 opacity-70">({appStats?.total ?? citizenApps.length})</span>
+              </button>
+              {DOCUMENT_TYPES.map((t) => {
+                const count = appStats?.byType.find((x) => x.code === t.code)?.total ?? 0;
+                return (
+                  <button
+                    key={t.code}
+                    type="button"
+                    onClick={() => setDocTypeFilter(t.code)}
+                    className={
+                      'rounded-full border px-3 py-1.5 text-xs font-semibold transition ' +
+                      (docTypeFilter === t.code
+                        ? t.badgeClass + ' ring-1 ring-offset-1 ring-slate-400'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50')
+                    }
+                  >
+                    {t.icon} {t.label}
+                    <span className="ml-1 opacity-70">({count})</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { key: 'SUBMITTED', label: 'Chờ duyệt' },
+                  { key: 'APPROVED', label: 'Đã duyệt' },
+                  { key: 'RETURNED', label: 'Cần bổ sung' },
+                  { key: 'ALL', label: 'Mọi trạng thái' },
+                ] as const
+              ).map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => setStatusFilter(s.key)}
+                  className={
+                    'rounded-md border px-2.5 py-1 text-xs font-medium ' +
+                    (statusFilter === s.key
+                      ? 'border-blue-600 bg-blue-50 text-blue-900'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50')
+                  }
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filteredCitizenApps.length === 0 ? (
             <div className="card text-center py-12 text-slate-400 border border-dashed border-slate-200">
-              Chưa có hồ sơ nào được nộp.
+              {citizenApps.length === 0
+                ? 'Chưa có hồ sơ nào được nộp.'
+                : statusFilter === 'SUBMITTED'
+                  ? 'Không còn hồ sơ chờ duyệt — chọn bộ lọc khác để xem đã duyệt / cần bổ sung.'
+                  : 'Không có hồ sơ khớp bộ lọc hiện tại.'}
             </div>
           ) : (
-            <div className="space-y-6">
-              {citizenApps.map((app) => {
-                const isPendingReview = app.status === 'SUBMITTED';
-                const reviewFields = visibleFieldsFor(app.fields, app.data).filter((f) => {
-                  const v = app.data[f.id];
-                  return v !== undefined && v !== null && v !== '';
-                });
+            <div className="space-y-3">
+              <p className="text-xs text-slate-500">
+                Nhấn vào một hồ sơ để xem chi tiết và phê duyệt / trả lại.
+              </p>
+              {filteredCitizenApps.map((app) => {
+                const typeMeta = getDocumentTypeMeta(app.documentType);
+                const title =
+                  app.documentTypeLabel || typeMeta.label || app.procedureName;
+                const detailHref = `${portalHome}/applications/${encodeURIComponent(app.id)}`;
+                const statusUi =
+                  app.status === 'SUBMITTED'
+                    ? {
+                        text: 'CHỜ DUYỆT',
+                        className: 'bg-amber-100 text-amber-800 border-amber-200',
+                      }
+                    : app.status === 'APPROVED'
+                      ? {
+                          text: 'ĐÃ DUYỆT',
+                          className: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                        }
+                      : {
+                          text: 'CẦN BỔ SUNG',
+                          className: 'bg-rose-100 text-rose-800 border-rose-200',
+                        };
                 return (
-                  <div key={app.id} className="card border border-slate-100 shadow-sm space-y-4 p-6">
-                    <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-slate-900">{app.procedureName}</span>
+                  <Link
+                    key={app.id}
+                    href={detailHref}
+                    className="card block border border-slate-100 p-4 shadow-sm transition hover:border-sky-300 hover:shadow-md"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-bold text-slate-900">
+                            <span className="mr-1" aria-hidden>
+                              {typeMeta.icon}
+                            </span>
+                            {title}
+                          </span>
+                          <DocumentTypeBadge code={app.documentType} />
                           <span
-                            className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full border ${
-                              app.status === 'SUBMITTED'
-                                ? 'bg-amber-100 text-amber-800 border-amber-200'
-                                : app.status === 'APPROVED'
-                                ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                                : 'bg-rose-100 text-rose-800 border-rose-200'
-                            }`}
+                            className={
+                              'inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ' +
+                              statusUi.className
+                            }
                           >
-                            {app.status === 'SUBMITTED'
-                              ? 'CHỜ DUYỆT'
-                              : app.status === 'APPROVED'
-                              ? 'ĐÃ DUYỆT'
-                              : 'ĐÃ TRẢ LẠI'}
+                            {statusUi.text}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-400">
-                          Biểu mẫu {app.formCode} · phiên bản {app.formVersion} · nộp lúc:{' '}
-                          {formatDate(app.submittedAt)}
-                          {app.reviewedAt
-                            ? ` · xử lý lúc: ${formatDate(app.reviewedAt)}${app.reviewedBy ? ' bởi ' + app.reviewedBy : ''}`
-                            : ''}
+                        <p className="truncate text-xs text-slate-500">
+                          {app.procedureName}
+                          {' · '}
+                          <span className="font-mono">{app.formCode}</span>
+                          {' · '}nộp {formatDate(app.submittedAt)}
+                          {app.reviewedBy ? ` · ${app.reviewedBy}` : ''}
                         </p>
+                        {app.status === 'RETURNED' && app.reviewNote ? (
+                          <p className="line-clamp-1 text-xs text-amber-800">
+                            Lý do: {app.reviewNote}
+                          </p>
+                        ) : null}
                       </div>
+                      <span className="shrink-0 text-sm font-semibold text-sky-700">
+                        Xem chi tiết →
+                      </span>
                     </div>
-
-                    <div className="border border-slate-100 rounded-lg overflow-hidden">
-                      <table className="min-w-full divide-y divide-slate-200 text-sm">
-                        <thead className="bg-slate-50">
-                          <tr>
-                            <th className="px-4 py-2 text-left font-semibold text-slate-500 w-1/3">Trường thông tin</th>
-                            <th className="px-4 py-2 text-left font-semibold text-slate-500">Nội dung khai</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
-                          {reviewFields.length === 0 ? (
-                            <tr>
-                              <td colSpan={2} className="px-4 py-4 text-center text-slate-400 italic">
-                                Hồ sơ không có dữ liệu hiển thị.
-                              </td>
-                            </tr>
-                          ) : (
-                            reviewFields.map((f) => (
-                              <tr key={f.id} className="hover:bg-slate-50">
-                                <td className="px-4 py-2 text-slate-600">{f.label}</td>
-                                <td className="px-4 py-2 font-medium text-slate-900">
-                                  {fmtFieldValue(f, app.data[f.id])}
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {app.status === 'RETURNED' && app.reviewNote && (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-900">
-                        <span className="font-semibold">Lý do trả lại:</span> {app.reviewNote}
-                      </div>
-                    )}
-                    {app.status === 'APPROVED' && (
-                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-900">
-                        🎉 Hồ sơ đã được phê duyệt{app.reviewNote ? ` — ghi chú: ${app.reviewNote}` : '.'}
-                      </div>
-                    )}
-
-                    {isPendingReview && (
-                      <div className="space-y-3">
-                        <label className="block text-sm font-semibold text-slate-700" htmlFor={`note-${app.id}`}>
-                          Ghi chú cho người dân (bắt buộc khi trả lại)
-                        </label>
-                        <textarea
-                          id={`note-${app.id}`}
-                          rows={2}
-                          maxLength={1000}
-                          value={reviewNotes[app.id] ?? ''}
-                          onChange={(e) =>
-                            setReviewNotes((prev) => ({ ...prev, [app.id]: e.target.value }))
-                          }
-                          placeholder="Ví dụ: Bổ sung bản chụp trang thông tin CCCD của bên nữ."
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
-                        />
-                        <div className="flex flex-wrap gap-3">
-                          <button
-                            onClick={() => handleReviewApplication(app.id, 'APPROVE')}
-                            disabled={reviewingId !== null}
-                            className="btn bg-emerald-600 hover:bg-emerald-500 text-white text-sm py-2 px-4 disabled:bg-slate-200 disabled:text-slate-400"
-                          >
-                            {reviewingId === app.id ? 'Đang xử lý...' : '✅ Phê duyệt hồ sơ'}
-                          </button>
-                          <button
-                            onClick={() => handleReviewApplication(app.id, 'RETURN')}
-                            disabled={reviewingId !== null || (reviewNotes[app.id] ?? '').trim() === ''}
-                            className="btn bg-amber-600 hover:bg-amber-500 text-white text-sm py-2 px-4 disabled:bg-slate-200 disabled:text-slate-400"
-                          >
-                            ↩ Trả lại để bổ sung
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  </Link>
                 );
               })}
             </div>

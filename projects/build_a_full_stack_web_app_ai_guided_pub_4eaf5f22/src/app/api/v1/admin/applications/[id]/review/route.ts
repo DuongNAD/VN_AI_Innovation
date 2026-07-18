@@ -1,5 +1,5 @@
 import { requireStaffAuth } from '@/lib/login-auth';
-import { prisma } from '@/lib/db';
+import { prisma, withDbRetry } from '@/lib/db';
 import { getProvider } from '@/lib/data-provider';
 import { AppError, handleRoute, jsonOk } from '@/lib/errors';
 import { readJsonBody } from '@/lib/http';
@@ -39,7 +39,10 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
     });
   }
 
-  const application = await prisma.application.findUnique({ where: { id } });
+  const application = await withDbRetry(
+    () => prisma.application.findUnique({ where: { id } }),
+    { retries: 3, label: 'review-find' }
+  );
   if (!application) {
     throw new AppError(404, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ.');
   }
@@ -53,10 +56,16 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
     if (!pinned) {
       throw new AppError(404, 'APPLICATION_NOT_FOUND', 'Không tìm thấy hồ sơ.');
     }
-    const storedData =
+    const rawStored =
       application.dataJson && typeof application.dataJson === 'object' && !Array.isArray(application.dataJson)
         ? (application.dataJson as Record<string, unknown>)
         : {};
+    // Strip internal/meta keys (e.g. seed markers) so they never block officer approval.
+    const storedData: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rawStored)) {
+      if (k.startsWith('__')) continue;
+      storedData[k] = v;
+    }
     const sanitizeResult = sanitizeFormData(pinned.fields, storedData);
     if (!sanitizeResult.ok) {
       throw new AppError(422, 'VALIDATION_FAILED', 'Hồ sơ còn dữ liệu không hợp lệ, không thể phê duyệt.', {
@@ -75,20 +84,25 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
   }
 
   const now = new Date();
+  // APPROVED = ĐÃ DUYỆT; RETURNED = CẦN BỔ SUNG (UI label; DB keeps RETURNED)
   const nextStatus = decision === 'APPROVE' ? 'APPROVED' : 'RETURNED';
   // Cookie sessions know who decided; the legacy shared-token path has no
   // identity, so it keeps the generic officer label.
   const reviewedBy = user?.displayName ?? 'Cán bộ một cửa (demo)';
 
-  const updateResult = await prisma.application.updateMany({
-    where: { id, status: 'SUBMITTED' },
-    data: {
-      status: nextStatus,
-      reviewedAt: now,
-      reviewedBy,
-      reviewNote: note,
-    },
-  });
+  const updateResult = await withDbRetry(
+    () =>
+      prisma.application.updateMany({
+        where: { id, status: 'SUBMITTED' },
+        data: {
+          status: nextStatus,
+          reviewedAt: now,
+          reviewedBy,
+          reviewNote: note,
+        },
+      }),
+    { retries: 3, label: 'review-update' }
+  );
 
   if (updateResult.count === 0) {
     throw new AppError(409, 'ALREADY_PROCESSED', 'Hồ sơ này đã được xử lý trước đó.');
@@ -97,6 +111,7 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
   return jsonOk({
     applicationId: id,
     status: nextStatus,
+    statusLabel: nextStatus === 'APPROVED' ? 'ĐÃ DUYỆT' : 'CẦN BỔ SUNG',
     reviewedAt: now,
     reviewedBy,
     reviewNote: note,

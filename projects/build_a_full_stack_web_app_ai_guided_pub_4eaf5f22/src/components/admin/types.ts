@@ -6,7 +6,8 @@ export type StaffConsoleRole = 'manager' | 'admin';
 
 export interface StaffConsoleProps {
   /**
-   * manager — xem overview + change requests (không phê duyệt)
+   * manager — duyệt hồ sơ công dân (APPROVE/RETURN), xem overview + change requests
+   *           (không phê duyệt phiên bản biểu mẫu)
    * admin — đầy đủ quyền, gồm phê duyệt & kích hoạt phiên bản
    */
   role?: StaffConsoleRole;

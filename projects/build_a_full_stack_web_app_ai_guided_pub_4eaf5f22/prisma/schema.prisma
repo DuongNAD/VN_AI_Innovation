@@ -133,6 +133,9 @@ model Application {
   formVersion   FormVersion @relation(fields: [formVersionId], references: [id], onDelete: Cascade)
   // DRAFT -> SUBMITTED -> APPROVED | RETURNED (RETURNED can be edited and re-submitted)
   status        String      @default("DRAFT")
+  /// Classification for officer queue filters (see src/lib/document-types.ts).
+  /// e.g. MARRIAGE_REGISTRATION | DIVORCE_APPLICATION | BIRTH_CERTIFICATE | OTHER
+  documentType  String      @default("OTHER")
   dataJson      Json
   revision      Int         @default(0)
   submittedAt   DateTime?
@@ -145,6 +148,8 @@ model Application {
   @@index([sessionId])
   @@index([formVersionId])
   @@index([status])
+  @@index([documentType])
+  @@index([status, documentType])
 }
 
 model ChangeRequest {
