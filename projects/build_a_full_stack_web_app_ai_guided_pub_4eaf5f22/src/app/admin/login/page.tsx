@@ -6,7 +6,7 @@ export default function AdminLoginPage() {
       <LoginForm
         portal="admin"
         title="Đăng nhập quản trị viên"
-        subtitle="Chỉ tài khoản vai trò admin. Phê duyệt thay đổi biểu mẫu yêu cầu quyền này."
+        subtitle="Chỉ tài khoản vai trò admin — quản lý tài khoản và cài đặt kỹ thuật hệ thống."
         socialEnabled={false}
       />
     </main>

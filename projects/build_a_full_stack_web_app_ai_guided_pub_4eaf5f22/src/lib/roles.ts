@@ -1,9 +1,10 @@
 /**
  * Application role model and route prefixes.
  * - user: citizen self-service flow (public + session token)
- * - manager: works the citizen queue (review/approve/return applications)
- * - admin: accounts + technical config (form-version approval, settings) —
- *   does NOT review citizen applications
+ * - manager: the business domain — citizen queue (review/approve/return
+ *   applications) AND forms/documents (approve & activate form versions)
+ * - admin: accounts + technical config (settings, monitoring) — does NOT
+ *   review citizen applications, does NOT approve form versions
  */
 
 export type AppRole = 'user' | 'manager' | 'admin';
@@ -45,12 +46,13 @@ export const ROUTES = {
 export const STAFF_PERMISSIONS = {
   viewOverview: ['manager', 'admin'] as const satisfies readonly StaffRole[],
   viewChangeRequests: ['manager', 'admin'] as const satisfies readonly StaffRole[],
-  approveChangeRequests: ['admin'] as const satisfies readonly StaffRole[],
+  /** Forms & documents are the manager's domain, like the citizen queue below. */
+  approveChangeRequests: ['manager'] as const satisfies readonly StaffRole[],
   /** Citizen queue is the manager's job — admins run accounts & technical config only. */
   reviewCitizenApplications: ['manager'] as const satisfies readonly StaffRole[],
   manageAccounts: ['admin'] as const satisfies readonly StaffRole[],
 } as const;
 
 export function canApprove(role: StaffRole): boolean {
-  return role === 'admin';
+  return (STAFF_PERMISSIONS.approveChangeRequests as readonly StaffRole[]).includes(role);
 }

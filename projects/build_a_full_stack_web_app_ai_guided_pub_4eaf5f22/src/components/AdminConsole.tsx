@@ -625,16 +625,17 @@ export type StaffConsoleRole = 'manager' | 'admin';
 
 export interface StaffConsoleProps {
   /**
-   * manager — xét duyệt hồ sơ công dân + xem overview/change requests
-   *           (không phê duyệt phiên bản biểu mẫu, không đổi cài đặt)
-   * admin — quản lý tài khoản, cài đặt hệ thống, phê duyệt & kích hoạt
-   *         phiên bản biểu mẫu (KHÔNG xét duyệt hồ sơ công dân)
+   * manager — toàn bộ nghiệp vụ: xét duyệt hồ sơ công dân + quản lý giấy tờ,
+   *           biểu mẫu (phê duyệt & kích hoạt phiên bản)
+   * admin — quản lý tài khoản và cài đặt kỹ thuật hệ thống (KHÔNG xét duyệt
+   *         hồ sơ, KHÔNG phê duyệt biểu mẫu)
    */
   role?: StaffConsoleRole;
 }
 
 export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): ReactElement {
-  const canApproveActions = role === 'admin';
+  const isAdmin = role === 'admin';
+  const canApproveForms = role === 'manager';
   const roleLabel = role === 'admin' ? 'Quản trị viên' : 'Người quản lý';
 
   const [loading, setLoading] = useState<boolean>(false);
@@ -961,8 +962,8 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
     setSuccess(null);
 
     try {
-      if (!canApproveActions) {
-        setError('Chỉ quản trị viên mới được phê duyệt yêu cầu thay đổi.');
+      if (!canApproveForms) {
+        setError('Phê duyệt phiên bản biểu mẫu thuộc thẩm quyền của cán bộ quản lý.');
         setApprovingId(null);
         return;
       }
@@ -1069,9 +1070,9 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
               Bảng điều khiển {roleLabel}
             </h2>
             <p className="text-sm text-slate-600">
-              {canApproveActions
-                ? 'Phiên đăng nhập cookie — quản lý tài khoản, cài đặt hệ thống và phê duyệt thay đổi biểu mẫu.'
-                : 'Phiên đăng nhập cookie — xét duyệt hồ sơ công dân, xem danh mục thủ tục, quan trắc AI và yêu cầu thay đổi.'}
+              {isAdmin
+                ? 'Phiên đăng nhập cookie — quản lý tài khoản và cài đặt kỹ thuật hệ thống.'
+                : 'Phiên đăng nhập cookie — xét duyệt hồ sơ công dân, quản lý giấy tờ & biểu mẫu, phê duyệt phiên bản khi quy định thay đổi.'}
             </p>
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span
@@ -1088,14 +1089,9 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                   <span className="truncate">Phiên: {actorName}</span>
                 </span>
               ) : null}
-              {!canApproveActions && (
+              {isAdmin && (
                 <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium text-slate-500">
-                  Không phê duyệt phiên bản biểu mẫu
-                </span>
-              )}
-              {canApproveActions && (
-                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium text-slate-500">
-                  Hồ sơ công dân do cán bộ quản lý xét duyệt
+                  Hồ sơ &amp; biểu mẫu do cán bộ quản lý phụ trách
                 </span>
               )}
             </div>
@@ -1286,7 +1282,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
         </div>
       )}
 
-      {overview && canApproveActions && (
+      {overview && isAdmin && (
         <div className="card space-y-4 border border-slate-100 shadow-sm">
           <div className="space-y-1">
             <h3 className="text-lg font-bold text-slate-900 border-b pb-2">Chế độ đọc nội dung (Text-to-Speech)</h3>
@@ -1470,14 +1466,14 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
         </div>
       )}
 
-      {overview && canApproveActions && (
+      {overview && isAdmin && (
         <div className="space-y-6">
           <div className="border-b pb-4">
             <h3 className="text-xl font-bold text-slate-900">Quản lý tài khoản</h3>
             <p className="text-sm text-slate-500">
               Cấp tài khoản cán bộ, đổi vai trò và đặt lại mật khẩu. Tài khoản quản lý/quản trị
-              chỉ được cấp tại đây — không thể tự đăng ký. Việc xét duyệt hồ sơ công dân thuộc
-              cổng người quản lý.
+              chỉ được cấp tại đây — không thể tự đăng ký. Hồ sơ công dân và giấy tờ, biểu mẫu
+              do cán bộ quản lý phụ trách tại cổng người quản lý.
             </p>
           </div>
 
@@ -1740,7 +1736,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                           }
                         })()}
 
-                        {isPending && canApproveActions && (
+                        {isPending && canApproveForms && (
                           <button
                             onClick={() => handleApprove(cr.id)}
                             disabled={approvingId !== null}
@@ -1756,9 +1752,9 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                             )}
                           </button>
                         )}
-                        {isPending && !canApproveActions && (
+                        {isPending && !canApproveForms && (
                           <span className="text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-3 py-1.5">
-                            Chỉ xem — cần quyền admin để phê duyệt
+                            Chỉ xem — biểu mẫu do cán bộ quản lý phê duyệt
                           </span>
                         )}
                       </div>
