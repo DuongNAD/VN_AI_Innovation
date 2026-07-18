@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type JSX } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { visibleFieldsFor } from '@/components/DynamicForm';
 import type { FieldDef } from '@/lib/schema-guards';
 import { DEFAULT_TTS_MODE, isTtsMode, type TtsMode } from '@/lib/tts-mode';
@@ -548,7 +548,7 @@ export interface StaffConsoleProps {
   role?: StaffConsoleRole;
 }
 
-export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): JSX.Element {
+export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): ReactElement {
   const canApproveActions = role === 'admin';
   const roleLabel = role === 'admin' ? 'Quản trị viên' : 'Người quản lý';
 
