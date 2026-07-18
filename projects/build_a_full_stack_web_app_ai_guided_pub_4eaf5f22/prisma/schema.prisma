@@ -13,6 +13,8 @@ model Procedure {
   name                String
   sector              String
   agency              String
+  // Target audience of the procedure: CITIZEN (công dân) or BUSINESS (doanh nghiệp)
+  audience            String                @default("CITIZEN")
   sourceUrl           String
   lastCheckedAt       DateTime
   versions            ProcedureVersion[]

@@ -29,6 +29,16 @@ const KEYWORD_TABLE: Record<string, string[]> = {
   TEMP_RESIDENCE_REGISTRATION: ['dang ky tam tru', 'tam tru'],
   CITIZEN_ID_ISSUANCE: ['cap the can cuoc', 'can cuoc', 'cccd', 'the can cuoc'],
   PASSPORT_ISSUANCE: ['cap ho chieu', 'ho chieu', 'passport'],
+  HOUSEHOLD_BUSINESS_REGISTRATION: [
+    'dang ky ho kinh doanh',
+    'thanh lap ho kinh doanh',
+    'ho kinh doanh',
+    'dang ky kinh doanh',
+    'mo cua hang',
+    'mo tiem',
+    'ban hang',
+    'kinh doanh ca the',
+  ],
 };
 
 const ERROR_EXPLANATIONS: Record<string, (err: { field?: string; fields?: string[] }) => string> = {

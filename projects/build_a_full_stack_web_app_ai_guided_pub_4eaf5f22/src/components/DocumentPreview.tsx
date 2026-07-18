@@ -41,6 +41,9 @@ function fmtValue(field: FieldDef | undefined, value: unknown): string {
   if (typeof value === 'boolean') {
     return value ? 'Có' : 'Không';
   }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value.toLocaleString('vi-VN');
+  }
   return String(value);
 }
 

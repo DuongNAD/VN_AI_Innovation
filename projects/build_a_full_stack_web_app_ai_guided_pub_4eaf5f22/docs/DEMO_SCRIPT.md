@@ -153,6 +153,11 @@ gộp mốc 5 thành một câu nói. Ba mốc đó đã phủ cả 5 tiêu chí
 - *"Dữ liệu có thật không?"* → "Dữ liệu demo chuẩn hóa từ nguồn công khai trên Cổng DVC
   Quốc gia; hệ thống có sẵn lớp `GovernmentApiProvider` để nối dữ liệu thật khi được cấp quyền —
   chỉ đổi một provider, không sửa frontend."
+- *"Có hỗ trợ doanh nghiệp không?"* → "Có. Danh mục chia hai đối tượng **Công dân** và
+  **Doanh nghiệp** ngay trên trang chủ; demo sẵn thủ tục *Đăng ký thành lập hộ kinh doanh*
+  theo Nghị định 168/2025/NĐ-CP (nộp cấp xã, 3 ngày làm việc) với đầy đủ luồng: hỏi làm rõ →
+  checklist có điều kiện → form động → rule engine bắt lỗi → tờ khai điền sẵn + PDF. Thử gõ
+  *'Tôi muốn mở cửa hàng tạp hóa'* — AI nhận diện đúng thủ tục."
 - *"AI có tự bịa quy định không?"* → "Không. AI chỉ phân loại nhu cầu và diễn giải mã lỗi.
   Giấy tờ, phí, biểu mẫu, căn cứ pháp lý đều lấy từ database + rule engine."
 - *"Chịu tải nhiều người cùng lúc không?"* → "Có rate-limit, idempotency key và cache theo

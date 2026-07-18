@@ -2,6 +2,94 @@ import React from 'react';
 import Link from 'next/link';
 import SourceFooter from '@/components/SourceFooter';
 
+type ProcedureCardDef = {
+  href: string;
+  title: string;
+  description: string;
+  cta: string;
+  color: 'blue' | 'indigo' | 'emerald' | 'slate';
+  iconPath: string;
+};
+
+const CARD_COLORS: Record<ProcedureCardDef['color'], { border: string; iconBg: string; icon: string; title: string; cta: string }> = {
+  blue: { border: 'hover:border-blue-300', iconBg: 'from-blue-100 to-blue-200', icon: 'text-blue-600', title: 'group-hover:text-blue-600', cta: 'text-blue-600 group-hover:text-blue-700' },
+  indigo: { border: 'hover:border-indigo-300', iconBg: 'from-indigo-100 to-indigo-200', icon: 'text-indigo-600', title: 'group-hover:text-indigo-600', cta: 'text-indigo-600 group-hover:text-indigo-700' },
+  emerald: { border: 'hover:border-emerald-300', iconBg: 'from-emerald-100 to-emerald-200', icon: 'text-emerald-600', title: 'group-hover:text-emerald-600', cta: 'text-emerald-600 group-hover:text-emerald-700' },
+  slate: { border: 'hover:border-slate-300', iconBg: 'from-slate-100 to-slate-200', icon: 'text-slate-600', title: 'group-hover:text-slate-700', cta: 'text-slate-600 group-hover:text-slate-700' },
+};
+
+const CITIZEN_CARDS: ProcedureCardDef[] = [
+  {
+    href: '/chat?procedure=MARRIAGE_REGISTRATION',
+    title: 'Đăng ký kết hôn',
+    description: 'Hướng dẫn chi tiết thủ tục đăng ký kết hôn trong nước, bao gồm chuẩn bị giấy tờ, điền tờ khai và nộp hồ sơ.',
+    cta: 'Bắt đầu ngay',
+    color: 'blue',
+    iconPath: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z',
+  },
+  {
+    href: '/chat?procedure=BIRTH_REGISTRATION',
+    title: 'Đăng ký khai sinh',
+    description: 'Tìm hiểu các bước đăng ký khai sinh cho trẻ mới sinh, các giấy tờ cần chuẩn bị từ bệnh viện và gia đình.',
+    cta: 'Bắt đầu ngay',
+    color: 'indigo',
+    iconPath: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+  },
+];
+
+const BUSINESS_CARDS: ProcedureCardDef[] = [
+  {
+    href: '/chat?procedure=HOUSEHOLD_BUSINESS_REGISTRATION',
+    title: 'Đăng ký hộ kinh doanh',
+    description: 'Thành lập hộ kinh doanh theo Nghị định 168/2025/NĐ-CP: chỉ cần một bộ hồ sơ gọn nhẹ, nộp tại cấp xã, nhận kết quả trong 3 ngày làm việc.',
+    cta: 'Bắt đầu ngay',
+    color: 'emerald',
+    iconPath: 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+  },
+  {
+    href: '/chat',
+    title: 'Thủ tục khác cho doanh nghiệp',
+    description: 'Chưa thấy thủ tục bạn cần? Hỏi trực tiếp trợ lý — hệ thống sẽ hướng dẫn hoặc chỉ ra danh mục thủ tục đang hỗ trợ.',
+    cta: 'Hỏi trợ lý',
+    color: 'slate',
+    iconPath: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+  },
+];
+
+function ProcedureCard({ card }: { card: ProcedureCardDef }) {
+  const c = CARD_COLORS[card.color];
+  return (
+    <Link
+      href={card.href}
+      className={`group flex flex-col justify-between p-8 bg-white rounded-2xl shadow-lg border-2 border-slate-100 ${c.border} hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1`}
+    >
+      <div className="space-y-4">
+        <div className={`w-14 h-14 bg-gradient-to-br ${c.iconBg} ${c.icon} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={card.iconPath} />
+          </svg>
+        </div>
+        <h3 className={`text-2xl font-bold text-slate-900 ${c.title} transition-colors`}>
+          {card.title}
+        </h3>
+        <p className="text-base text-slate-600 leading-relaxed">{card.description}</p>
+      </div>
+      <div className={`mt-6 flex items-center text-base font-semibold ${c.cta} group-hover:gap-2 transition-all`}>
+        {card.cta}
+        <svg
+          className="w-5 h-5 ml-1 transform group-hover:translate-x-1 transition-transform"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+    </Link>
+  );
+}
+
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col justify-between bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 text-slate-900 px-4 py-12 sm:px-6 lg:px-8">
@@ -123,104 +211,47 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Popular procedures cards */}
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-center text-slate-900 mb-6">Thủ tục phổ biến</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Link
-              href="/chat?procedure=MARRIAGE_REGISTRATION"
-              className="group flex flex-col justify-between p-8 bg-white rounded-2xl shadow-lg border-2 border-slate-100 hover:border-blue-300 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
-            >
-              <div className="space-y-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-blue-200 text-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <svg
-                    className="w-7 h-7"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                  Đăng ký kết hôn
-                </h3>
-                <p className="text-base text-slate-600 leading-relaxed">
-                  Hướng dẫn chi tiết thủ tục đăng ký kết hôn trong nước, bao gồm chuẩn bị giấy tờ, điền tờ khai và nộp hồ sơ.
-                </p>
-              </div>
-              <div className="mt-6 flex items-center text-base font-semibold text-blue-600 group-hover:text-blue-700 group-hover:gap-2 transition-all">
-                Bắt đầu ngay
-                <svg
-                  className="w-5 h-5 ml-1 transform group-hover:translate-x-1 transition-transform"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </div>
-            </Link>
+        {/* Procedures grouped by audience */}
+        <div className="max-w-3xl mx-auto space-y-10">
+          <h2 className="text-2xl font-bold text-center text-slate-900">Thủ tục phổ biến</h2>
 
-            <Link
-              href="/chat?procedure=BIRTH_REGISTRATION"
-              className="group flex flex-col justify-between p-8 bg-white rounded-2xl shadow-lg border-2 border-slate-100 hover:border-indigo-300 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
-            >
-              <div className="space-y-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <svg
-                    className="w-7 h-7"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                  Đăng ký khai sinh
-                </h3>
-                <p className="text-base text-slate-600 leading-relaxed">
-                  Tìm hiểu các bước đăng ký khai sinh cho trẻ mới sinh, các giấy tờ cần chuẩn bị từ bệnh viện và gia đình.
-                </p>
-              </div>
-              <div className="mt-6 flex items-center text-base font-semibold text-indigo-600 group-hover:text-indigo-700 group-hover:gap-2 transition-all">
-                Bắt đầu ngay
-                <svg
-                  className="w-5 h-5 ml-1 transform group-hover:translate-x-1 transition-transform"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 5l7 7-7 7"
-                  />
+          <section aria-labelledby="citizen-procedures">
+            <div className="flex justify-center mb-6">
+              <span
+                id="citizen-procedures"
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-sm font-bold uppercase tracking-wide"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-              </div>
-            </Link>
-          </div>
+                Dành cho Công dân
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {CITIZEN_CARDS.map((card) => (
+                <ProcedureCard key={card.href} card={card} />
+              ))}
+            </div>
+          </section>
+
+          <section aria-labelledby="business-procedures">
+            <div className="flex justify-center mb-6">
+              <span
+                id="business-procedures"
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-bold uppercase tracking-wide"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                Dành cho Doanh nghiệp
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {BUSINESS_CARDS.map((card) => (
+                <ProcedureCard key={card.href} card={card} />
+              ))}
+            </div>
+          </section>
         </div>
       </div>
 
