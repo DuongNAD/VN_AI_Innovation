@@ -2,6 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ['music-metadata'],
+  // Hide the floating "N" Next.js dev-tools badge in `next dev`
+  devIndicators: false,
   // Pin the workspace root to this app so Turbopack ignores stray lockfiles
   // higher up the repo. import.meta.dirname keeps it portable across machines
   // (the previous hardcoded d:/ path only worked on one Windows machine).
