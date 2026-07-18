@@ -120,29 +120,51 @@ function foldString(input: string): string {
 
 export function classifyByKeywords(message: string): { procedureCode: string; confidence: number } | null {
   if (typeof message !== 'string') return null;
-  const folded = foldString(message);
-  if (!folded.trim()) return null;
+  const folded = foldString(message)
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!folded) return null;
 
-  let bestMatch: { procedureCode: string; keyword: string } | null = null;
+  const paddedMessage = ` ${folded} `;
+  const matches: { procedureCode: string; keyword: string }[] = [];
 
   for (const [code, keywords] of Object.entries(KEYWORD_TABLE)) {
     for (const kw of keywords) {
-      if (folded.includes(kw)) {
-        if (!bestMatch || kw.length > bestMatch.keyword.length) {
-          bestMatch = { procedureCode: code, keyword: kw };
-        }
+      if (paddedMessage.includes(` ${kw} `)) {
+        matches.push({ procedureCode: code, keyword: kw });
       }
     }
   }
 
-  if (bestMatch) {
-    return {
-      procedureCode: bestMatch.procedureCode,
-      confidence: 0.95,
-    };
+  if (matches.length === 0) return null;
+
+  const bestMatch = matches.reduce((best, current) =>
+    current.keyword.length > best.keyword.length ? current : best
+  );
+  const keywordWords = bestMatch.keyword.split(' ').length;
+  const messageWords = folded.split(' ').length;
+  const supportingMatches = matches.filter(
+    (match) => match.procedureCode === bestMatch.procedureCode
+  ).length;
+
+  // This is a deterministic match score, not a fixed probability. Exact and
+  // specific phrases score higher; short/ambiguous keywords score lower.
+  let confidence: number;
+  if (folded === bestMatch.keyword) {
+    confidence = 0.98;
+  } else {
+    const specificity = Math.min(keywordWords / 3, 1);
+    const coverage = Math.min(keywordWords / messageWords, 1);
+    const supportBonus = Math.min(Math.max(supportingMatches - 1, 0), 2) * 0.02;
+    confidence = 0.68 + specificity * 0.14 + coverage * 0.1 + supportBonus;
+    confidence = Math.min(confidence, 0.94);
   }
 
-  return null;
+  return {
+    procedureCode: bestMatch.procedureCode,
+    confidence: Math.round(confidence * 100) / 100,
+  };
 }
 
 function sanitizeCatalog(input: any): { code: string; name: string }[] {
@@ -298,7 +320,7 @@ export const mockLlm: LlmProvider = {
 
     const hit = classifyByKeywords(truncatedMessage);
     if (hit && sanitizedCatalog.some(e => e.code === hit.procedureCode)) {
-      return { procedureCode: hit.procedureCode, confidence: 0.95 };
+      return hit;
     }
     return { procedureCode: null, confidence: 0 };
   },
@@ -355,7 +377,8 @@ Hãy chọn mã thủ tục (procedureCode) PHÙ HỢP NHẤT từ danh mục đ
 
 Yêu cầu bắt buộc:
 1. CHỈ chọn procedureCode từ danh mục được cung cấp hoặc trả về null. Không tự ý tạo hay sửa đổi mã thủ tục.
-2. Trả về kết quả dưới định dạng JSON có cấu trúc chính xác như sau:
+2. Chấm confidence theo mức độ khớp thực tế: 0.95-1.0 chỉ khi người dùng nói trực tiếp, gần như chính xác tên thủ tục; 0.80-0.94 khi ý định rõ ràng và duy nhất; 0.60-0.79 khi còn một phần mơ hồ; dưới 0.60 hoặc null khi không đủ thông tin.
+3. Trả về kết quả dưới định dạng JSON có cấu trúc chính xác như sau:
 {
   "procedureCode": string | null,
   "confidence": number

@@ -15,4 +15,21 @@ describe('mock classifier · business intents', () => {
     expect(classifyByKeywords('Tôi muốn đăng ký kết hôn')?.procedureCode).toBe('MARRIAGE_REGISTRATION');
     expect(classifyByKeywords('làm giấy khai sinh cho con')?.procedureCode).toBe('BIRTH_REGISTRATION');
   });
+
+  it('calculates a bounded, non-hardcoded match score', () => {
+    const exact = classifyByKeywords('đăng ký kết hôn');
+    const conversational = classifyByKeywords('Tôi muốn đăng ký kết hôn');
+    const shortKeyword = classifyByKeywords('Tôi cần làm CCCD mới');
+
+    expect(exact?.confidence).toBe(0.98);
+    expect(conversational?.confidence).toBeGreaterThan(0.8);
+    expect(conversational?.confidence).toBeLessThan(exact!.confidence);
+    expect(shortKeyword?.confidence).toBeGreaterThanOrEqual(0.6);
+    expect(shortKeyword?.confidence).toBeLessThan(conversational!.confidence);
+    expect(
+      [exact, conversational, shortKeyword].every(
+        (result) => result && result.confidence >= 0 && result.confidence <= 1
+      )
+    ).toBe(true);
+  });
 });

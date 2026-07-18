@@ -7,6 +7,7 @@ import { randomUUID } from '@/lib/uuid';
 import { WavRecorder } from '@/lib/wav-recorder';
 import SpeechButton from '@/components/SpeechButton';
 import BrandLogo from '@/components/BrandLogo';
+import { confidenceLevel, confidencePercent } from '@/lib/confidence';
 
 type Phase = 'search' | 'intake' | 'done';
 
@@ -816,12 +817,17 @@ export default function ChatIntake({
   // RENDER PROCEDURE CARD IN THREAD
   const renderProcedureCard = (attachment: any) => {
     const validatedLink = safeHttpsUrl(attachment.procedure?.sourceUrl);
+    const score = confidencePercent(attachment.procedure?.confidence);
+    const level = confidenceLevel(attachment.procedure?.confidence);
     return (
       <div className="mt-3 space-y-3 rounded-xl border border-brand-200 bg-brand-50 p-4">
         <h4 className="text-base font-bold text-brand-900">{attachment.procedure?.name}</h4>
-        <div className="flex items-center justify-between text-sm text-slate-700">
+        <div
+          className="flex items-center justify-between gap-4 text-sm text-slate-700"
+          title="Điểm khớp giữa nội dung bạn nhập và thủ tục được gợi ý; không phải độ chính xác pháp lý."
+        >
           <span>
-            Độ tin cậy {attachment.procedure ? Math.round(attachment.procedure.confidence * 100) : 0}%
+            Mức độ khớp: <strong className="text-brand-800">{level} · {score}%</strong>
           </span>
           {validatedLink ? (
             <a
