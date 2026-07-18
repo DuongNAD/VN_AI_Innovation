@@ -20,7 +20,8 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: psp
-          POSTGRES_PASSWORD: psp_ci_password
+          # Throwaway CI-only service password; not a secret.
+          POSTGRES_PASSWORD: postgres
           POSTGRES_DB: psp
         ports:
           - 5432:5432
@@ -35,9 +36,8 @@ jobs:
         working-directory: projects/build_a_full_stack_web_app_ai_guided_pub_4eaf5f22
 
     env:
-      DATABASE_URL: postgresql://psp:psp_ci_password@localhost:5432/psp
-      POSTGRES_PASSWORD: psp_ci_password
-      ADMIN_TOKEN: ci-admin-token-9F3k2Lm8Q7x4V6n1
+      DATABASE_URL: postgresql://psp:postgres@localhost:5432/psp
+      POSTGRES_PASSWORD: postgres
       AI_PROVIDER: mock
       TRUST_PROXY: "0"
 
@@ -54,6 +54,10 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Generate throwaway CI admin token
+        # Generated per-run so no token-looking literal lives in the repo.
+        run: echo "ADMIN_TOKEN=ci-$(openssl rand -hex 24)" >> "$GITHUB_ENV"
 
       - name: Audit dependencies
         # Informational: a new upstream advisory should not block unrelated changes.
