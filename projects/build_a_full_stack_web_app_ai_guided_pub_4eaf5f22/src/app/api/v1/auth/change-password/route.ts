@@ -12,6 +12,24 @@ import { enforceRateLimit, rateLimitCheck, rateLimitConsume } from '@/lib/rate-l
 // scrypt is a Node crypto primitive — pin the handler to the Node.js runtime.
 export const runtime = 'nodejs';
 
+// Seeded demo accounts (prisma/seed.ts) whose passwords are published to the
+// competition judges — one visitor changing a shared password would lock every
+// other judge out of the submitted demo.
+const DEMO_ACCOUNT_USERNAMES = new Set([
+  'congdan',
+  'congdan2',
+  'user.test',
+  'quanly',
+  'quanly2',
+  'manager.test',
+  'quanly.hanoi',
+  'quanly.hcm',
+  'quanly.danang',
+  'admin',
+  'admin2',
+  'admin.test',
+]);
+
 /**
  * POST — the signed-in account changes its own password.
  *
@@ -36,6 +54,16 @@ export const POST = handleRoute(async (req: Request) => {
   if (!user) {
     // Session pointed at a user that no longer exists.
     throw new AppError(401, 'UNAUTHORIZED', 'Vui lòng đăng nhập để tiếp tục.');
+  }
+
+  // Before any password verification so the lock is observable without ever
+  // submitting a real credential pair.
+  if (DEMO_ACCOUNT_USERNAMES.has(user.username)) {
+    throw new AppError(
+      403,
+      'DEMO_ACCOUNT_PASSWORD_LOCKED',
+      'Đây là tài khoản demo dùng chung cho ban giám khảo nên không thể đổi mật khẩu. Vui lòng đăng ký tài khoản riêng để sử dụng tính năng này.'
+    );
   }
 
   if (!user.passwordHash) {
