@@ -14,7 +14,9 @@ const MAX_NOTE_LENGTH = 1000;
  * approved, even if the queue data changed since it was listed.
  */
 export const POST = handleRoute(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
-  await requireStaffAuth(req, 'admin');
+  // Reviewing citizen applications is day-to-day staff work — managers may
+  // decide too. Form-version change requests stay admin-only.
+  const { user } = await requireStaffAuth(req, 'manager');
 
   const { id } = await params;
   const body = await readJsonBody(req);
@@ -74,7 +76,9 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
 
   const now = new Date();
   const nextStatus = decision === 'APPROVE' ? 'APPROVED' : 'RETURNED';
-  const reviewedBy = 'Cán bộ một cửa (demo)';
+  // Cookie sessions know who decided; the legacy shared-token path has no
+  // identity, so it keeps the generic officer label.
+  const reviewedBy = user?.displayName ?? 'Cán bộ một cửa (demo)';
 
   const updateResult = await prisma.application.updateMany({
     where: { id, status: 'SUBMITTED' },

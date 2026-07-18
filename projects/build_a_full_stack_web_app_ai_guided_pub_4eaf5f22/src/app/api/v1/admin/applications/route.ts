@@ -9,7 +9,8 @@ import { handleRoute, jsonOk } from '@/lib/errors';
  * stay private to the citizen and are never listed here.
  */
 export const GET = handleRoute(async (req: Request) => {
-  await requireStaffAuth(req, 'admin');
+  // Managers work the citizen queue too; only form-version changes are admin-only.
+  await requireStaffAuth(req, 'manager');
 
   const rows = await prisma.application.findMany({
     where: { status: { in: ['SUBMITTED', 'APPROVED', 'RETURNED'] } },

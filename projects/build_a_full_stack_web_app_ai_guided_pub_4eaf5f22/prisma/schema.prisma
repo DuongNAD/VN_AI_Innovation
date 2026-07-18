@@ -221,6 +221,9 @@ model User {
   username     String         @unique
   email        String?        @unique
   displayName  String
+  phone        String?
+  dateOfBirth  DateTime?
+  address      String?
   /// scrypt-encoded password; null for OAuth/VNID-only accounts
   passwordHash String?
   /// user | manager | admin

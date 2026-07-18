@@ -135,6 +135,265 @@
   }
 }
 
+/* Citizen profile */
+.profile-page {
+  min-height: calc(100vh - 61px);
+  padding: 48px 20px 72px;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(186, 230, 253, 0.72), transparent 34%),
+    radial-gradient(circle at 95% 12%, rgba(254, 215, 170, 0.52), transparent 30%),
+    #f8fafc;
+}
+
+.profile-shell {
+  width: min(820px, 100%);
+  margin: 0 auto;
+}
+
+.profile-title {
+  margin-bottom: 24px;
+}
+
+.profile-title p {
+  margin: 0 0 4px;
+  color: #075fe7;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.profile-title h1 {
+  margin: 0;
+  color: #0c1c43;
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.profile-title span {
+  display: block;
+  margin-top: 8px;
+  color: #526079;
+}
+
+.profile-form {
+  padding: clamp(22px, 4vw, 36px);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 24px 70px rgba(30, 64, 175, 0.12);
+}
+
+.profile-form__heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.profile-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 60px;
+  height: 60px;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #1473ee, #0752d0);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 800;
+  text-transform: uppercase;
+  box-shadow: 0 8px 20px rgba(7, 95, 231, 0.25);
+}
+
+.profile-form__heading h2 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.profile-form__heading p {
+  margin: 3px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 28px;
+}
+
+.profile-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.profile-field--wide {
+  grid-column: 1 / -1;
+}
+
+.profile-field strong {
+  color: #dc2626;
+}
+
+.profile-field input,
+.profile-field textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 11px;
+  background: #fff;
+  padding: 11px 13px;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.profile-field input:hover,
+.profile-field textarea:hover {
+  border-color: #94a3b8;
+}
+
+.profile-field input:focus,
+.profile-field textarea:focus {
+  border-color: #075fe7;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(7, 95, 231, 0.13);
+}
+
+.profile-field input:disabled {
+  cursor: not-allowed;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.profile-field textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.profile-field small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.profile-privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 24px;
+  border-radius: 10px;
+  background: #eff6ff;
+  padding: 12px 14px;
+  color: #334e75;
+  font-size: 13px;
+}
+
+.profile-notice {
+  margin-top: 16px;
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.profile-notice--success {
+  border: 1px solid #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.profile-notice--error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.profile-button {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  padding: 10px 20px;
+  font-weight: 750;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.profile-button:active {
+  transform: translateY(1px);
+}
+
+.profile-button--secondary {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+}
+
+.profile-button--secondary:hover {
+  background: #f8fafc;
+}
+
+.profile-button--primary {
+  border: 1px solid #075fe7;
+  background: #075fe7;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(7, 95, 231, 0.2);
+}
+
+.profile-button--primary:hover {
+  background: #0649bf;
+}
+
+.profile-button--primary:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+@media (max-width: 640px) {
+  .profile-page {
+    padding: 28px 14px 48px;
+  }
+
+  .profile-form {
+    border-radius: 18px;
+  }
+
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-field--wide {
+    grid-column: auto;
+  }
+
+  .profile-actions {
+    flex-direction: column-reverse;
+  }
+
+  .profile-button {
+    width: 100%;
+  }
+}
+
 /* =============================================================
    Dynamic-background home scene (feature/dynamic-background):
    hero với ảnh nền Việt Nam + hoạt cảnh chim/chuồn chuồn/cánh hoa.

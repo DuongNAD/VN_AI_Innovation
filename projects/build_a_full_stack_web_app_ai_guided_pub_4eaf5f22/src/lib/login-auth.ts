@@ -15,6 +15,9 @@ export type AuthUser = {
   username: string;
   email: string | null;
   displayName: string;
+  phone: string | null;
+  dateOfBirth: string | null;
+  address: string | null;
   role: AppRole;
   avatarUrl: string | null;
 };
@@ -28,6 +31,9 @@ export function publicUser(u: {
   username: string;
   email: string | null;
   displayName: string;
+  phone: string | null;
+  dateOfBirth: Date | null;
+  address: string | null;
   role: string;
   avatarUrl: string | null;
 }): AuthUser {
@@ -39,6 +45,9 @@ export function publicUser(u: {
     username: u.username,
     email: u.email,
     displayName: u.displayName,
+    phone: u.phone,
+    dateOfBirth: u.dateOfBirth ? u.dateOfBirth.toISOString().slice(0, 10) : null,
+    address: u.address,
     role: u.role,
     avatarUrl: u.avatarUrl,
   };

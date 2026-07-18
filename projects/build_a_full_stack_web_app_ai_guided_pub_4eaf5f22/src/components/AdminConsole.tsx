@@ -541,7 +541,8 @@ export type StaffConsoleRole = 'manager' | 'admin';
 
 export interface StaffConsoleProps {
   /**
-   * manager — xem overview + change requests (không phê duyệt)
+   * manager — xem overview + change requests, xét duyệt hồ sơ công dân
+   *           (không phê duyệt phiên bản biểu mẫu, không đổi cài đặt)
    * admin — đầy đủ quyền, gồm phê duyệt & kích hoạt phiên bản
    */
   role?: StaffConsoleRole;
@@ -574,8 +575,8 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): JSX
     }
 
     try {
-      // Officer queue (/admin/applications) is admin-only on the server;
-      // the manager console skips it instead of failing the whole load.
+      // Citizen queue is staff-wide (manager + admin) — only form-version
+      // change requests and settings stay admin-only.
       const [overviewRes, crRes, appsRes] = await Promise.all([
         fetch('/api/v1/admin/overview', {
           credentials: 'include',
@@ -583,11 +584,9 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): JSX
         fetch('/api/v1/admin/change-requests', {
           credentials: 'include',
         }),
-        canApproveActions
-          ? fetch('/api/v1/admin/applications', {
-              credentials: 'include',
-            })
-          : Promise.resolve(null),
+        fetch('/api/v1/admin/applications', {
+          credentials: 'include',
+        }),
       ]);
 
       if (!overviewRes.ok) {
@@ -598,27 +597,25 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): JSX
         const { status, code } = await getErrorFromResponse(crRes);
         throw new Error(errorMessageFor(status, code));
       }
-      if (appsRes && !appsRes.ok) {
+      if (!appsRes.ok) {
         const { status, code } = await getErrorFromResponse(appsRes);
         throw new Error(errorMessageFor(status, code));
       }
 
       let rawOverview: unknown;
       let rawCRs: unknown;
-      let rawApps: unknown = null;
+      let rawApps: unknown;
       try {
         rawOverview = await overviewRes.json();
         rawCRs = await crRes.json();
-        if (appsRes) {
-          rawApps = await appsRes.json();
-        }
+        rawApps = await appsRes.json();
       } catch (_) {
         throw new Error(errorMessageFor(500, 'JSON_PARSE_FAILURE'));
       }
 
       const parsedOverview = parseOverview(rawOverview);
       const parsedCRs = parseChangeRequests(rawCRs);
-      const parsedApps = appsRes ? parseCitizenApplications(rawApps) : [];
+      const parsedApps = parseCitizenApplications(rawApps);
 
       if (parsedOverview === null || parsedCRs === null || parsedApps === null) {
         throw new Error(errorMessageFor(500, 'PARSER_FAILURE'));
@@ -641,7 +638,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): JSX
         setSuccess(
           role === 'admin'
             ? 'Tải dữ liệu quản trị thành công.'
-            : 'Tải dữ liệu người quản lý thành công (chế độ chỉ đọc).'
+            : 'Tải dữ liệu người quản lý thành công.'
         );
       }
     } catch (err: any) {
@@ -855,7 +852,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): JSX
             <p className="text-sm text-slate-300">
               {canApproveActions
                 ? 'Phiên đăng nhập cookie — xem dữ liệu hệ thống, quan trắc AI và phê duyệt thay đổi biểu mẫu.'
-                : 'Phiên đăng nhập cookie — xem danh mục thủ tục, quan trắc AI và yêu cầu thay đổi (chỉ đọc).'}
+                : 'Phiên đăng nhập cookie — xét duyệt hồ sơ công dân, xem danh mục thủ tục, quan trắc AI và yêu cầu thay đổi.'}
             </p>
             <p className="text-xs text-slate-400">
               Vai trò: <span className="font-semibold text-amber-300">{role}</span>
@@ -865,7 +862,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): JSX
                   · Phiên: <span className="text-slate-200">{actorName}</span>
                 </>
               ) : null}
-              {!canApproveActions && ' · không có quyền phê duyệt'}
+              {!canApproveActions && ' · không phê duyệt phiên bản biểu mẫu'}
             </p>
           </div>
           <button
@@ -1102,7 +1099,7 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): JSX
         </div>
       )}
 
-      {overview && canApproveActions && (
+      {overview && (
         <div className="space-y-6">
           <div className="border-b pb-4">
             <h3 className="text-xl font-bold text-slate-900">Hồ sơ công dân chờ xét duyệt</h3>
