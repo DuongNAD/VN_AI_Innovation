@@ -12,6 +12,11 @@ import {
 } from '@/lib/rule-engine';
 import type { FieldDef, RuleDef } from '@/lib/schema-guards';
 import SpeechButton from '@/components/SpeechButton';
+import AttachmentPreviewLink from '@/components/AttachmentPreviewLink';
+import {
+  ATTACHMENT_ACCEPT,
+  MAX_ATTACHMENT_BYTES,
+} from '@/lib/application-attachments';
 
 const INPUT_CLASS =
   'w-full rounded-lg border border-surface-border bg-surface px-4 py-3 text-lg text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20';
@@ -232,6 +237,8 @@ type DynamicFormProps = {
   fields: FieldDef[];
   rules?: RuleDef[];
   initialData?: Record<string, unknown>;
+  applicationId?: string;
+  sessionToken?: string;
   submitLabel: string;
   submitting?: boolean;
   onSubmit(data: Record<string, unknown>, clientErrors: ValidationErrorItem[]): void;
@@ -242,6 +249,8 @@ export default function DynamicForm({
   fields,
   rules,
   initialData,
+  applicationId,
+  sessionToken,
   submitLabel,
   submitting = false,
   onSubmit,
@@ -256,6 +265,8 @@ export default function DynamicForm({
   const [resolvedFieldIds, setResolvedFieldIds] = useState<Set<string>>(() => new Set());
   const [guideOpen, setGuideOpen] = useState(false);
   const [guidedErrorIndex, setGuidedErrorIndex] = useState(0);
+  const [uploadingFieldId, setUploadingFieldId] = useState<string | null>(null);
+  const [attachmentErrors, setAttachmentErrors] = useState<Record<string, string>>({});
 
   const affectedFieldIds = (errors: ValidationErrorItem[]): Set<string> => {
     const ids = new Set<string>();
@@ -303,6 +314,84 @@ export default function DynamicForm({
     }
 
     onDirtyChange?.(true);
+  };
+
+  const setAttachmentError = (fieldId: string, message: string | null) => {
+    setAttachmentErrors((current) => {
+      const next = { ...current };
+      if (message) next[fieldId] = message;
+      else delete next[fieldId];
+      return next;
+    });
+  };
+
+  const uploadAttachment = async (fieldId: string, file: File) => {
+    if (!applicationId || !sessionToken) {
+      setAttachmentError(fieldId, 'Không xác định được hồ sơ để tải tệp lên.');
+      return;
+    }
+    if (file.size < 1 || file.size > MAX_ATTACHMENT_BYTES) {
+      setAttachmentError(fieldId, 'Tệp phải có dung lượng từ 1 byte đến 10 MB.');
+      return;
+    }
+    if (file.type && !ATTACHMENT_ACCEPT.split(',').includes(file.type)) {
+      setAttachmentError(fieldId, 'Chỉ chấp nhận tệp PDF hoặc ảnh JPG, PNG, WebP.');
+      return;
+    }
+
+    setUploadingFieldId(fieldId);
+    setAttachmentError(fieldId, null);
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      const res = await fetch(
+        `/api/v1/applications/${encodeURIComponent(applicationId)}/attachments/${encodeURIComponent(fieldId)}`,
+        {
+          method: 'POST',
+          headers: { 'X-Session-Token': sessionToken },
+          body,
+        }
+      );
+      const result = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(result?.error?.message || 'Không thể tải tệp lên.');
+      }
+      setField(fieldId, result.fileName);
+    } catch (err) {
+      setAttachmentError(
+        fieldId,
+        err instanceof Error ? err.message : 'Không thể tải tệp lên.'
+      );
+    } finally {
+      setUploadingFieldId(null);
+    }
+  };
+
+  const removeAttachment = async (fieldId: string) => {
+    if (!applicationId || !sessionToken || uploadingFieldId) return;
+    setUploadingFieldId(fieldId);
+    setAttachmentError(fieldId, null);
+    try {
+      const res = await fetch(
+        `/api/v1/applications/${encodeURIComponent(applicationId)}/attachments/${encodeURIComponent(fieldId)}`,
+        {
+          method: 'DELETE',
+          headers: { 'X-Session-Token': sessionToken },
+        }
+      );
+      const result = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(result?.error?.message || 'Không thể xóa tệp đính kèm.');
+      }
+      setField(fieldId, '');
+    } catch (err) {
+      setAttachmentError(
+        fieldId,
+        err instanceof Error ? err.message : 'Không thể xóa tệp đính kèm.'
+      );
+    } finally {
+      setUploadingFieldId(null);
+    }
   };
 
   const visibleFields = visibleFieldsFor(fields, formData);
@@ -559,21 +648,60 @@ export default function DynamicForm({
         );
       case 'file':
         return (
-          <div>
+          <div className="space-y-2">
             <input
               id={inputId}
               type="file"
-              className="block w-full text-lg text-slate-800"
-              onChange={(e) =>
-                setField(
-                  field.id,
-                  e.target.files && e.target.files[0] ? e.target.files[0].name : ''
-                )
-              }
+              accept={ATTACHMENT_ACCEPT}
+              disabled={uploadingFieldId === field.id}
+              className="block w-full text-base text-slate-800 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2.5 file:font-semibold file:text-brand-800 hover:file:bg-brand-100 disabled:opacity-60"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void uploadAttachment(field.id, file);
+                event.target.value = '';
+              }}
               {...a11y}
             />
+            <p className="text-sm text-slate-500">
+              PDF hoặc ảnh JPG, PNG, WebP · tối đa 10 MB.
+            </p>
+            {uploadingFieldId === field.id && (
+              <p className="text-sm font-semibold text-brand-700" role="status">
+                Đang tải tệp lên hệ thống…
+              </p>
+            )}
             {typeof value === 'string' && value !== '' && (
-              <p className="mt-1 text-base text-slate-600">Tệp đã chọn: {value}</p>
+              <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Tệp đã tải lên
+                  </p>
+                  <p className="truncate font-semibold text-slate-800">{value}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {applicationId && (
+                    <AttachmentPreviewLink
+                      applicationId={applicationId}
+                      fieldId={field.id}
+                      fileName={value}
+                      token={sessionToken}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void removeAttachment(field.id)}
+                    disabled={uploadingFieldId === field.id}
+                    className="inline-flex min-h-10 items-center rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
+                  >
+                    Xóa
+                  </button>
+                </div>
+              </div>
+            )}
+            {attachmentErrors[field.id] && (
+              <p className="text-sm font-semibold text-red-700" role="alert">
+                {attachmentErrors[field.id]}
+              </p>
             )}
           </div>
         );
@@ -1414,6 +1542,8 @@ export function ApplicationFormRunner({
         fields={fields}
         rules={rules}
         initialData={data}
+        applicationId={applicationId}
+        sessionToken={token}
         submitLabel={saving ? 'Đang lưu...' : 'Lưu và kiểm tra hồ sơ'}
         submitting={saving}
         onSubmit={handleSubmit}

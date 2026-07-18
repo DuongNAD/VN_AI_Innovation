@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { visibleFieldsFor } from '@/components/DynamicForm';
 import type { FieldDef } from '@/lib/schema-guards';
 import { DEFAULT_TTS_MODE, isTtsMode, type TtsMode } from '@/lib/tts-mode';
+import AttachmentPreviewLink from '@/components/AttachmentPreviewLink';
 
 interface FormVersionOverview {
   version: string;
@@ -1404,7 +1405,21 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                               <tr key={f.id} className="hover:bg-slate-50">
                                 <td className="px-4 py-2 text-slate-600">{f.label}</td>
                                 <td className="px-4 py-2 font-medium text-slate-900">
-                                  {fmtFieldValue(f, app.data[f.id])}
+                                  {f.type === 'file' &&
+                                  typeof app.data[f.id] === 'string' &&
+                                  app.data[f.id] !== '' ? (
+                                    <span className="inline-flex flex-wrap items-center gap-2">
+                                      <span>{fmtFieldValue(f, app.data[f.id])}</span>
+                                      <AttachmentPreviewLink
+                                        applicationId={app.id}
+                                        fieldId={f.id}
+                                        fileName={String(app.data[f.id])}
+                                        compact
+                                      />
+                                    </span>
+                                  ) : (
+                                    fmtFieldValue(f, app.data[f.id])
+                                  )}
                                 </td>
                               </tr>
                             ))

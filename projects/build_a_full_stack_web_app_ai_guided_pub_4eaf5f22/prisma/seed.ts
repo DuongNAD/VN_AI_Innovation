@@ -514,13 +514,13 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
     const marriageFieldsV1Raw = [
       { id: "male_full_name", type: "text", label: "Họ và tên nam", required: true },
       { id: "male_birth_date", type: "date", label: "Ngày sinh nam", required: true },
-      { id: "male_identity_number", type: "text", label: "Số định danh cá nhân/CCCD nam", required: true },
+      { id: "male_identity_number", type: "text", label: "Số định danh cá nhân/CCCD của bên nam", required: true },
       { id: "female_full_name", type: "text", label: "Họ và tên nữ", required: true },
       { id: "female_birth_date", type: "date", label: "Ngày sinh nữ", required: true },
-      { id: "female_identity_number", type: "text", label: "Số định danh cá nhân/CCCD nữ", required: true },
+      { id: "female_identity_number", type: "text", label: "Số định danh cá nhân/CCCD của bên nữ", required: true },
       { id: "residence", type: "text", label: "Nơi cư trú", required: true },
       { id: "province", type: "province", label: "Tỉnh/thành phố đăng ký", required: true },
-      { id: "previously_married", type: "radio", label: "Đã từng kết hôn chưa", required: true, options: [{ value: true, label: "Có" }, { value: false, label: "Chưa" }] },
+      { id: "previously_married", type: "radio", label: "Bạn đã từng đăng ký kết hôn trước đây chưa?", required: true, options: [{ value: true, label: "Có" }, { value: false, label: "Không" }] },
       { id: "marriage_number", type: "number", label: "Số lần kết hôn", required: false, visibleWhen: { field: "previously_married", operator: "equals", value: true } },
       { id: "divorce_document", type: "file", label: "Trích lục ly hôn", required: false, visibleWhen: { field: "previously_married", operator: "equals", value: true } },
       { id: "submission_channel", type: "radio", label: "Kênh nộp hồ sơ", required: true, options: [{ value: "online", label: "Trực tuyến" }, { value: "offline", label: "Trực tiếp" }] }
@@ -529,34 +529,34 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
     const marriageRulesV1Raw = [
       { id: "mr_v1_req_male_full_name", type: "required", fieldId: "male_full_name", params: {}, message: "Vui lòng nhập họ và tên nam.", suggestion: "Nhập đầy đủ họ và tên theo giấy khai sinh.", severity: "error", orderNumber: 1 },
       { id: "mr_v1_req_male_birth_date", type: "required", fieldId: "male_birth_date", params: {}, message: "Vui lòng nhập ngày sinh nam.", suggestion: "Nhập đúng ngày tháng năm sinh.", severity: "error", orderNumber: 2 },
-      { id: "mr_v1_req_male_identity_number", type: "required", fieldId: "male_identity_number", params: {}, message: "Vui lòng nhập số định danh cá nhân/CCCD nam.", suggestion: "Nhập đúng 12 số trên thẻ căn cước.", severity: "error", orderNumber: 3 },
+      { id: "mr_v1_req_male_identity_number", type: "required", fieldId: "male_identity_number", params: {}, message: "Vui lòng nhập số định danh cá nhân/CCCD của bên nam.", suggestion: "Nhập đúng 12 chữ số trên thẻ căn cước.", severity: "error", orderNumber: 3 },
       { id: "mr_v1_req_female_full_name", type: "required", fieldId: "female_full_name", params: {}, message: "Vui lòng nhập họ và tên nữ.", suggestion: "Nhập đầy đủ họ và tên theo giấy khai sinh.", severity: "error", orderNumber: 4 },
       { id: "mr_v1_req_female_birth_date", type: "required", fieldId: "female_birth_date", params: {}, message: "Vui lòng nhập ngày sinh nữ.", suggestion: "Nhập đúng ngày tháng năm sinh.", severity: "error", orderNumber: 5 },
-      { id: "mr_v1_req_female_identity_number", type: "required", fieldId: "female_identity_number", params: {}, message: "Vui lòng nhập số định danh cá nhân/CCCD nữ.", suggestion: "Nhập đúng 12 số trên thẻ căn cước.", severity: "error", orderNumber: 6 },
+      { id: "mr_v1_req_female_identity_number", type: "required", fieldId: "female_identity_number", params: {}, message: "Vui lòng nhập số định danh cá nhân/CCCD của bên nữ.", suggestion: "Nhập đúng 12 chữ số trên thẻ căn cước.", severity: "error", orderNumber: 6 },
       { id: "mr_v1_req_residence", type: "required", fieldId: "residence", params: {}, message: "Vui lòng nhập nơi cư trú.", suggestion: "Nhập địa chỉ thường trú hoặc tạm trú hiện tại.", severity: "error", orderNumber: 7 },
       { id: "mr_v1_req_province", type: "required", fieldId: "province", params: {}, message: "Vui lòng chọn tỉnh/thành phố đăng ký.", suggestion: "Chọn trong danh sách hiển thị.", severity: "error", orderNumber: 8 },
       { id: "mr_v1_req_submission_channel", type: "required", fieldId: "submission_channel", params: {}, message: "Vui lòng chọn kênh nộp hồ sơ.", suggestion: "Chọn Trực tuyến hoặc Trực tiếp.", severity: "error", orderNumber: 9 },
-      { id: "mr_v1_regex_male_id", type: "regex", fieldId: "male_identity_number", params: { pattern: "^[0-9]{12}$" }, message: "Số CCCD phải gồm đúng 12 chữ số", suggestion: "Kiểm tra lại số CCCD trên thẻ căn cước", severity: "error", orderNumber: 10 },
-      { id: "mr_v1_regex_female_id", type: "regex", fieldId: "female_identity_number", params: { pattern: "^[0-9]{12}$" }, message: "Số CCCD phải gồm đúng 12 chữ số", suggestion: "Kiểm tra lại số CCCD trên thẻ căn cước", severity: "error", orderNumber: 11 },
-      { id: "mr_v1_date_male_birth", type: "date_not_future", fieldId: "male_birth_date", params: {}, message: "Ngày sinh nam không được ở tương lai", suggestion: "Vui lòng kiểm tra lại ngày sinh của nam.", severity: "error", orderNumber: 12 },
-      { id: "mr_v1_date_female_birth", type: "date_not_future", fieldId: "female_birth_date", params: {}, message: "Ngày sinh nữ không được ở tương lai", suggestion: "Vui lòng kiểm tra lại ngày sinh của nữ.", severity: "error", orderNumber: 13 },
-      { id: "mr_v1_range_marriage_number", type: "number_range", fieldId: "marriage_number", params: { min: 1, max: 10 }, message: "Số lần kết hôn phải từ 1 đến 10", suggestion: "Vui lòng nhập số lần kết hôn hợp lệ.", severity: "error", orderNumber: 14 },
-      { id: "mr_v1_conflict_marriage", type: "cross_field_conflict", fieldId: undefined, params: { conditions: [{ field: "previously_married", operator: "equals", value: false }, { field: "marriage_number", operator: "not_empty" }] }, message: "Thông tin mâu thuẫn: chưa từng kết hôn nhưng có số lần kết hôn", suggestion: "Kiểm tra lại lựa chọn Đã từng kết hôn chưa hoặc Số lần kết hôn", severity: "error", orderNumber: 15 },
+      { id: "mr_v1_regex_male_id", type: "regex", fieldId: "male_identity_number", params: { pattern: "^[0-9]{12}$" }, message: "Số CCCD phải gồm đúng 12 chữ số.", suggestion: "Kiểm tra lại số CCCD trên thẻ căn cước.", severity: "error", orderNumber: 10 },
+      { id: "mr_v1_regex_female_id", type: "regex", fieldId: "female_identity_number", params: { pattern: "^[0-9]{12}$" }, message: "Số CCCD phải gồm đúng 12 chữ số.", suggestion: "Kiểm tra lại số CCCD trên thẻ căn cước.", severity: "error", orderNumber: 11 },
+      { id: "mr_v1_date_male_birth", type: "date_not_future", fieldId: "male_birth_date", params: {}, message: "Ngày sinh của bên nam không được ở tương lai.", suggestion: "Vui lòng kiểm tra lại ngày sinh của bên nam.", severity: "error", orderNumber: 12 },
+      { id: "mr_v1_date_female_birth", type: "date_not_future", fieldId: "female_birth_date", params: {}, message: "Ngày sinh của bên nữ không được ở tương lai.", suggestion: "Vui lòng kiểm tra lại ngày sinh của bên nữ.", severity: "error", orderNumber: 13 },
+      { id: "mr_v1_range_marriage_number", type: "number_range", fieldId: "marriage_number", params: { min: 1, max: 10 }, message: "Số lần kết hôn phải từ 1 đến 10.", suggestion: "Vui lòng nhập số lần kết hôn hợp lệ.", severity: "error", orderNumber: 14 },
+      { id: "mr_v1_conflict_marriage", type: "cross_field_conflict", fieldId: undefined, params: { conditions: [{ field: "previously_married", operator: "equals", value: false }, { field: "marriage_number", operator: "not_empty" }] }, message: "Thông tin mâu thuẫn: bạn chọn chưa từng đăng ký kết hôn nhưng lại nhập số lần kết hôn.", suggestion: "Kiểm tra lại câu trả lời về việc đã từng đăng ký kết hôn hoặc xóa số lần kết hôn.", severity: "error", orderNumber: 15 },
       { id: "mr_v1_cond_doc_divorce", type: "conditional_document", fieldId: "divorce_document", params: { condition: { field: "previously_married", operator: "equals", value: true } }, message: "Vui lòng tải lên Trích lục ly hôn.", suggestion: "Bạn cần cung cấp giấy tờ ly hôn vì đã từng kết hôn.", severity: "error", orderNumber: 16 }
     ];
 
     const marriageFieldsV2Raw = [
       { id: "male_full_name", type: "text", label: "Họ và tên nam", required: true },
       { id: "male_birth_date", type: "date", label: "Ngày sinh nam", required: true },
-      { id: "male_identity_number", type: "text", label: "Số định danh cá nhân/CCCD nam", required: true },
+      { id: "male_identity_number", type: "text", label: "Số định danh cá nhân/CCCD của bên nam", required: true },
       { id: "female_full_name", type: "text", label: "Họ và tên nữ", required: true },
       { id: "female_birth_date", type: "date", label: "Ngày sinh nữ", required: true },
-      { id: "female_identity_number", type: "text", label: "Số định danh cá nhân/CCCD nữ", required: true },
+      { id: "female_identity_number", type: "text", label: "Số định danh cá nhân/CCCD của bên nữ", required: true },
       { id: "permanent_address", type: "text", label: "Địa chỉ thường trú", required: true },
       { id: "temporary_address", type: "text", label: "Địa chỉ tạm trú", required: true },
       { id: "phone_number", type: "text", label: "Số điện thoại", required: true },
       { id: "province", type: "province", label: "Tỉnh/thành phố đăng ký", required: true },
-      { id: "previously_married", type: "radio", label: "Đã từng kết hôn chưa", required: true, options: [{ value: true, label: "Có" }, { value: false, label: "Chưa" }] },
+      { id: "previously_married", type: "radio", label: "Bạn đã từng đăng ký kết hôn trước đây chưa?", required: true, options: [{ value: true, label: "Có" }, { value: false, label: "Không" }] },
       { id: "marriage_number", type: "number", label: "Số lần kết hôn", required: false, visibleWhen: { field: "previously_married", operator: "equals", value: true } },
       { id: "divorce_document", type: "file", label: "Trích lục ly hôn", required: false, visibleWhen: { field: "previously_married", operator: "equals", value: true } },
       { id: "submission_channel", type: "radio", label: "Kênh nộp hồ sơ", required: true, options: [{ value: "online", label: "Trực tuyến" }, { value: "offline", label: "Trực tiếp" }] }
@@ -565,22 +565,22 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
     const marriageRulesV2Raw = [
       { id: "mr_v2_req_male_full_name", type: "required", fieldId: "male_full_name", params: {}, message: "Vui lòng nhập họ và tên nam.", suggestion: "Nhập đầy đủ họ và tên theo giấy khai sinh.", severity: "error", orderNumber: 1 },
       { id: "mr_v2_req_male_birth_date", type: "required", fieldId: "male_birth_date", params: {}, message: "Vui lòng nhập ngày sinh nam.", suggestion: "Nhập đúng ngày tháng năm sinh.", severity: "error", orderNumber: 2 },
-      { id: "mr_v2_req_male_identity_number", type: "required", fieldId: "male_identity_number", params: {}, message: "Vui lòng nhập số định danh cá nhân/CCCD nam.", suggestion: "Nhập đúng 12 số trên thẻ căn cước.", severity: "error", orderNumber: 3 },
+      { id: "mr_v2_req_male_identity_number", type: "required", fieldId: "male_identity_number", params: {}, message: "Vui lòng nhập số định danh cá nhân/CCCD của bên nam.", suggestion: "Nhập đúng 12 chữ số trên thẻ căn cước.", severity: "error", orderNumber: 3 },
       { id: "mr_v2_req_female_full_name", type: "required", fieldId: "female_full_name", params: {}, message: "Vui lòng nhập họ và tên nữ.", suggestion: "Nhập đầy đủ họ và tên theo giấy khai sinh.", severity: "error", orderNumber: 4 },
       { id: "mr_v2_req_female_birth_date", type: "required", fieldId: "female_birth_date", params: {}, message: "Vui lòng nhập ngày sinh nữ.", suggestion: "Nhập đúng ngày tháng năm sinh.", severity: "error", orderNumber: 5 },
-      { id: "mr_v2_req_female_identity_number", type: "required", fieldId: "female_identity_number", params: {}, message: "Vui lòng nhập số định danh cá nhân/CCCD nữ.", suggestion: "Nhập đúng 12 số trên thẻ căn cước.", severity: "error", orderNumber: 6 },
+      { id: "mr_v2_req_female_identity_number", type: "required", fieldId: "female_identity_number", params: {}, message: "Vui lòng nhập số định danh cá nhân/CCCD của bên nữ.", suggestion: "Nhập đúng 12 chữ số trên thẻ căn cước.", severity: "error", orderNumber: 6 },
       { id: "mr_v2_req_permanent_address", type: "required", fieldId: "permanent_address", params: {}, message: "Vui lòng nhập địa chỉ thường trú.", suggestion: "Nhập đầy đủ số nhà, tên đường, khu vực.", severity: "error", orderNumber: 7 },
       { id: "mr_v2_req_temporary_address", type: "required", fieldId: "temporary_address", params: {}, message: "Vui lòng nhập địa chỉ tạm trú.", suggestion: "Nhập nơi cư trú tạm thời hiện tại.", severity: "error", orderNumber: 8 },
       { id: "mr_v2_req_phone_number", type: "required", fieldId: "phone_number", params: {}, message: "Vui lòng nhập số điện thoại liên hệ.", suggestion: "Nhập số điện thoại di động chính xác.", severity: "error", orderNumber: 9 },
       { id: "mr_v2_req_province", type: "required", fieldId: "province", params: {}, message: "Vui lòng chọn tỉnh/thành phố đăng ký.", suggestion: "Chọn trong danh sách hiển thị.", severity: "error", orderNumber: 10 },
       { id: "mr_v2_req_submission_channel", type: "required", fieldId: "submission_channel", params: {}, message: "Vui lòng chọn kênh nộp hồ sơ.", suggestion: "Chọn Trực tuyến hoặc Trực tiếp.", severity: "error", orderNumber: 11 },
-      { id: "mr_v2_regex_male_id", type: "regex", fieldId: "male_identity_number", params: { pattern: "^[0-9]{12}$" }, message: "Số CCCD phải gồm đúng 12 chữ số", suggestion: "Kiểm tra lại số CCCD trên thẻ căn cước", severity: "error", orderNumber: 12 },
-      { id: "mr_v2_regex_female_id", type: "regex", fieldId: "female_identity_number", params: { pattern: "^[0-9]{12}$" }, message: "Số CCCD phải gồm đúng 12 chữ số", suggestion: "Kiểm tra lại số CCCD trên thẻ căn cước", severity: "error", orderNumber: 13 },
-      { id: "mr_v2_regex_phone", type: "regex", fieldId: "phone_number", params: { pattern: "^0[0-9]{9}$" }, message: "Số điện thoại không hợp lệ", suggestion: "Nhập số điện thoại gồm 10 chữ số bắt đầu bằng 0", severity: "error", orderNumber: 14 },
-      { id: "mr_v2_date_male_birth", type: "date_not_future", fieldId: "male_birth_date", params: {}, message: "Ngày sinh nam không được ở tương lai", suggestion: "Vui lòng kiểm tra lại ngày sinh của nam.", severity: "error", orderNumber: 15 },
-      { id: "mr_v2_date_female_birth", type: "date_not_future", fieldId: "female_birth_date", params: {}, message: "Ngày sinh nữ không được ở tương lai", suggestion: "Vui lòng kiểm tra lại ngày sinh của nữ.", severity: "error", orderNumber: 16 },
-      { id: "mr_v2_range_marriage_number", type: "number_range", fieldId: "marriage_number", params: { min: 1, max: 10 }, message: "Số lần kết hôn phải từ 1 đến 10", suggestion: "Vui lòng nhập số lần kết hôn hợp lệ.", severity: "error", orderNumber: 17 },
-      { id: "mr_v2_conflict_marriage", type: "cross_field_conflict", fieldId: undefined, params: { conditions: [{ field: "previously_married", operator: "equals", value: false }, { field: "marriage_number", operator: "not_empty" }] }, message: "Thông tin mâu thuẫn: chưa từng kết hôn nhưng có số lần kết hôn", suggestion: "Kiểm tra lại lựa chọn Đã từng kết hôn chưa hoặc Số lần kết hôn", severity: "error", orderNumber: 18 },
+      { id: "mr_v2_regex_male_id", type: "regex", fieldId: "male_identity_number", params: { pattern: "^[0-9]{12}$" }, message: "Số CCCD phải gồm đúng 12 chữ số.", suggestion: "Kiểm tra lại số CCCD trên thẻ căn cước.", severity: "error", orderNumber: 12 },
+      { id: "mr_v2_regex_female_id", type: "regex", fieldId: "female_identity_number", params: { pattern: "^[0-9]{12}$" }, message: "Số CCCD phải gồm đúng 12 chữ số.", suggestion: "Kiểm tra lại số CCCD trên thẻ căn cước.", severity: "error", orderNumber: 13 },
+      { id: "mr_v2_regex_phone", type: "regex", fieldId: "phone_number", params: { pattern: "^0[0-9]{9}$" }, message: "Số điện thoại không hợp lệ.", suggestion: "Nhập số điện thoại gồm 10 chữ số, bắt đầu bằng 0.", severity: "error", orderNumber: 14 },
+      { id: "mr_v2_date_male_birth", type: "date_not_future", fieldId: "male_birth_date", params: {}, message: "Ngày sinh của bên nam không được ở tương lai.", suggestion: "Vui lòng kiểm tra lại ngày sinh của bên nam.", severity: "error", orderNumber: 15 },
+      { id: "mr_v2_date_female_birth", type: "date_not_future", fieldId: "female_birth_date", params: {}, message: "Ngày sinh của bên nữ không được ở tương lai.", suggestion: "Vui lòng kiểm tra lại ngày sinh của bên nữ.", severity: "error", orderNumber: 16 },
+      { id: "mr_v2_range_marriage_number", type: "number_range", fieldId: "marriage_number", params: { min: 1, max: 10 }, message: "Số lần kết hôn phải từ 1 đến 10.", suggestion: "Vui lòng nhập số lần kết hôn hợp lệ.", severity: "error", orderNumber: 17 },
+      { id: "mr_v2_conflict_marriage", type: "cross_field_conflict", fieldId: undefined, params: { conditions: [{ field: "previously_married", operator: "equals", value: false }, { field: "marriage_number", operator: "not_empty" }] }, message: "Thông tin mâu thuẫn: bạn chọn chưa từng đăng ký kết hôn nhưng lại nhập số lần kết hôn.", suggestion: "Kiểm tra lại câu trả lời về việc đã từng đăng ký kết hôn hoặc xóa số lần kết hôn.", severity: "error", orderNumber: 18 },
       { id: "mr_v2_cond_doc_divorce", type: "conditional_document", fieldId: "divorce_document", params: { condition: { field: "previously_married", operator: "equals", value: true } }, message: "Vui lòng tải lên Trích lục ly hôn.", suggestion: "Bạn cần cung cấp giấy tờ ly hôn vì đã từng kết hôn.", severity: "error", orderNumber: 19 }
     ];
 
@@ -664,7 +664,7 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
       { id: "br_v1_req_province", type: "required", fieldId: "province", params: {}, message: "Tỉnh/thành phố đăng ký là bắt buộc.", suggestion: "Chọn tỉnh/thành phố đăng ký khai sinh.", severity: "error", orderNumber: 3 },
       { id: "br_v1_req_requester_name", type: "required", fieldId: "requester_name", params: {}, message: "Họ và tên người đi khai sinh là bắt buộc.", suggestion: "Nhập họ tên đầy đủ của người đi đăng ký.", severity: "error", orderNumber: 4 },
       { id: "br_v1_req_relationship", type: "required", fieldId: "relationship", params: {}, message: "Quan hệ với trẻ là bắt buộc.", suggestion: "Chọn Cha, Mẹ hoặc Khác.", severity: "error", orderNumber: 5 },
-      { id: "br_v1_date_child_birth", type: "date_not_future", fieldId: "birth_date", params: {}, message: "Ngày sinh của trẻ không được ở tương lai", suggestion: "Vui lòng kiểm tra lại ngày sinh của trẻ.", severity: "error", orderNumber: 6 }
+      { id: "br_v1_date_child_birth", type: "date_not_future", fieldId: "birth_date", params: {}, message: "Ngày sinh của trẻ không được ở tương lai.", suggestion: "Vui lòng kiểm tra lại ngày sinh của trẻ.", severity: "error", orderNumber: 6 }
     ];
 
     await upsertFormAndVersions(
@@ -692,7 +692,7 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
 
     const tempResidenceQuestions = [
       { code: 'has_consent', orderNumber: 1, fieldType: 'radio', optionsJson: [{ value: true, label: 'Có' }, { value: false, label: 'Không' }], conditionJson: null, questionText: 'Bạn có sự đồng ý của chủ hộ/chủ sở hữu chỗ ở hợp pháp không?' },
-      { code: 'province', orderNumber: 2, fieldType: 'province', optionsJson: null, conditionJson: null, questionText: 'Tỉnh/thành phố nơi bạn đến đăng ký tạm trú?' }
+      { code: 'province', orderNumber: 2, fieldType: 'province', optionsJson: null, conditionJson: null, questionText: 'Bạn muốn đăng ký tạm trú tại tỉnh/thành phố nào?' }
     ];
 
     const tempResidenceDocuments = [
@@ -783,8 +783,8 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
     ];
 
     const citizenIdQuestions = [
-      { code: 'age_group', orderNumber: 1, fieldType: 'select', optionsJson: [{ value: 'under_6', label: 'Dưới 6 tuổi' }, { value: '6_to_14', label: 'Từ 6 đến dưới 14 tuổi' }, { value: 'over_14', label: 'Từ đủ 14 tuổi trở lên' }], conditionJson: null, questionText: 'Độ tuổi của người được cấp thẻ căn cước?' },
-      { code: 'province', orderNumber: 2, fieldType: 'province', optionsJson: null, conditionJson: null, questionText: 'Tỉnh/thành phố nơi bạn muốn thực hiện cấp thẻ?' }
+      { code: 'age_group', orderNumber: 1, fieldType: 'select', optionsJson: [{ value: 'under_6', label: 'Dưới 6 tuổi' }, { value: '6_to_14', label: 'Từ 6 đến dưới 14 tuổi' }, { value: 'over_14', label: 'Từ đủ 14 tuổi trở lên' }], conditionJson: null, questionText: 'Người làm thẻ căn cước thuộc nhóm tuổi nào?' },
+      { code: 'province', orderNumber: 2, fieldType: 'province', optionsJson: null, conditionJson: null, questionText: 'Bạn muốn làm thẻ căn cước tại tỉnh/thành phố nào?' }
     ];
 
     const citizenIdDocuments = [
@@ -867,7 +867,7 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
 
     const passportQuestions = [
       { code: 'passport_type', orderNumber: 1, fieldType: 'select', optionsJson: [{ value: 'chipped', label: 'Có gắn chíp điện tử' }, { value: 'non_chipped', label: 'Không gắn chíp điện tử' }], conditionJson: null, questionText: 'Bạn muốn cấp hộ chiếu loại gắn chíp điện tử hay không gắn chíp?' },
-      { code: 'province', orderNumber: 2, fieldType: 'province', optionsJson: null, conditionJson: null, questionText: 'Tỉnh/thành phố nơi bạn nộp hồ sơ?' }
+      { code: 'province', orderNumber: 2, fieldType: 'province', optionsJson: null, conditionJson: null, questionText: 'Bạn muốn nộp hồ sơ tại tỉnh/thành phố nào?' }
     ];
 
     const passportDocuments = [
@@ -994,7 +994,7 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
       { id: "business_name", type: "text", label: "Tên hộ kinh doanh", required: true },
       { id: "owner_full_name", type: "text", label: "Họ và tên chủ hộ kinh doanh", required: true },
       { id: "owner_birth_date", type: "date", label: "Ngày sinh chủ hộ", required: true },
-      { id: "owner_identity_number", type: "text", label: "Số định danh cá nhân/CCCD chủ hộ", required: true },
+      { id: "owner_identity_number", type: "text", label: "Số định danh cá nhân/CCCD của chủ hộ", required: true },
       { id: "business_address", type: "text", label: "Địa chỉ trụ sở hộ kinh doanh", required: true },
       { id: "province", type: "province", label: "Tỉnh/thành phố đăng ký", required: true },
       { id: "business_lines", type: "text", label: "Ngành, nghề kinh doanh", required: true },
@@ -1009,18 +1009,18 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
       { id: "hkd_v1_req_business_name", type: "required", fieldId: "business_name", params: {}, message: "Vui lòng nhập tên hộ kinh doanh.", suggestion: "Nhập tên đầy đủ, ví dụ: Hộ kinh doanh Tạp hóa Minh Anh.", severity: "error", orderNumber: 1 },
       { id: "hkd_v1_req_owner_name", type: "required", fieldId: "owner_full_name", params: {}, message: "Vui lòng nhập họ tên chủ hộ kinh doanh.", suggestion: "Nhập đầy đủ họ tên theo CCCD.", severity: "error", orderNumber: 2 },
       { id: "hkd_v1_req_owner_birth", type: "required", fieldId: "owner_birth_date", params: {}, message: "Vui lòng nhập ngày sinh chủ hộ.", suggestion: "Nhập đúng ngày tháng năm sinh.", severity: "error", orderNumber: 3 },
-      { id: "hkd_v1_date_owner_birth", type: "date_not_future", fieldId: "owner_birth_date", params: {}, message: "Ngày sinh chủ hộ không được ở tương lai", suggestion: "Vui lòng kiểm tra lại ngày sinh.", severity: "error", orderNumber: 4 },
-      { id: "hkd_v1_req_owner_id", type: "required", fieldId: "owner_identity_number", params: {}, message: "Vui lòng nhập số định danh cá nhân/CCCD chủ hộ.", suggestion: "Nhập đủ 12 chữ số trên thẻ căn cước.", severity: "error", orderNumber: 5 },
-      { id: "hkd_v1_fmt_owner_id", type: "regex", fieldId: "owner_identity_number", params: { pattern: "^[0-9]{12}$" }, message: "Số CCCD phải gồm đúng 12 chữ số", suggestion: "Kiểm tra lại số CCCD trên thẻ căn cước", severity: "error", orderNumber: 6 },
+      { id: "hkd_v1_date_owner_birth", type: "date_not_future", fieldId: "owner_birth_date", params: {}, message: "Ngày sinh của chủ hộ không được ở tương lai.", suggestion: "Vui lòng kiểm tra lại ngày sinh.", severity: "error", orderNumber: 4 },
+      { id: "hkd_v1_req_owner_id", type: "required", fieldId: "owner_identity_number", params: {}, message: "Vui lòng nhập số định danh cá nhân/CCCD của chủ hộ.", suggestion: "Nhập đủ 12 chữ số trên thẻ căn cước.", severity: "error", orderNumber: 5 },
+      { id: "hkd_v1_fmt_owner_id", type: "regex", fieldId: "owner_identity_number", params: { pattern: "^[0-9]{12}$" }, message: "Số CCCD phải gồm đúng 12 chữ số.", suggestion: "Kiểm tra lại số CCCD trên thẻ căn cước.", severity: "error", orderNumber: 6 },
       { id: "hkd_v1_req_address", type: "required", fieldId: "business_address", params: {}, message: "Vui lòng nhập địa chỉ trụ sở hộ kinh doanh.", suggestion: "Nhập số nhà, đường/phố, phường/xã nơi đặt trụ sở.", severity: "error", orderNumber: 7 },
       { id: "hkd_v1_req_province", type: "required", fieldId: "province", params: {}, message: "Vui lòng chọn tỉnh/thành phố đăng ký.", suggestion: "Chọn nơi đặt trụ sở hộ kinh doanh.", severity: "error", orderNumber: 8 },
       { id: "hkd_v1_req_lines", type: "required", fieldId: "business_lines", params: {}, message: "Vui lòng nhập ngành, nghề kinh doanh.", suggestion: "Ví dụ: bán lẻ tạp hóa, dịch vụ ăn uống.", severity: "error", orderNumber: 9 },
       { id: "hkd_v1_req_capital", type: "required", fieldId: "capital_amount", params: {}, message: "Vui lòng nhập vốn kinh doanh.", suggestion: "Nhập số vốn bằng đồng Việt Nam.", severity: "error", orderNumber: 10 },
-      { id: "hkd_v1_range_capital", type: "number_range", fieldId: "capital_amount", params: { min: 1 }, message: "Vốn kinh doanh phải lớn hơn 0 đồng", suggestion: "Kiểm tra lại số vốn đã kê khai.", severity: "error", orderNumber: 11 },
-      { id: "hkd_v1_fmt_phone", type: "regex", fieldId: "phone_number", params: { pattern: "^0[0-9]{9}$" }, message: "Số điện thoại phải gồm 10 chữ số bắt đầu bằng 0", suggestion: "Ví dụ: 0912345678.", severity: "error", orderNumber: 12 },
+      { id: "hkd_v1_range_capital", type: "number_range", fieldId: "capital_amount", params: { min: 1 }, message: "Vốn kinh doanh phải lớn hơn 0 đồng.", suggestion: "Kiểm tra lại số vốn đã kê khai.", severity: "error", orderNumber: 11 },
+      { id: "hkd_v1_fmt_phone", type: "regex", fieldId: "phone_number", params: { pattern: "^0[0-9]{9}$" }, message: "Số điện thoại phải gồm 10 chữ số, bắt đầu bằng 0.", suggestion: "Ví dụ: 0912345678.", severity: "error", orderNumber: 12 },
       { id: "hkd_v1_req_family_flag", type: "required", fieldId: "registered_by_family", params: {}, message: "Vui lòng chọn hình thức đăng ký.", suggestion: "Chọn Có nếu các thành viên hộ gia đình cùng đăng ký.", severity: "error", orderNumber: 13 },
       { id: "hkd_v1_cond_doc_authorization", type: "conditional_document", fieldId: "family_authorization", params: { condition: { field: "registered_by_family", operator: "equals", value: true } }, message: "Vui lòng tải lên văn bản ủy quyền của thành viên hộ gia đình.", suggestion: "Cần bản sao văn bản ủy quyền có công chứng/chứng thực vì hộ do các thành viên hộ gia đình đăng ký.", severity: "error", orderNumber: 14 },
-      { id: "hkd_v1_conflict_authorization", type: "cross_field_conflict", fieldId: undefined, params: { conditions: [{ field: "registered_by_family", operator: "equals", value: false }, { field: "family_authorization", operator: "not_empty" }] }, message: "Thông tin mâu thuẫn: đăng ký cá nhân nhưng có văn bản ủy quyền thành viên hộ gia đình", suggestion: "Kiểm tra lại hình thức đăng ký hoặc gỡ tệp ủy quyền.", severity: "error", orderNumber: 15 },
+      { id: "hkd_v1_conflict_authorization", type: "cross_field_conflict", fieldId: undefined, params: { conditions: [{ field: "registered_by_family", operator: "equals", value: false }, { field: "family_authorization", operator: "not_empty" }] }, message: "Thông tin mâu thuẫn: bạn chọn đăng ký cá nhân nhưng lại tải lên văn bản ủy quyền của thành viên hộ gia đình.", suggestion: "Kiểm tra lại hình thức đăng ký hoặc gỡ tệp ủy quyền.", severity: "error", orderNumber: 15 },
       { id: "hkd_v1_req_channel", type: "required", fieldId: "submission_channel", params: {}, message: "Vui lòng chọn kênh nộp hồ sơ.", suggestion: "Chọn Trực tuyến hoặc Trực tiếp.", severity: "error", orderNumber: 16 }
     ];
 

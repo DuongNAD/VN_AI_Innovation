@@ -113,6 +113,41 @@ export const PUT = handleRoute(async (req: Request, { params }: { params: Promis
   }
   const sanitized = sanitizeResult.sanitized;
 
+  const populatedFileFields = pinned.fields.filter((field) => {
+    const value = sanitized[field.id];
+    return field.type === 'file' && typeof value === 'string' && value !== '';
+  });
+  if (populatedFileFields.length > 0) {
+    const attachments = await prisma.applicationAttachment.findMany({
+      where: {
+        applicationId: application.id,
+        fieldId: { in: populatedFileFields.map((field) => field.id) },
+      },
+      select: { fieldId: true, fileName: true },
+    });
+    const attachmentByField = new Map(
+      attachments.map((attachment) => [attachment.fieldId, attachment.fileName])
+    );
+    const invalidFileFields = populatedFileFields.filter(
+      (field) => attachmentByField.get(field.id) !== sanitized[field.id]
+    );
+    if (invalidFileFields.length > 0) {
+      throw new AppError(
+        400,
+        'INVALID_FORM_DATA',
+        'Một số tệp mới chỉ có tên hoặc chưa được tải lên hệ thống.',
+        {
+          issues: invalidFileFields.map((field) => ({
+            path: field.id,
+            field: field.id,
+            code: 'ATTACHMENT_NOT_UPLOADED',
+            message: `Vui lòng chọn và tải lại tệp tại trường ${field.label}.`,
+          })),
+        }
+      );
+    }
+  }
+
   const updateResult = await prisma.application.updateMany({
     where: {
       id: application.id,

@@ -91,10 +91,14 @@ const QUESTION_PRESENTATIONS: Record<string, QuestionRewrite> = {
     ],
   },
   'MARRIAGE_REGISTRATION:previously_married': {
-    questionText: 'Trước đây bạn đã từng được cấp Giấy chứng nhận kết hôn chưa?',
+    questionText: 'Trước đây bạn đã từng đăng ký kết hôn chưa?',
     helpText:
-      'Chọn “Có” kể cả khi cuộc hôn nhân trước đã chấm dứt do ly hôn hoặc người vợ/chồng trước đã mất.',
-    examples: [],
+      'Chọn “Có” nếu bạn đã từng đăng ký kết hôn, kể cả khi đã ly hôn hoặc vợ/chồng trước của bạn đã mất. Nếu chưa từng đăng ký kết hôn, hãy chọn “Không”.',
+    examples: [
+      'Chọn “Không”: bạn chưa từng đăng ký kết hôn.',
+      'Chọn “Có”: bạn đã ly hôn.',
+      'Chọn “Có”: vợ/chồng trước của bạn đã mất.',
+    ],
   },
   'MARRIAGE_REGISTRATION:province': {
     questionText: 'Bạn muốn làm thủ tục đăng ký kết hôn tại tỉnh hoặc thành phố nào?',
@@ -207,14 +211,19 @@ function sanitizeFormCode(input: any): string {
   return 'UNKNOWN';
 }
 
+export function normalizeGeneratedVietnameseText(value: string): string {
+  return value
+    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\b(?:đã\s+)?(?:g[oó]a|goá)\s+bụa\b/giu, 'có vợ hoặc chồng đã mất')
+    .trim();
+}
+
 function cleanQuestionText(value: unknown, maxLength: number): string | null {
   if (typeof value !== 'string') {
     return null;
   }
-  const cleaned = value
-    .replace(/[\u0000-\u001F\u007F]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const cleaned = normalizeGeneratedVietnameseText(value);
   return cleaned && cleaned.length <= maxLength ? cleaned : null;
 }
 
@@ -367,7 +376,9 @@ Hãy giải thích các lỗi được cung cấp một cách đơn giản, dễ
 Yêu cầu bắt buộc:
 1. CHỈ giải thích các mã lỗi được cung cấp.
 2. Không đưa ra bất kỳ lời khuyên pháp lý nào.
-3. Trả về kết quả dưới định dạng JSON có cấu trúc chính xác như sau:
+3. Dùng từ phổ thông, hiện đại; tránh từ cổ, từ địa phương và từ dễ gây hiểu nhầm.
+4. Kiểm tra chính tả và dấu câu tiếng Việt trước khi trả kết quả.
+5. Trả về kết quả dưới định dạng JSON có cấu trúc chính xác như sau:
 {
   "explanation": string
 }`;
@@ -381,7 +392,9 @@ Yêu cầu bắt buộc:
 3. questionText là một câu hỏi ngắn, trực tiếp.
 4. helpText giải thích cách hiểu bằng ngôn ngữ đời thường.
 5. examples có tối đa 3 ví dụ ngắn; có thể là mảng rỗng.
-6. Chỉ trả về JSON:
+6. Dùng từ phổ thông, hiện đại; tránh từ cổ, từ địa phương hoặc từ dễ gây hiểu nhầm. Không dùng “góa bụa”; hãy viết rõ “vợ/chồng đã mất”.
+7. Kiểm tra chính tả và dấu câu tiếng Việt trước khi trả kết quả.
+8. Chỉ trả về JSON:
 {
   "questionText": string,
   "helpText": string,
@@ -471,6 +484,10 @@ export const openaiLlm: LlmProvider = {
 
   async rewriteQuestion(input) {
     const sanitized = sanitizeQuestionInput(input);
+    const curated = QUESTION_PRESENTATIONS[`${sanitized.procedureCode}:${sanitized.questionCode}`];
+    if (curated) {
+      return curated;
+    }
     const startTime = Date.now();
     const response = await fetchUpstreamJson('/chat/completions', {
       method: 'POST',
@@ -561,12 +578,12 @@ export const openaiLlm: LlmProvider = {
       throw new UpstreamError('Response content is not a non-null object');
     }
 
-    const explanation = parsed.explanation;
-    if (typeof explanation !== 'string' || explanation.trim() === '' || explanation.length > 2000) {
+    const rawExplanation = parsed.explanation;
+    if (typeof rawExplanation !== 'string' || rawExplanation.trim() === '' || rawExplanation.length > 2000) {
       throw new UpstreamError('Invalid explanation field in OpenAI response');
     }
 
-    return explanation.trim();
+    return normalizeGeneratedVietnameseText(rawExplanation);
   },
 };
 

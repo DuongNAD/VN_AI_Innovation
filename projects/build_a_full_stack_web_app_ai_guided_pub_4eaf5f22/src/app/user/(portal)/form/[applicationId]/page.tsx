@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import SourceFooter from '@/components/SourceFooter';
 import { ApplicationFormRunner } from '@/components/ApplicationFormRunner';
@@ -34,6 +34,13 @@ export default function ApplicationFormPage() {
   const [error, setError] = useState<'session_missing' | 'access_denied' | string | null>(null);
   const [data, setData] = useState<ApplicationData | null>(null);
   const [token, setToken] = useState<string>('');
+  const [sessionId, setSessionId] = useState<string>('');
+
+  useLayoutEffect(() => {
+    // Luôn mở một bước mới từ đầu trang, không giữ vị trí cuộn ở cuối
+    // trang giấy tờ trước đó.
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [applicationId]);
 
   useEffect(() => {
     if (!applicationId) return;
@@ -44,6 +51,7 @@ export default function ApplicationFormPage() {
       if (sessionStr) {
         const sessionObj = JSON.parse(sessionStr);
         sessionToken = sessionObj.token || '';
+        setSessionId(sessionObj.sessionId || '');
       }
     } catch (e) {
       console.error('Error reading session token:', e);
@@ -152,7 +160,12 @@ export default function ApplicationFormPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-      <FlowChrome current="form" title="Điền biểu mẫu" />
+      <FlowChrome
+        current="form"
+        title="Điền biểu mẫu"
+        backHref={sessionId ? `/user/checklist?sessionId=${sessionId}` : '/user/chat'}
+        backLabel={sessionId ? 'Giấy tờ' : 'Trò chuyện'}
+      />
       <main id="main-content" className="flex-1 px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl space-y-8">
           <div className="border-b border-slate-200 pb-6">
