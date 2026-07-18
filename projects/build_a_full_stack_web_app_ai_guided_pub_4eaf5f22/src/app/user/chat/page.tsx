@@ -1,5 +1,6 @@
 import ChatIntake from '@/components/ChatIntake';
 import FlowChrome from '@/components/FlowChrome';
+import { getAuthUserFromCookies } from '@/lib/login-auth';
 
 export default async function ChatPage({
   searchParams,
@@ -10,10 +11,18 @@ export default async function ChatPage({
   const q = params.q;
   const procedure = params.procedure;
   const embed = params.embed === '1';
+  const authUser = embed ? null : await getAuthUserFromCookies();
+  const hasUserBar = authUser?.role === 'user';
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
-      {!embed && <FlowChrome current="chat" title="Trò chuyện với trợ lý AI" />}
+      {!embed && (
+        <FlowChrome
+          current="chat"
+          title="Trò chuyện với trợ lý AI"
+          standalone={!hasUserBar}
+        />
+      )}
       <main
         id="main-content"
         className={`flex min-h-0 flex-1 flex-col ${embed ? '' : 'p-3 sm:p-4'}`}

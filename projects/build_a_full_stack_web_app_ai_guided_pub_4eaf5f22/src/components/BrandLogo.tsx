@@ -6,6 +6,8 @@ type BrandLogoProps = {
   iconOnly?: boolean;
   /** null = không bọc Link */
   href?: string | null;
+  /** Dùng thẻ a để dựng lại đầy đủ layout khi đi từ route công khai sang route có xác thực. */
+  reloadDocument?: boolean;
   className?: string;
 };
 
@@ -15,9 +17,9 @@ const SIZE_MAP = {
   lg: { box: 'h-12 w-12', mark: 'text-lg', sub: 'text-xs' },
 } as const;
 
-const BRAND_NAME = 'VN AI Innovation';
+const BRAND_NAME = 'Guideline AI';
 const BRAND_TAGLINE = 'Trợ lý Thủ tục Hành chính';
-const BRAND_ARIA = 'VN AI Innovation — Trợ lý Thủ tục Hành chính';
+const BRAND_ARIA = 'Guideline AI — Trợ lý Thủ tục Hành chính';
 
 /**
  * Logo dự án: con dấu/khiên + hồ sơ số + mạng nơ-ron.
@@ -27,6 +29,7 @@ export default function BrandLogo({
   size = 'md',
   iconOnly = false,
   href = '/user',
+  reloadDocument = false,
   className = '',
 }: BrandLogoProps) {
   const s = SIZE_MAP[size];
@@ -89,6 +92,18 @@ export default function BrandLogo({
   );
 
   if (href) {
+    if (reloadDocument) {
+      return (
+        <a
+          href={href}
+          className="inline-flex rounded-lg outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-600"
+          aria-label={`${BRAND_ARIA} — trang chủ`}
+        >
+          {mark}
+        </a>
+      );
+    }
+
     return (
       <Link
         href={href}

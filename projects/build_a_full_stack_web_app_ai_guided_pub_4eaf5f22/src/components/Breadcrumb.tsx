@@ -83,9 +83,12 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
     architecture: 'Kiến trúc hệ thống',
   };
 
-  segments.forEach((segment, index) => {
+  const visibleSegments = segments[0] === 'user' ? segments.slice(1) : segments;
+  const rootSegments = segments[0] === 'user' ? ['user'] : [];
+
+  visibleSegments.forEach((segment, index) => {
     const label = pathMap[segment] || segment;
-    const href = '/' + segments.slice(0, index + 1).join('/');
+    const href = '/' + [...rootSegments, ...visibleSegments.slice(0, index + 1)].join('/');
     breadcrumbs.push({ label, href });
   });
 

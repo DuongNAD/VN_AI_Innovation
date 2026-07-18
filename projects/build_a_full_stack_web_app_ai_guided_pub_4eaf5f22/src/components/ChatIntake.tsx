@@ -930,7 +930,7 @@ export default function ChatIntake({
                 Chào mừng đến Trợ lý Thủ tục Hành chính
               </h2>
               <p className="text-body text-slate-600">
-                VN AI Innovation — chọn lối tắt bên dưới hoặc gõ nhu cầu của bạn.
+                Guideline AI — chọn lối tắt bên dưới hoặc gõ nhu cầu của bạn.
               </p>
             </div>
             <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">

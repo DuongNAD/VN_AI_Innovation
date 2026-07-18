@@ -276,7 +276,7 @@ export default function WidgetDemoPage() {
                 HỆ THỐNG DỊCH VỤ CÔNG MÔ PHỎNG
               </h4>
               <p className="text-xs text-slate-400 max-w-md leading-relaxed">
-                Được phát triển trong khuôn khổ dự án VN AI Innovation — Trợ lý Thủ tục Hành chính. Hệ thống giúp tối ưu hóa và đơn giản hóa thủ tục hành chính công bằng công nghệ trí tuệ nhân tạo.
+                Được phát triển trong khuôn khổ dự án Guideline AI — Trợ lý Thủ tục Hành chính. Hệ thống giúp tối ưu hóa và đơn giản hóa thủ tục hành chính công bằng công nghệ trí tuệ nhân tạo.
               </p>
             </div>
             <div className="space-y-3">

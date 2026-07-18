@@ -4,6 +4,9 @@ const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-be-vietnam-pro)'],
+      },
       colors: {
         brand: {
           50: '#eff6ff',
