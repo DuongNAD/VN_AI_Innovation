@@ -219,101 +219,117 @@ const DEMO_FIELDS: Record<DocumentTypeCode, FieldDefLite[]> = {
   ],
 };
 
-const SPECS: FakeSpec[] = [
-  {
-    documentType: 'MARRIAGE_REGISTRATION',
-    status: 'SUBMITTED',
-    person: 'Nguyễn Văn An',
-    person2: 'Trần Thị Bình',
-    hoursAgo: 2,
-  },
-  {
-    documentType: 'MARRIAGE_REGISTRATION',
-    status: 'APPROVED',
-    person: 'Lê Minh Cường',
-    person2: 'Phạm Thu Dung',
-    hoursAgo: 26,
-  },
-  {
-    documentType: 'DIVORCE_APPLICATION',
-    status: 'SUBMITTED',
-    person: 'Hoàng Văn Em',
-    person2: 'Ngô Thị Hoa',
-    hoursAgo: 5,
-  },
-  {
-    documentType: 'DIVORCE_APPLICATION',
-    status: 'RETURNED',
-    person: 'Võ Thị Phương',
-    person2: 'Đặng Văn Sơn',
-    note: 'Thiếu bản sao Giấy chứng nhận kết hôn và CCCD của cả hai bên.',
-    hoursAgo: 30,
-  },
-  {
-    documentType: 'BIRTH_CERTIFICATE',
-    status: 'SUBMITTED',
-    person: 'Nguyễn Gia Bảo',
-    person2: 'Nguyễn Văn Khoa',
-    hoursAgo: 1,
-  },
-  {
-    documentType: 'BIRTH_CERTIFICATE',
-    status: 'APPROVED',
-    person: 'Trần Minh Khang',
-    person2: 'Trần Thị Lan',
-    hoursAgo: 48,
-  },
-  {
-    documentType: 'DEATH_CERTIFICATE',
-    status: 'SUBMITTED',
-    person: 'Phạm Văn Long',
-    person2: 'Phạm Thị Mai',
-    hoursAgo: 8,
-  },
-  {
-    documentType: 'TEMPORARY_RESIDENCE',
-    status: 'SUBMITTED',
-    person: 'Đỗ Thị Mai',
-    hoursAgo: 4,
-  },
-  {
-    documentType: 'TEMPORARY_RESIDENCE',
-    status: 'RETURNED',
-    person: 'Bùi Quốc Huy',
-    note: 'Bổ sung giấy tờ chứng minh chỗ ở và thời gian tạm trú.',
-    hoursAgo: 20,
-  },
-  {
-    documentType: 'MARITAL_STATUS_CONFIRMATION',
-    status: 'SUBMITTED',
-    person: 'Ngô Thanh Hà',
-    hoursAgo: 3,
-  },
-  {
-    documentType: 'DOCUMENT_AUTHENTICATION',
-    status: 'SUBMITTED',
-    person: 'Phan Văn Khoa',
-    hoursAgo: 6,
-  },
-  {
-    documentType: 'DOCUMENT_AUTHENTICATION',
-    status: 'APPROVED',
-    person: 'Lý Thị Lan',
-    hoursAgo: 40,
-  },
-  {
-    documentType: 'OTHER',
-    status: 'SUBMITTED',
-    person: 'Trịnh Minh Tuấn',
-    hoursAgo: 12,
-  },
-  {
-    documentType: 'OTHER',
-    status: 'APPROVED',
-    person: 'Đặng Thu Trang',
-    hoursAgo: 60,
-  },
+/** Base fixtures — expanded further by generateExtraSpecs() for bulk testing. */
+const BASE_SPECS: FakeSpec[] = [
+  // —— Kết hôn
+  { documentType: 'MARRIAGE_REGISTRATION', status: 'SUBMITTED', person: 'Nguyễn Văn An', person2: 'Trần Thị Bình', hoursAgo: 2 },
+  { documentType: 'MARRIAGE_REGISTRATION', status: 'SUBMITTED', person: 'Phạm Đức Thành', person2: 'Lê Thị Hương', hoursAgo: 7 },
+  { documentType: 'MARRIAGE_REGISTRATION', status: 'SUBMITTED', person: 'Hoàng Minh Tuấn', person2: 'Vũ Thị Ngọc', hoursAgo: 14 },
+  { documentType: 'MARRIAGE_REGISTRATION', status: 'APPROVED', person: 'Lê Minh Cường', person2: 'Phạm Thu Dung', hoursAgo: 26 },
+  { documentType: 'MARRIAGE_REGISTRATION', status: 'APPROVED', person: 'Đỗ Quang Huy', person2: 'Mai Thị Yến', hoursAgo: 50 },
+  { documentType: 'MARRIAGE_REGISTRATION', status: 'RETURNED', person: 'Trần Quốc Bảo', person2: 'Nguyễn Thị Hà', note: 'CCCD bên nữ bị mờ — chụp lại trang thông tin.', hoursAgo: 18 },
+  // —— Ly hôn
+  { documentType: 'DIVORCE_APPLICATION', status: 'SUBMITTED', person: 'Hoàng Văn Em', person2: 'Ngô Thị Hoa', hoursAgo: 5 },
+  { documentType: 'DIVORCE_APPLICATION', status: 'SUBMITTED', person: 'Lý Văn Phúc', person2: 'Đinh Thị Thảo', hoursAgo: 11 },
+  { documentType: 'DIVORCE_APPLICATION', status: 'SUBMITTED', person: 'Cao Minh Đức', person2: 'Bùi Thị Kim', hoursAgo: 22 },
+  { documentType: 'DIVORCE_APPLICATION', status: 'RETURNED', person: 'Võ Thị Phương', person2: 'Đặng Văn Sơn', note: 'Thiếu bản sao Giấy chứng nhận kết hôn và CCCD của cả hai bên.', hoursAgo: 30 },
+  { documentType: 'DIVORCE_APPLICATION', status: 'RETURNED', person: 'Phan Văn Toàn', person2: 'Lâm Thị My', note: 'Bổ sung thỏa thuận phân chia tài sản có công chứng.', hoursAgo: 42 },
+  { documentType: 'DIVORCE_APPLICATION', status: 'APPROVED', person: 'Trương Văn Nam', person2: 'Hồ Thị Loan', hoursAgo: 72 },
+  // —— Khai sinh
+  { documentType: 'BIRTH_CERTIFICATE', status: 'SUBMITTED', person: 'Nguyễn Gia Bảo', person2: 'Nguyễn Văn Khoa', hoursAgo: 1 },
+  { documentType: 'BIRTH_CERTIFICATE', status: 'SUBMITTED', person: 'Lê Khánh Chi', person2: 'Lê Thị Mai', hoursAgo: 6 },
+  { documentType: 'BIRTH_CERTIFICATE', status: 'SUBMITTED', person: 'Trần Gia Hân', person2: 'Trần Văn Hùng', hoursAgo: 9 },
+  { documentType: 'BIRTH_CERTIFICATE', status: 'SUBMITTED', person: 'Phạm Bảo Long', person2: 'Phạm Thị Oanh', hoursAgo: 16 },
+  { documentType: 'BIRTH_CERTIFICATE', status: 'APPROVED', person: 'Trần Minh Khang', person2: 'Trần Thị Lan', hoursAgo: 48 },
+  { documentType: 'BIRTH_CERTIFICATE', status: 'RETURNED', person: 'Vũ An Nhiên', person2: 'Vũ Thị Hằng', note: 'Thiếu giấy chứng sinh do cơ sở y tế cấp.', hoursAgo: 28 },
+  // —— Khai tử
+  { documentType: 'DEATH_CERTIFICATE', status: 'SUBMITTED', person: 'Phạm Văn Long', person2: 'Phạm Thị Mai', hoursAgo: 8 },
+  { documentType: 'DEATH_CERTIFICATE', status: 'SUBMITTED', person: 'Nguyễn Thị Bảy', person2: 'Nguyễn Văn Tám', hoursAgo: 15 },
+  { documentType: 'DEATH_CERTIFICATE', status: 'SUBMITTED', person: 'Lê Văn Chín', person2: 'Lê Thị Mười', hoursAgo: 19 },
+  { documentType: 'DEATH_CERTIFICATE', status: 'APPROVED', person: 'Đặng Văn Hùng', person2: 'Đặng Thị Lan', hoursAgo: 55 },
+  { documentType: 'DEATH_CERTIFICATE', status: 'RETURNED', person: 'Bùi Văn Cường', person2: 'Bùi Thị Duyên', note: 'Bổ sung giấy báo tử / giấy xác nhận của bệnh viện.', hoursAgo: 33 },
+  // —— Tạm trú
+  { documentType: 'TEMPORARY_RESIDENCE', status: 'SUBMITTED', person: 'Đỗ Thị Mai', hoursAgo: 4 },
+  { documentType: 'TEMPORARY_RESIDENCE', status: 'SUBMITTED', person: 'Nguyễn Văn Kiên', hoursAgo: 10 },
+  { documentType: 'TEMPORARY_RESIDENCE', status: 'SUBMITTED', person: 'Lê Thị Phương', hoursAgo: 13 },
+  { documentType: 'TEMPORARY_RESIDENCE', status: 'SUBMITTED', person: 'Hoàng Đức Anh', hoursAgo: 21 },
+  { documentType: 'TEMPORARY_RESIDENCE', status: 'RETURNED', person: 'Bùi Quốc Huy', note: 'Bổ sung giấy tờ chứng minh chỗ ở và thời gian tạm trú.', hoursAgo: 20 },
+  { documentType: 'TEMPORARY_RESIDENCE', status: 'APPROVED', person: 'Trần Thị Quỳnh', hoursAgo: 64 },
+  // —— Xác nhận tình trạng hôn nhân
+  { documentType: 'MARITAL_STATUS_CONFIRMATION', status: 'SUBMITTED', person: 'Ngô Thanh Hà', hoursAgo: 3 },
+  { documentType: 'MARITAL_STATUS_CONFIRMATION', status: 'SUBMITTED', person: 'Đinh Thị Thu', hoursAgo: 8 },
+  { documentType: 'MARITAL_STATUS_CONFIRMATION', status: 'SUBMITTED', person: 'Mai Văn Sơn', hoursAgo: 17 },
+  { documentType: 'MARITAL_STATUS_CONFIRMATION', status: 'APPROVED', person: 'Lâm Thị Vân', hoursAgo: 45 },
+  { documentType: 'MARITAL_STATUS_CONFIRMATION', status: 'RETURNED', person: 'Phùng Văn Đạt', note: 'Ghi rõ mục đích sử dụng giấy xác nhận (đăng ký kết hôn / xuất cảnh…).', hoursAgo: 25 },
+  // —— Chứng thực
+  { documentType: 'DOCUMENT_AUTHENTICATION', status: 'SUBMITTED', person: 'Phan Văn Khoa', hoursAgo: 6 },
+  { documentType: 'DOCUMENT_AUTHENTICATION', status: 'SUBMITTED', person: 'Nguyễn Thị Xuân', hoursAgo: 12 },
+  { documentType: 'DOCUMENT_AUTHENTICATION', status: 'SUBMITTED', person: 'Võ Minh Nhật', hoursAgo: 23 },
+  { documentType: 'DOCUMENT_AUTHENTICATION', status: 'APPROVED', person: 'Lý Thị Lan', hoursAgo: 40 },
+  { documentType: 'DOCUMENT_AUTHENTICATION', status: 'RETURNED', person: 'Châu Văn Bình', note: 'Mang theo bản chính để đối chiếu khi chứng thực bản sao.', hoursAgo: 35 },
+  // —— Khác
+  { documentType: 'OTHER', status: 'SUBMITTED', person: 'Trịnh Minh Tuấn', hoursAgo: 12 },
+  { documentType: 'OTHER', status: 'SUBMITTED', person: 'Hà Thị Linh', hoursAgo: 18 },
+  { documentType: 'OTHER', status: 'APPROVED', person: 'Đặng Thu Trang', hoursAgo: 60 },
+  { documentType: 'OTHER', status: 'RETURNED', person: 'Ông Văn Tài', note: 'Mô tả rõ hơn nội dung đề nghị và đính kèm giấy tờ liên quan.', hoursAgo: 29 },
 ];
+
+const FIRST_NAMES = [
+  'An', 'Bình', 'Châu', 'Dũng', 'Em', 'Giang', 'Hà', 'Hùng', 'Khoa', 'Lan',
+  'Minh', 'Nam', 'Oanh', 'Phúc', 'Quân', 'Sơn', 'Tâm', 'Uyên', 'Vân', 'Yến',
+  'Ánh', 'Bảo', 'Cường', 'Duy', 'Hạnh', 'Khánh', 'Linh', 'My', 'Ngọc', 'Trang',
+];
+const MIDDLE = ['Văn', 'Thị', 'Minh', 'Đức', 'Hoàng', 'Thanh', 'Quốc', 'Kim'];
+const LAST = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Hồ', 'Ngô', 'Dương'];
+
+function randomPerson(i: number): string {
+  const last = LAST[i % LAST.length];
+  const mid = MIDDLE[i % MIDDLE.length];
+  const first = FIRST_NAMES[i % FIRST_NAMES.length];
+  return `${last} ${mid} ${first}`;
+}
+
+/** Extra bulk rows so every type has more pending work for the officer queue. */
+function generateExtraSpecs(): FakeSpec[] {
+  const types = DOCUMENT_TYPE_CODES;
+  const out: FakeSpec[] = [];
+  let n = 0;
+  for (const documentType of types) {
+    // 3 thêm CHỜ DUYỆT mỗi loại
+    for (let k = 0; k < 3; k++) {
+      n++;
+      out.push({
+        documentType,
+        status: 'SUBMITTED',
+        person: randomPerson(n * 3),
+        person2: randomPerson(n * 3 + 1),
+        hoursAgo: 1 + ((n + k) % 40),
+      });
+    }
+    // 1 thêm ĐÃ DUYỆT
+    n++;
+    out.push({
+      documentType,
+      status: 'APPROVED',
+      person: randomPerson(n * 5),
+      person2: randomPerson(n * 5 + 2),
+      hoursAgo: 48 + (n % 20),
+    });
+    // 1 thêm CẦN BỔ SUNG
+    n++;
+    out.push({
+      documentType,
+      status: 'RETURNED',
+      person: randomPerson(n * 7),
+      person2: randomPerson(n * 7 + 1),
+      note: 'Vui lòng kiểm tra lại thông tin khai báo và bổ sung giấy tờ còn thiếu.',
+      hoursAgo: 24 + (n % 15),
+    });
+  }
+  return out;
+}
+
+const SPECS: FakeSpec[] = [...BASE_SPECS, ...generateExtraSpecs()];
 
 function cid(): string {
   return '0' + String(Math.floor(10000000000 + Math.random() * 89999999999));
