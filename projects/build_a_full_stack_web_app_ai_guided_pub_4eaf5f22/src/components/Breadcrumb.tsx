@@ -19,7 +19,7 @@ export default function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
   // Auto-generate breadcrumbs if not provided
   const breadcrumbs = items || generateBreadcrumbs(pathname);
 
-  if (breadcrumbs.length <= 1) {
+  if (breadcrumbs.length === 0) {
     return null;
   }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import SourceFooter from '@/components/SourceFooter';
+import FlowProgress from '@/components/FlowProgress';
 import { ApplicationFormRunner } from '@/components/DynamicForm';
 
 interface ApplicationData {
@@ -149,6 +150,8 @@ export default function ApplicationFormPage() {
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-8">
+        <FlowProgress current="form" />
+
         <div className="border-b border-slate-200 pb-6">
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight sm:text-4xl mb-3">
             {data.procedure.name} — Phiên bản {data.formVersion}

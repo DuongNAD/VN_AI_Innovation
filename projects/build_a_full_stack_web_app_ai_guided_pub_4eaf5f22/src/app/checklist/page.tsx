@@ -4,6 +4,7 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import ChecklistView from '@/components/ChecklistView';
 import SpeechButton from '@/components/SpeechButton';
+import FlowProgress from '@/components/FlowProgress';
 import { randomUUID } from '@/lib/uuid';
 
 function buildChecklistSummary(guidance: any): string {
@@ -248,6 +249,8 @@ function ChecklistContent() {
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-6">
+        <FlowProgress current="checklist" />
+
         {/* Top Header Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>

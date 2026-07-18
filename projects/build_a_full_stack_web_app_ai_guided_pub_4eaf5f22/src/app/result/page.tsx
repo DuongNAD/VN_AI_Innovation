@@ -4,12 +4,16 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ValidationReport from '@/components/ValidationReport';
 import SourceFooter from '@/components/SourceFooter';
+import DocumentPreview from '@/components/DocumentPreview';
+import FlowProgress from '@/components/FlowProgress';
 
 interface ApplicationData {
   formCode: string;
   formVersion: string;
   data: Record<string, any>;
+  fields?: any[];
   procedure?: {
+    name?: string;
     sourceUrl?: string;
     lastCheckedAt?: string | Date;
   };
@@ -138,32 +142,46 @@ function ResultPageContent() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto p-4 md:p-8 space-y-6">
-      {validationResult.valid && (
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-6">
-          Kết quả kiểm tra hồ sơ
-        </h1>
-      )}
+    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
+      <main className="max-w-3xl mx-auto space-y-6">
+        <FlowProgress current="result" />
 
-      <ValidationReport
-        valid={validationResult.valid}
-        errors={validationResult.errors}
-        aiExplanation={validationResult.aiExplanation}
-        applicationId={applicationId!}
-        formVersion={validationResult.formVersion || appData.formVersion}
-        aiMode={validationResult.aiMode}
-        degraded={validationResult.degraded}
-      />
+        {validationResult.valid && (
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+            Kết quả kiểm tra hồ sơ
+          </h1>
+        )}
 
-      <div className="pt-6 border-t border-slate-200">
-        <SourceFooter
-          showDisclaimer={true}
-          sourceUrl={appData.procedure?.sourceUrl}
-          version={validationResult.formVersion || appData.formVersion}
-          lastCheckedAt={appData.procedure?.lastCheckedAt}
+        <ValidationReport
+          valid={validationResult.valid}
+          errors={validationResult.errors}
+          aiExplanation={validationResult.aiExplanation}
+          applicationId={applicationId!}
+          formVersion={validationResult.formVersion || appData.formVersion}
+          aiMode={validationResult.aiMode}
+          degraded={validationResult.degraded}
         />
-      </div>
-    </main>
+
+        {validationResult.valid && Array.isArray(appData.fields) && appData.fields.length > 0 && (
+          <DocumentPreview
+            procedureName={appData.procedure?.name || 'thủ tục hành chính'}
+            formCode={appData.formCode}
+            formVersion={validationResult.formVersion || appData.formVersion}
+            fields={appData.fields}
+            data={appData.data}
+          />
+        )}
+
+        <div className="no-print pt-6 border-t border-slate-200">
+          <SourceFooter
+            showDisclaimer={true}
+            sourceUrl={appData.procedure?.sourceUrl}
+            version={validationResult.formVersion || appData.formVersion}
+            lastCheckedAt={appData.procedure?.lastCheckedAt}
+          />
+        </div>
+      </main>
+    </div>
   );
 }
 
