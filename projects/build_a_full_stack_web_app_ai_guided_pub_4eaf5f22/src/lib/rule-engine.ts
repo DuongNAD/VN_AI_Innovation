@@ -429,7 +429,11 @@ function appendNameFormatErrors(
   errors: ValidationErrorItem[]
 ): void {
   const namePattern = /^[\p{L}\s\-'\.]{2,}$/u;
-  const skipList = ['agency', 'company', 'organization', 'document', 'file', 'province', 'district', 'ward', 'username'];
+  const skipList = [
+    'agency', 'company', 'organization', 'document', 'file', 
+    'province', 'district', 'ward', 'username',
+    'business', 'household', 'store', 'shop', 'brand'
+  ];
   
   for (const [fieldId, fieldDef] of fieldsMap.entries()) {
     const lowerId = fieldId.toLowerCase();
@@ -452,6 +456,67 @@ function appendNameFormatErrors(
           field: fieldId,
           message: 'Họ và tên không hợp lệ (không được chứa chữ số hoặc ký tự đặc biệt).',
           suggestion: 'Vui lòng kiểm tra lại. Tên chỉ được gồm chữ cái, dấu cách, gạch ngang hoặc dấu chấm.',
+          severity: 'error',
+        });
+      }
+    }
+  }
+}
+
+function appendGenericTextFormatErrors(
+  fieldsMap: Map<string, FieldDef>,
+  data: Record<string, unknown>,
+  errors: ValidationErrorItem[]
+): void {
+  // Cho phép chữ cái (kể cả tiếng Việt), số, khoảng trắng (gồm cả dấu xuống dòng), 
+  // và các dấu câu thông thường. Cấm các ký tự đặc biệt như @#$%^*<>{}[]~`|=_\
+  const invalidCharPattern = /[^\p{L}\p{N}\s,\.\-\/\(\):'";&+]/u;
+  const skipList = ['email', 'password', 'url', 'link', 'username'];
+  const numericFieldList = ['phone', 'number', 'identity', 'cccd', 'zip', 'quantity', 'amount', 'price', 'year', 'month', 'day'];
+  
+  for (const [fieldId, fieldDef] of fieldsMap.entries()) {
+    if (fieldDef.type === 'text' || fieldDef.type === 'textarea') {
+      const lowerId = fieldId.toLowerCase();
+      if (skipList.some(skip => lowerId.includes(skip))) {
+        continue;
+      }
+      
+      const value = data[fieldId];
+      if (typeof value !== 'string' || value.trim() === '') {
+        continue;
+      }
+      
+      if (fieldDef.visibleWhen && !evaluateCondition(fieldDef.visibleWhen, data)) {
+        continue;
+      }
+      
+      // Tránh báo lỗi trùng lặp nếu trường này đã bị lỗi "INVALID_NAME_FORMAT"
+      if (errors.some(e => e.field === fieldId && e.code === 'INVALID_NAME_FORMAT')) {
+        continue;
+      }
+
+      // Kiểm tra phải có ít nhất 1 chữ cái đối với các trường văn bản thông thường
+      const isNumericField = numericFieldList.some(numId => lowerId.includes(numId));
+      if (!isNumericField) {
+        const hasLetter = /[\p{L}]/u.test(value);
+        if (!hasLetter) {
+          errors.push({
+            code: 'MISSING_LETTERS',
+            field: fieldId,
+            message: 'Dữ liệu không hợp lệ (không có chữ cái).',
+            suggestion: 'Vui lòng nhập thông tin có ý nghĩa (phải chứa chữ cái), không thể chỉ nhập toàn số hoặc dấu.',
+            severity: 'error',
+          });
+          continue;
+        }
+      }
+      
+      if (invalidCharPattern.test(value)) {
+        errors.push({
+          code: 'INVALID_SPECIAL_CHARS',
+          field: fieldId,
+          message: 'Dữ liệu không được chứa ký tự đặc biệt lạ.',
+          suggestion: 'Vui lòng không sử dụng các ký tự như @, #, $, %, ^, *, <, >, v.v.',
           severity: 'error',
         });
       }
@@ -871,5 +936,6 @@ export function runRules(
 
   appendMarriageDomainErrors(fieldsMap, data, errors);
   appendNameFormatErrors(fieldsMap, data, errors);
+  appendGenericTextFormatErrors(fieldsMap, data, errors);
   return errors;
 }
