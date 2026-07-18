@@ -138,8 +138,17 @@
 /* =============================================================
    Dynamic-background home scene (feature/dynamic-background):
    hero với ảnh nền Việt Nam + hoạt cảnh chim/chuồn chuồn/cánh hoa.
-   Chỉ áp dụng cho trang chủ (/user) qua các class home-*/scene-*.
+   Chỉ áp dụng cho trang chủ (/user) qua các class "home-" và "scene-".
    ============================================================= */
+:root {
+  --ink: #0c1c43;
+  --muted: #455578;
+  --blue: #075fe7;
+  --blue-dark: #0649bf;
+  --purple: #7c3aed;
+  --warm-white: #fffdf8;
+}
+
 .home-page {
   min-height: 100vh;
   overflow: hidden;
@@ -1262,3 +1271,4 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
