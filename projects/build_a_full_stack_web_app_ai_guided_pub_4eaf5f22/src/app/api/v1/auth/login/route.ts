@@ -35,13 +35,13 @@ export const POST = handleRoute(async (req: Request) => {
   });
 
   if (!user || !user.passwordHash) {
-    rateLimitConsume('auth-login-fail', req);
+    rateLimitConsume('auth-login-fail', req, 900000);
     throw new AppError(401, 'UNAUTHORIZED', GENERIC_AUTH_ERROR);
   }
 
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) {
-    rateLimitConsume('auth-login-fail', req);
+    rateLimitConsume('auth-login-fail', req, 900000);
     throw new AppError(401, 'UNAUTHORIZED', GENERIC_AUTH_ERROR);
   }
 
@@ -50,7 +50,7 @@ export const POST = handleRoute(async (req: Request) => {
   // credentials — never confirm the account exists, that the password was
   // right, or which portal it belongs to.
   if (user.role !== requiredRole) {
-    rateLimitConsume('auth-login-fail', req);
+    rateLimitConsume('auth-login-fail', req, 900000);
     throw new AppError(401, 'UNAUTHORIZED', GENERIC_AUTH_ERROR);
   }
 
