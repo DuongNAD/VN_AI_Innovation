@@ -175,16 +175,15 @@ export function getAdminToken(): string {
 }
 
 /**
- * Shared demo token for the manager portal (/manager).
- * Manager can view overview + change requests but cannot approve.
+ * OPTIONAL legacy shared token for the X-Manager-Token header path.
+ * Managers sign in with accounts (cookie sessions) since the login system, so
+ * nothing requires this anymore: unset ⇒ returns null and the header path is
+ * simply disabled. When set, production still enforces a real, strong value.
  */
-export function getManagerToken(): string {
-  // MANAGER_TOKEN is newer than most local .env files; outside production an
-  // unset value falls back to the documented demo default so dev boots keep
-  // working. Production still hard-requires a real, strong value.
+export function getManagerToken(): string | null {
   const raw = process.env.MANAGER_TOKEN;
-  if ((raw === undefined || raw === '') && !isProd()) {
-    return 'demo-manager-token';
+  if (raw === undefined || raw === '') {
+    return null;
   }
   return validateStaffToken('MANAGER_TOKEN', raw, 'demo-manager-token');
 }
@@ -192,7 +191,7 @@ export function getManagerToken(): string {
 export function assertStartupConfig(): void {
   const admin = getAdminToken();
   const manager = getManagerToken();
-  if (admin === manager) {
+  if (manager !== null && admin === manager) {
     throw new Error('CONFIG_INVALID: ADMIN_TOKEN and MANAGER_TOKEN must be different');
   }
   getOpenAiBaseUrl();

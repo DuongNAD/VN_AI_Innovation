@@ -107,7 +107,7 @@ export async function requireLiveSession(
 /**
  * Resolve staff role from request headers.
  * - X-Admin-Token  → admin (if matches ADMIN_TOKEN)
- * - X-Manager-Token → manager (if matches MANAGER_TOKEN)
+ * - X-Manager-Token → manager (only when the optional MANAGER_TOKEN is set)
  * Admin takes precedence when both headers are present and valid.
  * Returns null when neither credential is valid (does not throw / rate-limit).
  */
@@ -124,7 +124,12 @@ export function resolveStaffRole(req: Request): StaffRole | null {
   }
 
   try {
-    if (managerPresented !== '' && tokenMatchesSecret(managerPresented, getManagerToken())) {
+    const managerToken = getManagerToken();
+    if (
+      managerToken !== null &&
+      managerPresented !== '' &&
+      tokenMatchesSecret(managerPresented, managerToken)
+    ) {
       return 'manager';
     }
   } catch {
