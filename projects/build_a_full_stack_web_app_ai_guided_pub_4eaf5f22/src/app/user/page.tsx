@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import SourceFooter from '@/components/SourceFooter';
 
@@ -47,7 +48,7 @@ type ProcedureCardDef = {
   description: string;
   tone: 'blue' | 'purple' | 'orange' | 'cyan';
   cta?: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
 };
 
 const CITIZEN_CARDS: ProcedureCardDef[] = [

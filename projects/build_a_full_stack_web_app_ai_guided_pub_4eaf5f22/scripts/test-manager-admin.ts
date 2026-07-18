@@ -13,6 +13,7 @@ async function main() {
   });
   const loginAdminBody = await loginAdmin.json();
   console.log('manager→admin login', loginAdmin.status, loginAdminBody);
+  // Expect 401 + generic message (no role leak)
 
   // 2) Manager login on manager portal, then hit /admin
   const loginMgr = await fetch(`${base}/api/v1/auth/login`, {

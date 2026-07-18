@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import SourceFooter from '@/components/SourceFooter';
-import { ApplicationFormRunner } from '@/components/DynamicForm';
+import { ApplicationFormRunner } from '@/components/ApplicationFormRunner';
 import FlowChrome from '@/components/FlowChrome';
 
 interface ApplicationData {
