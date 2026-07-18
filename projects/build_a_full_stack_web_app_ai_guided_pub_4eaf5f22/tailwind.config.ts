@@ -36,6 +36,9 @@ const config: Config = {
           border: '#e2e8f0',
         },
       },
+      fontFamily: {
+        serif: ['"Times New Roman"', 'Times', 'serif'],
+      },
       fontSize: {
         body: ['1.0625rem', { lineHeight: '1.7', letterSpacing: '-0.005em' }],
         'body-lg': ['1.125rem', { lineHeight: '1.75', letterSpacing: '-0.01em' }],

@@ -1,12 +1,20 @@
-import { requireStaffAuth } from '@/lib/login-auth';
+import { requireStaffRole } from '@/lib/login-auth';
+import { STAFF_PERMISSIONS } from '@/lib/roles';
 import { prisma } from '@/lib/db';
 import { AppError, handleRoute, jsonOk } from '@/lib/errors';
 import { activateVersion } from '@/lib/form-migration';
 
-/** POST approve — admin only (cookie session or legacy X-Admin-Token) */
+/**
+ * POST approve — forms/documents are the manager's domain (cookie session or
+ * legacy X-Manager-Token). Admins manage accounts & technical config only.
+ */
 export const POST = handleRoute(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
-  const { user } = await requireStaffAuth(req, 'admin');
-  const reviewedBy = user?.username ?? user?.displayName ?? 'shared-admin-token';
+  const { user } = await requireStaffRole(
+    req,
+    STAFF_PERMISSIONS.approveChangeRequests,
+    'Phê duyệt phiên bản biểu mẫu thuộc thẩm quyền của cán bộ quản lý.'
+  );
+  const reviewedBy = user?.username ?? user?.displayName ?? 'shared-manager-token';
 
   const { id } = await params;
   const now = new Date();

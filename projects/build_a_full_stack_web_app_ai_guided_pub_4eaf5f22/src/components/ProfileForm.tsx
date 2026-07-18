@@ -45,11 +45,32 @@ export default function ProfileForm({ user }: Props) {
     idIssuedAt: user.idIssuedAt ?? '',
     idExpiresAt: user.idExpiresAt ?? '',
   });
+  const [fieldErrors, setFieldErrors] = useState<{ displayName?: string; phone?: string }>({});
+
+  const namePattern = /^[\p{L}\s\-'\.]{2,}$/u;
+  const phonePattern = /^(?:\+84|0)[0-9]{9,10}$/;
 
   const today = new Date().toISOString().slice(0, 10);
 
   function updateField<K extends keyof ProfileFields>(key: K, value: ProfileFields[K]) {
     setFields((current) => ({ ...current, [key]: value }));
+
+    if (key === 'displayName') {
+      const val = value as string;
+      if (val.trim().length > 0 && !namePattern.test(val)) {
+        setFieldErrors(e => ({ ...e, displayName: 'Họ và tên không hợp lệ (không chứa số hoặc ký tự đặc biệt).' }));
+      } else {
+        setFieldErrors(e => ({ ...e, displayName: undefined }));
+      }
+    } else if (key === 'phone') {
+      const val = value as string;
+      const digits = val.replace(/[\s().-]/g, '');
+      if (digits.length > 0 && !phonePattern.test(digits)) {
+        setFieldErrors(e => ({ ...e, phone: 'Số điện thoại không hợp lệ.' }));
+      } else {
+        setFieldErrors(e => ({ ...e, phone: undefined }));
+      }
+    }
   }
 
   function applyScan(data: CitizenIdScanData) {
@@ -132,6 +153,9 @@ export default function ProfileForm({ user }: Props) {
             minLength={2}
             required
           />
+          {fieldErrors.displayName && (
+            <small className="font-medium text-red-600">{fieldErrors.displayName}</small>
+          )}
         </label>
 
         <label className="profile-field">
@@ -224,6 +248,9 @@ export default function ProfileForm({ user }: Props) {
             maxLength={20}
             placeholder="0901 234 567"
           />
+          {fieldErrors.phone && (
+            <small className="font-medium text-red-600">{fieldErrors.phone}</small>
+          )}
         </label>
 
         <label className="profile-field profile-field--wide">

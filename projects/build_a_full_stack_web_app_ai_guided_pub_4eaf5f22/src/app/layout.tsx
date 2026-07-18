@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Be_Vietnam_Pro } from 'next/font/google';
 import './globals.css';
-import ChatWidget from '@/components/ChatWidget';
 
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['latin', 'vietnamese'],
@@ -42,7 +41,6 @@ export default function RootLayout({
       <body className="relative min-h-screen overflow-x-hidden bg-gradient-to-b from-brand-50 via-surface-muted to-slate-100 font-sans text-body text-slate-900 antialiased">
         <AmbientMesh />
         <div className="relative z-10 flex min-h-screen flex-col">{children}</div>
-        <ChatWidget />
       </body>
     </html>
   );

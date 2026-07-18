@@ -6,10 +6,10 @@ import { hashPassword, isStrongEnoughPassword } from '@/lib/password';
 import type { AppRole } from '@/lib/roles';
 import { enforceRateLimit } from '@/lib/rate-limit';
 
+// Public self-registration is citizen-only. Staff accounts (manager/admin)
+// are issued by an admin in the account-management console, never self-made.
 const PORTAL_ROLE: Record<string, AppRole> = {
   user: 'user',
-  manager: 'manager',
-  admin: 'admin',
 };
 
 const USERNAME_RE = /^[a-z0-9._]{3,50}$/;
@@ -25,6 +25,14 @@ export const POST = handleRoute(async (req: Request) => {
   const displayName = requireString(body, 'displayName', 100);
   const emailRaw = optionalString(body, 'email', 200);
   const portalRaw = typeof body.portal === 'string' ? body.portal.trim().toLowerCase() : 'user';
+
+  if (portalRaw === 'manager' || portalRaw === 'admin') {
+    throw new AppError(
+      403,
+      'STAFF_REGISTRATION_CLOSED',
+      'Tài khoản cán bộ do quản trị viên cấp trong mục Quản lý tài khoản, không thể tự đăng ký.'
+    );
+  }
 
   const role = PORTAL_ROLE[portalRaw];
   if (!role) {

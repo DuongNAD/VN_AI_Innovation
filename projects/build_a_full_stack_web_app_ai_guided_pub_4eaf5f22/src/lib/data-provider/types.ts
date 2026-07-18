@@ -6,6 +6,7 @@ export interface ProcedureDto {
   name: string;
   sector: string;
   agency: string;
+  audience: 'CITIZEN' | 'BUSINESS';
   sourceUrl: string;
   version: string;
   lastCheckedAt: Date;
