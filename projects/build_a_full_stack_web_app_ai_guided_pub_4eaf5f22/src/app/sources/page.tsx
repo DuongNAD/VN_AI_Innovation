@@ -82,7 +82,7 @@ export default async function SourcesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen  text-slate-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto space-y-10">
         <div className="space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold uppercase tracking-wider">
@@ -178,7 +178,7 @@ export default async function SourcesPage() {
                 </dl>
 
                 {item.legalBasisText && (
-                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                  <div className=" border border-slate-100 rounded-xl p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
                       Căn cứ pháp lý
                     </p>

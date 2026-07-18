@@ -31,9 +31,7 @@ export function middleware(req: NextRequest) {
 
   const hasCookie = Boolean(req.cookies.get(LOGIN_COOKIE)?.value);
 
-  // Embedded widget chat is anonymous by design (it uses the intake
-  // session-token flow, not the login cookie) — never bounce it to login.
-  if (isUserProtected && !isUserLogin && !hasCookie && !isEmbed) {
+  if (isUserProtected && !isUserLogin && !hasCookie) {
     const url = req.nextUrl.clone();
     url.pathname = '/user/login';
     url.searchParams.set('next', pathname);
