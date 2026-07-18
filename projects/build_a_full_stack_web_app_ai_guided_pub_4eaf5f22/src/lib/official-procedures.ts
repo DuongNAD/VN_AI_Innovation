@@ -10,6 +10,10 @@ export const OFFICIAL_PROCEDURE_SOURCE_URLS = {
     `${DVC_BASE_URL}/thu-tuc-hanh-chinh/019d2bfd-3fac-7489-b53b-a15eb239a6fe`,
   BIRTH_REGISTRATION:
     `${DVC_BASE_URL}/thu-tuc-hanh-chinh/019d2bfd-3fe0-70ac-b9d6-5e9e20d6eef7`,
+  // Divorce is resolved by a competent court, not through the National Public
+  // Service Portal. This official court template also lists the usual exhibits.
+  DIVORCE_RESOLUTION:
+    'https://langson.toaan.gov.vn/webcenter/ShowProperty?nodeId=%2FUCMServer%2FTAND368326',
   TEMP_RESIDENCE_REGISTRATION:
     `${DVC_BASE_URL}/thu-tuc-hanh-chinh/019d2bf7-770b-734d-b7fb-5e1995f194f4`,
   // The demo currently combines the under-14 and 14-or-older procedures, so

@@ -24,6 +24,7 @@ const FIELD_RE = /^[A-Za-z][A-Za-z0-9_.:-]{0,63}$/;
 const FORM_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
 const KEYWORD_TABLE: Record<string, string[]> = {
+  DIVORCE_RESOLUTION: ['thu tuc ly hon', 'xin ly hon', 'don ly hon', 'ly hon', 'li hon'],
   MARRIAGE_REGISTRATION: ['dang ky ket hon', 'ket hon', 'dam cuoi', 'giay ket hon'],
   BIRTH_REGISTRATION: ['dang ky khai sinh', 'khai sinh', 'giay khai sinh'],
   TEMP_RESIDENCE_REGISTRATION: ['dang ky tam tru', 'tam tru'],

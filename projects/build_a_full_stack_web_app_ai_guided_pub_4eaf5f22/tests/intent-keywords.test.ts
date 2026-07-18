@@ -15,4 +15,12 @@ describe('mock classifier · business intents', () => {
     expect(classifyByKeywords('Tôi muốn đăng ký kết hôn')?.procedureCode).toBe('MARRIAGE_REGISTRATION');
     expect(classifyByKeywords('làm giấy khai sinh cho con')?.procedureCode).toBe('BIRTH_REGISTRATION');
   });
+
+  it.each([
+    ['Tôi muốn ly hôn', 'DIVORCE_RESOLUTION'],
+    ['tôi muốn li hôn', 'DIVORCE_RESOLUTION'],
+    ['xin ly hon đơn phương', 'DIVORCE_RESOLUTION'],
+  ])('maps divorce intent "%s" to %s', (message, expected) => {
+    expect(classifyByKeywords(message)?.procedureCode).toBe(expected);
+  });
 });
