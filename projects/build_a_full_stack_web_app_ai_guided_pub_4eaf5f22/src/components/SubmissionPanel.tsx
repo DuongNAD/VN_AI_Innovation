@@ -164,7 +164,7 @@ export default function SubmissionPanel({
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <Link
-            href={'/form/' + applicationId}
+            href={'/user/form/' + applicationId}
             className="btn bg-amber-600 text-white hover:bg-amber-700"
           >
             Sửa hồ sơ theo yêu cầu

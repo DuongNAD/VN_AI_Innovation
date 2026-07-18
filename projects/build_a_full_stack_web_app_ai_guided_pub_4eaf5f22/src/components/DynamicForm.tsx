@@ -9,7 +9,65 @@ import type { FieldDef, RuleDef } from '@/lib/schema-guards';
 import SpeechButton from '@/components/SpeechButton';
 
 const INPUT_CLASS =
-  'w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-lg focus:border-blue-500';
+  'w-full rounded-lg border border-surface-border bg-surface px-4 py-3 text-lg text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20';
+
+const INPUT_ERROR_CLASS = ' border-red-600 focus:border-red-600 focus:ring-red-600/20';
+
+/** Nhóm field theo id prefix / heuristic UI — không đụng schema backend. */
+function getFieldSection(field: FieldDef): { key: string; title: string } {
+  const id = field.id.toLowerCase();
+  if (id.startsWith('male_') || id.includes('groom')) {
+    return { key: 'male', title: 'Thông tin bên nam' };
+  }
+  if (id.startsWith('female_') || id.includes('bride')) {
+    return { key: 'female', title: 'Thông tin bên nữ' };
+  }
+  if (id.startsWith('child_') || id === 'birth_date') {
+    return { key: 'child', title: 'Thông tin trẻ' };
+  }
+  if (id.startsWith('requester_') || id === 'relationship') {
+    return { key: 'requester', title: 'Người đi khai sinh' };
+  }
+  if (
+    id === 'residence' ||
+    id === 'permanent_address' ||
+    id === 'temporary_address' ||
+    id === 'province' ||
+    id === 'phone_number'
+  ) {
+    return { key: 'address', title: 'Địa chỉ & liên hệ' };
+  }
+  if (
+    id === 'previously_married' ||
+    id === 'marriage_number' ||
+    id === 'divorce_document'
+  ) {
+    return { key: 'marriage', title: 'Tình trạng hôn nhân' };
+  }
+  if (id === 'submission_channel') {
+    return { key: 'channel', title: 'Kênh nộp hồ sơ' };
+  }
+  return { key: 'general', title: 'Thông tin chung' };
+}
+
+/** Giữ thứ tự field gốc; gom nhóm khi key section đổi lần đầu. */
+function groupFieldsInOrder(
+  fields: FieldDef[]
+): { key: string; title: string; fields: FieldDef[] }[] {
+  const groups: { key: string; title: string; fields: FieldDef[] }[] = [];
+  const indexByKey = new Map<string, number>();
+  for (const field of fields) {
+    const sec = getFieldSection(field);
+    const existing = indexByKey.get(sec.key);
+    if (existing === undefined) {
+      indexByKey.set(sec.key, groups.length);
+      groups.push({ key: sec.key, title: sec.title, fields: [field] });
+    } else {
+      groups[existing].fields.push(field);
+    }
+  }
+  return groups;
+}
 
 /**
  * Seeds every visible field with a key ('' default, so required rules fire on
@@ -158,12 +216,19 @@ export default function DynamicForm({
     onSubmit(data, errs);
   };
 
-  const renderInput = (field: FieldDef, value: unknown, hasError: boolean) => {
+  const renderInput = (
+    field: FieldDef,
+    value: unknown,
+    hasError: boolean,
+    errorId: string
+  ) => {
     const inputId = 'field-' + field.id;
-    const base = INPUT_CLASS + (hasError ? ' border-red-500' : '');
-    const aria = hasError
-      ? { 'aria-invalid': true as const, 'aria-describedby': 'error-' + field.id }
-      : {};
+    const base = INPUT_CLASS + (hasError ? INPUT_ERROR_CLASS : '');
+    const a11y = {
+      'aria-invalid': hasError || undefined,
+      'aria-required': field.required || undefined,
+      'aria-describedby': hasError ? errorId : undefined,
+    } as const;
 
     switch (field.type) {
       case 'text':
@@ -175,7 +240,7 @@ export default function DynamicForm({
             placeholder={field.placeholder}
             value={asInputString(value)}
             onChange={(e) => setField(field.id, e.target.value)}
-            {...aria}
+            {...a11y}
           />
         );
       case 'textarea':
@@ -187,7 +252,7 @@ export default function DynamicForm({
             placeholder={field.placeholder}
             value={asInputString(value)}
             onChange={(e) => setField(field.id, e.target.value)}
-            {...aria}
+            {...a11y}
           />
         );
       case 'number':
@@ -201,7 +266,7 @@ export default function DynamicForm({
             onChange={(e) =>
               setField(field.id, e.target.value === '' ? '' : Number(e.target.value))
             }
-            {...aria}
+            {...a11y}
           />
         );
       case 'date':
@@ -212,7 +277,7 @@ export default function DynamicForm({
             className={base}
             value={typeof value === 'string' ? value : ''}
             onChange={(e) => setField(field.id, e.target.value)}
-            {...aria}
+            {...a11y}
           />
         );
       case 'select': {
@@ -221,7 +286,7 @@ export default function DynamicForm({
           <select
             id={inputId}
             className={base}
-            {...aria}
+            {...a11y}
             value={asInputString(value)}
             onChange={(e) => {
               const raw = e.target.value;
@@ -232,6 +297,7 @@ export default function DynamicForm({
               const match = options.find((o) => String(o.value) === raw);
               setField(field.id, match ? match.value : raw);
             }}
+            {...a11y}
           >
             <option value="">-- Chọn --</option>
             {options.map((o) => (
@@ -245,7 +311,14 @@ export default function DynamicForm({
       case 'radio': {
         const options = field.options ?? [];
         return (
-          <div className="flex flex-wrap gap-3" role="radiogroup" aria-label={field.label}>
+          <div
+            className="flex flex-wrap gap-3"
+            role="radiogroup"
+            aria-label={field.label}
+            aria-invalid={hasError || undefined}
+            aria-required={field.required || undefined}
+            aria-describedby={hasError ? errorId : undefined}
+          >
             {options.map((o) => {
               const selected = value === o.value;
               return (
@@ -258,8 +331,8 @@ export default function DynamicForm({
                   className={
                     'btn border-2 ' +
                     (selected
-                      ? 'border-blue-700 bg-blue-700 text-white'
-                      : 'border-slate-300 bg-white text-slate-800 hover:border-blue-400')
+                      ? 'border-brand-700 bg-brand-700 text-white'
+                      : 'border-surface-border bg-surface text-slate-800 hover:border-brand-500')
                   }
                 >
                   {o.label}
@@ -274,9 +347,10 @@ export default function DynamicForm({
           <input
             id={inputId}
             type="checkbox"
-            className="h-6 w-6 rounded border-slate-300"
+            className="h-6 w-6 rounded border-surface-border text-brand-600 focus:ring-brand-600"
             checked={value === true}
             onChange={(e) => setField(field.id, e.target.checked)}
+            {...a11y}
           />
         );
       case 'file':
@@ -285,13 +359,14 @@ export default function DynamicForm({
             <input
               id={inputId}
               type="file"
-              className="block w-full text-lg"
+              className="block w-full text-lg text-slate-800"
               onChange={(e) =>
                 setField(
                   field.id,
                   e.target.files && e.target.files[0] ? e.target.files[0].name : ''
                 )
               }
+              {...a11y}
             />
             {typeof value === 'string' && value !== '' && (
               <p className="mt-1 text-base text-slate-600">Tệp đã chọn: {value}</p>
@@ -305,6 +380,7 @@ export default function DynamicForm({
             className={base}
             value={typeof value === 'string' ? value : ''}
             onChange={(e) => setField(field.id, e.target.value)}
+            {...a11y}
           >
             <option value="">-- Chọn tỉnh/thành phố --</option>
             {PROVINCES.map((p) => (
@@ -317,6 +393,61 @@ export default function DynamicForm({
       default:
         return null;
     }
+  };
+
+  const sections = groupFieldsInOrder(visibleFields);
+
+  const renderFieldBlock = (field: FieldDef) => {
+    const value = formData[field.id];
+    const fieldErrors = errorsFor(field.id);
+    const hasError = fieldErrors.length > 0;
+    const inputId = 'field-' + field.id;
+    const errorId = 'field-' + field.id + '-error';
+    const isRadio = field.type === 'radio';
+
+    return (
+      <div key={field.id} id={'fieldwrap-' + field.id} className="space-y-2">
+        {isRadio ? (
+          <div className="mb-1 text-lg font-semibold text-slate-900" id={inputId + '-label'}>
+            {field.label}
+            {field.required && (
+              <>
+                <span className="text-red-600" aria-hidden="true">
+                  {' '}
+                  *
+                </span>
+                <span className="sr-only"> (bắt buộc)</span>
+              </>
+            )}
+          </div>
+        ) : (
+          <label htmlFor={inputId} className="mb-1 block text-lg font-semibold text-slate-900">
+            {field.label}
+            {field.required && (
+              <>
+                <span className="text-red-600" aria-hidden="true">
+                  {' '}
+                  *
+                </span>
+                <span className="sr-only"> (bắt buộc)</span>
+              </>
+            )}
+          </label>
+        )}
+        {renderInput(field, value, hasError, errorId)}
+        {hasError && (
+          <p id={errorId} className="text-base font-medium text-red-700" role="alert">
+            {fieldErrors.map((err, i) => (
+              <span key={i}>
+                {i > 0 ? ' ' : ''}
+                {err.message}
+                {err.suggestion ? ' — ' + err.suggestion : ''}
+              </span>
+            ))}
+          </p>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -364,39 +495,23 @@ export default function DynamicForm({
         </div>
       )}
 
-      {visibleFields.map((field) => {
-        const value = formData[field.id];
-        const fieldErrors = errorsFor(field.id);
-        return (
-          <div key={field.id} id={'fieldwrap-' + field.id}>
-            <label
-              htmlFor={'field-' + field.id}
-              className="mb-2 block text-lg font-semibold text-slate-900"
-            >
-              {field.label}
-              {field.required && <span className="text-red-600"> *</span>}
-            </label>
-            {renderInput(field, value, fieldErrors.length > 0)}
-            {fieldErrors.map((err, i) => (
-              <p
-                key={i}
-                id={i === 0 ? 'error-' + field.id : undefined}
-                className="mt-1 text-base font-medium text-red-600"
-                role="alert"
-              >
-                {err.message}
-                {err.suggestion ? (
-                  <span className="block text-slate-700">
-                    <span className="font-bold">Cách khắc phục:</span> {err.suggestion}
-                  </span>
-                ) : null}
-              </p>
-            ))}
-          </div>
-        );
-      })}
+      {sections.map((section) => (
+        <section
+          key={section.key}
+          className="card-premium space-y-5 border-l-4 border-l-brand-600 pl-5"
+          aria-labelledby={`section-${section.key}-title`}
+        >
+          <h2
+            id={`section-${section.key}-title`}
+            className="border-b border-surface-border/80 pb-3 text-title text-brand-900"
+          >
+            {section.title}
+          </h2>
+          <div className="space-y-5">{section.fields.map(renderFieldBlock)}</div>
+        </section>
+      ))}
 
-      <button type="submit" className="btn w-full bg-blue-700 text-white hover:bg-blue-800 sm:w-auto">
+      <button type="submit" className="btn-primary w-full sm:w-auto">
         {submitLabel}
       </button>
     </form>
@@ -612,7 +727,7 @@ export function ApplicationFormRunner({
         void fetchAiGuide(formData);
         return;
       }
-      router.push('/result?applicationId=' + applicationId);
+      router.push('/user/result?applicationId=' + applicationId);
     } finally {
       setSaving(false);
     }
@@ -860,7 +975,7 @@ export function ApplicationFormRunner({
           <div className="mt-5 flex flex-wrap gap-3">
             <button
               type="button"
-              className="btn bg-blue-700 text-white hover:bg-blue-800 disabled:opacity-50"
+              className="btn bg-brand-700 text-white hover:bg-brand-800 disabled:opacity-50"
               onClick={confirmMigration}
               disabled={migrating || !allResolved}
             >
@@ -868,7 +983,7 @@ export function ApplicationFormRunner({
             </button>
             <button
               type="button"
-              className="btn border border-slate-300 bg-white text-slate-700"
+              className="btn border border-surface-border bg-surface text-slate-700"
               onClick={() => {
                 setPreview(null);
                 setResolutions({});

@@ -239,7 +239,7 @@
     iframeEl.setAttribute('referrerpolicy', 'no-referrer');
     iframeEl.referrerPolicy = 'no-referrer';
 
-    var srcUrl = base + '/chat?embed=1';
+    var srcUrl = base + '/user/chat?embed=1';
     if (widgetId) {
       srcUrl += '&widgetId=' + encodeURIComponent(widgetId);
     }

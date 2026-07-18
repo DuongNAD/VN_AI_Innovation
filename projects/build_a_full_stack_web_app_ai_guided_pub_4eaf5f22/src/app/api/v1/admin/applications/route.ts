@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/auth';
+import { requireStaffAuth } from '@/lib/login-auth';
 import { prisma } from '@/lib/db';
 import { getProvider, type FormVersionDto } from '@/lib/data-provider';
 import { handleRoute, jsonOk } from '@/lib/errors';
@@ -9,7 +9,7 @@ import { handleRoute, jsonOk } from '@/lib/errors';
  * stay private to the citizen and are never listed here.
  */
 export const GET = handleRoute(async (req: Request) => {
-  requireAdmin(req);
+  await requireStaffAuth(req, 'admin');
 
   const rows = await prisma.application.findMany({
     where: { status: { in: ['SUBMITTED', 'APPROVED', 'RETURNED'] } },

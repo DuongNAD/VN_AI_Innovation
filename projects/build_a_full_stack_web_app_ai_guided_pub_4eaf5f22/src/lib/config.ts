@@ -147,30 +147,54 @@ export function getOpenAiBaseUrl(): string {
   return href;
 }
 
-export function getAdminToken(): string {
-  const token = process.env.ADMIN_TOKEN;
+function validateStaffToken(varName: string, token: string | undefined, forbiddenPlaceholder: string): string {
   if (token === undefined || token === '') {
-    throw new Error('CONFIG_INVALID: ADMIN_TOKEN is required');
+    throw new Error(`CONFIG_INVALID: ${varName} is required`);
   }
   // Strength requirements are enforced in production only, as documented in
-  // README/.env.example — local demos may run with the shipped example value.
+  // README/.env.example — local demos may run with the shipped example values.
   if (isProd()) {
-    if (token === 'demo-admin-token') {
-      throw new Error('CONFIG_INVALID: ADMIN_TOKEN must not be a placeholder value');
+    if (token === forbiddenPlaceholder) {
+      throw new Error(`CONFIG_INVALID: ${varName} must not be a placeholder value`);
     }
     if (token.length < 24 || !/^[\x21-\x7E]+$/.test(token)) {
-      throw new Error('CONFIG_INVALID: ADMIN_TOKEN must be at least 24 printable non-whitespace ASCII characters');
+      throw new Error(
+        `CONFIG_INVALID: ${varName} must be at least 24 printable non-whitespace ASCII characters`
+      );
     }
     const distinctChars = new Set(token).size;
     if (distinctChars < 8) {
-      throw new Error('CONFIG_INVALID: ADMIN_TOKEN must contain at least 8 distinct characters');
+      throw new Error(`CONFIG_INVALID: ${varName} must contain at least 8 distinct characters`);
     }
   }
   return token;
 }
 
+export function getAdminToken(): string {
+  return validateStaffToken('ADMIN_TOKEN', process.env.ADMIN_TOKEN, 'demo-admin-token');
+}
+
+/**
+ * Shared demo token for the manager portal (/manager).
+ * Manager can view overview + change requests but cannot approve.
+ */
+export function getManagerToken(): string {
+  // MANAGER_TOKEN is newer than most local .env files; outside production an
+  // unset value falls back to the documented demo default so dev boots keep
+  // working. Production still hard-requires a real, strong value.
+  const raw = process.env.MANAGER_TOKEN;
+  if ((raw === undefined || raw === '') && !isProd()) {
+    return 'demo-manager-token';
+  }
+  return validateStaffToken('MANAGER_TOKEN', raw, 'demo-manager-token');
+}
+
 export function assertStartupConfig(): void {
-  getAdminToken();
+  const admin = getAdminToken();
+  const manager = getManagerToken();
+  if (admin === manager) {
+    throw new Error('CONFIG_INVALID: ADMIN_TOKEN and MANAGER_TOKEN must be different');
+  }
   getOpenAiBaseUrl();
   if (getAiProvider() === 'openai') {
     getServiceApiKey('llm');

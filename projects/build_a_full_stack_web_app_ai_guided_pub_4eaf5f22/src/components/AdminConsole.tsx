@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState, type JSX } from 'react';
 import { visibleFieldsFor } from '@/components/DynamicForm';
 import type { FieldDef } from '@/lib/schema-guards';
 import { DEFAULT_TTS_MODE, isTtsMode, type TtsMode } from '@/lib/tts-mode';
@@ -537,11 +537,24 @@ const getErrorFromResponse = async (res: Response): Promise<{ status: number; co
   return { status: res.status, code };
 };
 
-export default function AdminConsole(): React.ReactElement {
-  const [token, setToken] = useState<string>('');
+export type StaffConsoleRole = 'manager' | 'admin';
+
+export interface StaffConsoleProps {
+  /**
+   * manager — xem overview + change requests (không phê duyệt)
+   * admin — đầy đủ quyền, gồm phê duyệt & kích hoạt phiên bản
+   */
+  role?: StaffConsoleRole;
+}
+
+export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): JSX.Element {
+  const canApproveActions = role === 'admin';
+  const roleLabel = role === 'admin' ? 'Quản trị viên' : 'Người quản lý';
+
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [actorName, setActorName] = useState<string | null>(null);
   
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
@@ -553,11 +566,7 @@ export default function AdminConsole(): React.ReactElement {
   const [ttsMode, setTtsMode] = useState<TtsMode>(DEFAULT_TTS_MODE);
   const [savingTtsMode, setSavingTtsMode] = useState<boolean>(false);
 
-  const handleFetchData = async (activeToken = token, opts?: { silent?: boolean }) => {
-    if (!activeToken.trim()) {
-      setError('Vui lòng nhập mã quản trị');
-      return;
-    }
+  const handleFetchData = async (opts?: { silent?: boolean }) => {
     setLoading(true);
     setError(null);
     if (!opts?.silent) {
@@ -565,16 +574,20 @@ export default function AdminConsole(): React.ReactElement {
     }
 
     try {
+      // Officer queue (/admin/applications) is admin-only on the server;
+      // the manager console skips it instead of failing the whole load.
       const [overviewRes, crRes, appsRes] = await Promise.all([
         fetch('/api/v1/admin/overview', {
-          headers: { 'X-Admin-Token': activeToken },
+          credentials: 'include',
         }),
         fetch('/api/v1/admin/change-requests', {
-          headers: { 'X-Admin-Token': activeToken },
+          credentials: 'include',
         }),
-        fetch('/api/v1/admin/applications', {
-          headers: { 'X-Admin-Token': activeToken },
-        }),
+        canApproveActions
+          ? fetch('/api/v1/admin/applications', {
+              credentials: 'include',
+            })
+          : Promise.resolve(null),
       ]);
 
       if (!overviewRes.ok) {
@@ -585,25 +598,27 @@ export default function AdminConsole(): React.ReactElement {
         const { status, code } = await getErrorFromResponse(crRes);
         throw new Error(errorMessageFor(status, code));
       }
-      if (!appsRes.ok) {
+      if (appsRes && !appsRes.ok) {
         const { status, code } = await getErrorFromResponse(appsRes);
         throw new Error(errorMessageFor(status, code));
       }
 
       let rawOverview: unknown;
       let rawCRs: unknown;
-      let rawApps: unknown;
+      let rawApps: unknown = null;
       try {
         rawOverview = await overviewRes.json();
         rawCRs = await crRes.json();
-        rawApps = await appsRes.json();
+        if (appsRes) {
+          rawApps = await appsRes.json();
+        }
       } catch (_) {
         throw new Error(errorMessageFor(500, 'JSON_PARSE_FAILURE'));
       }
 
       const parsedOverview = parseOverview(rawOverview);
       const parsedCRs = parseChangeRequests(rawCRs);
-      const parsedApps = parseCitizenApplications(rawApps);
+      const parsedApps = appsRes ? parseCitizenApplications(rawApps) : [];
 
       if (parsedOverview === null || parsedCRs === null || parsedApps === null) {
         throw new Error(errorMessageFor(500, 'PARSER_FAILURE'));
@@ -613,8 +628,21 @@ export default function AdminConsole(): React.ReactElement {
       setChangeRequests(parsedCRs);
       setCitizenApps(parsedApps);
       setTtsMode(parsedOverview.ttsMode);
+
+      if (rawOverview && typeof rawOverview === 'object') {
+        const actor = (rawOverview as Record<string, unknown>).actor;
+        if (actor && typeof actor === 'object') {
+          const dn = (actor as Record<string, unknown>).displayName;
+          if (typeof dn === 'string') setActorName(dn);
+        }
+      }
+
       if (!opts?.silent) {
-        setSuccess('Tải dữ liệu quản trị thành công.');
+        setSuccess(
+          role === 'admin'
+            ? 'Tải dữ liệu quản trị thành công.'
+            : 'Tải dữ liệu người quản lý thành công (chế độ chỉ đọc).'
+        );
       }
     } catch (err: any) {
       setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
@@ -633,8 +661,8 @@ export default function AdminConsole(): React.ReactElement {
     try {
       const res = await fetch('/api/v1/admin/settings', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'X-Admin-Token': token,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ ttsMode: mode }),
@@ -675,8 +703,8 @@ export default function AdminConsole(): React.ReactElement {
     try {
       const res = await fetch(`/api/v1/admin/applications/${encodeURIComponent(id)}/review`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'X-Admin-Token': token,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ decision, note: note === '' ? undefined : note }),
@@ -693,13 +721,18 @@ export default function AdminConsole(): React.ReactElement {
           : 'Đã trả lại hồ sơ kèm lý do để người dân bổ sung.'
       );
       setReviewNotes((prev) => ({ ...prev, [id]: '' }));
-      await handleFetchData(token, { silent: true });
+      await handleFetchData({ silent: true });
     } catch (err: any) {
       setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
     } finally {
       setReviewingId(null);
     }
   };
+
+  useEffect(() => {
+    void handleFetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role]);
 
   const handleApprove = async (id: string) => {
     if (!isSafeId(id)) {
@@ -712,10 +745,16 @@ export default function AdminConsole(): React.ReactElement {
     setSuccess(null);
 
     try {
+      if (!canApproveActions) {
+        setError('Chỉ quản trị viên mới được phê duyệt yêu cầu thay đổi.');
+        setApprovingId(null);
+        return;
+      }
+
       const res = await fetch(`/api/v1/admin/change-requests/${encodeURIComponent(id)}/approve`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'X-Admin-Token': token,
           'Content-Type': 'application/json',
         },
       });
@@ -777,7 +816,7 @@ export default function AdminConsole(): React.ReactElement {
         setSuccess('Đã phê duyệt & kích hoạt thành công');
       }
 
-      await handleFetchData(token, { silent: true });
+      await handleFetchData({ silent: true });
     } catch (err: any) {
       setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
     } finally {
@@ -810,47 +849,39 @@ export default function AdminConsole(): React.ReactElement {
       <div className="card border border-slate-100 bg-slate-900 text-white shadow-lg p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="space-y-1">
-            <h2 className="text-xl font-bold tracking-tight text-amber-400">Đăng nhập Quản trị viên</h2>
+            <h2 className="text-xl font-bold tracking-tight text-amber-400">
+              Bảng điều khiển {roleLabel}
+            </h2>
             <p className="text-sm text-slate-300">
-              Nhập mã quản trị để truy cập dữ liệu hệ thống, xem quan trắc AI và xét duyệt thay đổi.
+              {canApproveActions
+                ? 'Phiên đăng nhập cookie — xem dữ liệu hệ thống, quan trắc AI và phê duyệt thay đổi biểu mẫu.'
+                : 'Phiên đăng nhập cookie — xem danh mục thủ tục, quan trắc AI và yêu cầu thay đổi (chỉ đọc).'}
+            </p>
+            <p className="text-xs text-slate-400">
+              Vai trò: <span className="font-semibold text-amber-300">{role}</span>
+              {actorName ? (
+                <>
+                  {' '}
+                  · Phiên: <span className="text-slate-200">{actorName}</span>
+                </>
+              ) : null}
+              {!canApproveActions && ' · không có quyền phê duyệt'}
             </p>
           </div>
-          <form
-            className="flex flex-col sm:flex-row gap-3 items-stretch"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleFetchData();
-            }}
+          <button
+            onClick={() => handleFetchData()}
+            disabled={loading}
+            className="btn bg-amber-500 text-slate-950 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 font-semibold"
           >
-            <input
-              type="password"
-              placeholder="Nhập X-Admin-Token"
-              autoComplete="off"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              className="px-4 py-2 bg-slate-800 text-white border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 animate-none"
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn bg-amber-500 text-slate-950 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 font-semibold"
-            >
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
-                  Đang tải...
-                </div>
-              ) : (
-                'Tải dữ liệu'
-              )}
-            </button>
-          </form>
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-          <span>
-            💡 <strong>Lưu ý:</strong> Mã quản trị dùng chung để chạy thử, chỉ lưu trong bộ nhớ (memory-only) và sẽ mất khi tải lại trang. Hệ thống thực tế sẽ sử dụng session ở phía máy chủ.
-          </span>
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                Đang tải...
+              </div>
+            ) : (
+              'Làm mới dữ liệu'
+            )}
+          </button>
         </div>
       </div>
 
@@ -1023,7 +1054,7 @@ export default function AdminConsole(): React.ReactElement {
         </div>
       )}
 
-      {overview && (
+      {overview && canApproveActions && (
         <div className="card space-y-4 border border-slate-100 shadow-sm">
           <div className="space-y-1">
             <h3 className="text-lg font-bold text-slate-900 border-b pb-2">Chế độ đọc nội dung (Text-to-Speech)</h3>
@@ -1071,7 +1102,7 @@ export default function AdminConsole(): React.ReactElement {
         </div>
       )}
 
-      {overview && (
+      {overview && canApproveActions && (
         <div className="space-y-6">
           <div className="border-b pb-4">
             <h3 className="text-xl font-bold text-slate-900">Hồ sơ công dân chờ xét duyệt</h3>
@@ -1273,7 +1304,7 @@ export default function AdminConsole(): React.ReactElement {
                           }
                         })()}
 
-                        {isPending && (
+                        {isPending && canApproveActions && (
                           <button
                             onClick={() => handleApprove(cr.id)}
                             disabled={approvingId !== null}
@@ -1288,6 +1319,11 @@ export default function AdminConsole(): React.ReactElement {
                               'Phê duyệt & kích hoạt'
                             )}
                           </button>
+                        )}
+                        {isPending && !canApproveActions && (
+                          <span className="text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-3 py-1.5">
+                            Chỉ xem — cần quyền admin để phê duyệt
+                          </span>
                         )}
                       </div>
                     </div>

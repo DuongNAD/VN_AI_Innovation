@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/auth';
+import { requireStaffAuth } from '@/lib/login-auth';
 import { AppError, handleRoute, jsonOk } from '@/lib/errors';
 import { readJsonBody } from '@/lib/http';
 import { getTtsMode, setTtsMode, isTtsMode } from '@/lib/settings';
@@ -6,7 +6,7 @@ import { getTtsMode, setTtsMode, isTtsMode } from '@/lib/settings';
 export const dynamic = 'force-dynamic';
 
 export const GET = handleRoute(async (req: Request) => {
-  requireAdmin(req);
+  await requireStaffAuth(req, 'admin');
   return jsonOk({ ttsMode: await getTtsMode() });
 });
 
@@ -15,7 +15,7 @@ export const GET = handleRoute(async (req: Request) => {
  * value is validated against the allowed set before it is persisted.
  */
 export const POST = handleRoute(async (req: Request) => {
-  requireAdmin(req);
+  await requireStaffAuth(req, 'admin');
 
   const body = await readJsonBody(req);
   const ttsMode = body.ttsMode;

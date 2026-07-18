@@ -1,6 +1,6 @@
 import { isValidElement, type ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
-import ChatPage from '@/app/chat/page';
+import ChatPage from '@/app/user/chat/page';
 
 function findChatIntakeProps(node: ReactNode): Record<string, unknown> | null {
   if (Array.isArray(node)) {

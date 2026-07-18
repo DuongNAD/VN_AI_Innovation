@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { parseFieldDefs, parseRuleDefs, parseMigrationHints } from '../src/lib/schema-guards';
 import { OFFICIAL_PROCEDURE_SOURCE_URLS } from '../src/lib/official-procedures';
+import { hashPassword } from '../src/lib/password';
 import { fileURLToPath } from 'url';
 
 const prisma = new PrismaClient();
@@ -13,6 +14,101 @@ export function assertSeedAllowed(
       'DEMO_SEED_BLOCKED: refusing to reset demo workflow data in production; set ALLOW_DEMO_SEED=1 only for an intentional disposable environment'
     );
   }
+}
+
+async function seedUsers() {
+  /** Local test accounts — password pattern: <Role>Demo123! */
+  const accounts = [
+    // user
+    {
+      username: 'congdan',
+      email: 'congdan@demo.vn',
+      displayName: 'Nguyễn Văn A',
+      role: 'user',
+      password: 'UserDemo123!',
+    },
+    {
+      username: 'congdan2',
+      email: 'congdan2@demo.vn',
+      displayName: 'Trần Thị B',
+      role: 'user',
+      password: 'UserDemo123!',
+    },
+    {
+      username: 'user.test',
+      email: 'user.test@demo.vn',
+      displayName: 'Lê Minh C',
+      role: 'user',
+      password: 'UserDemo123!',
+    },
+    // manager
+    {
+      username: 'quanly',
+      email: 'quanly@demo.vn',
+      displayName: 'Phạm Quản Lý',
+      role: 'manager',
+      password: 'ManagerDemo123!',
+    },
+    {
+      username: 'quanly2',
+      email: 'quanly2@demo.vn',
+      displayName: 'Hoàng Giám Sát',
+      role: 'manager',
+      password: 'ManagerDemo123!',
+    },
+    {
+      username: 'manager.test',
+      email: 'manager.test@demo.vn',
+      displayName: 'Vũ Điều Phối',
+      role: 'manager',
+      password: 'ManagerDemo123!',
+    },
+    // admin
+    {
+      username: 'admin',
+      email: 'admin@demo.vn',
+      displayName: 'Admin Hệ Thống',
+      role: 'admin',
+      password: 'AdminDemo123!',
+    },
+    {
+      username: 'admin2',
+      email: 'admin2@demo.vn',
+      displayName: 'Admin Phụ',
+      role: 'admin',
+      password: 'AdminDemo123!',
+    },
+    {
+      username: 'admin.test',
+      email: 'admin.test@demo.vn',
+      displayName: 'Admin Kiểm Thử',
+      role: 'admin',
+      password: 'AdminDemo123!',
+    },
+  ] as const;
+
+  for (const a of accounts) {
+    const passwordHash = await hashPassword(a.password);
+    await prisma.user.upsert({
+      where: { username: a.username },
+      update: {
+        email: a.email,
+        displayName: a.displayName,
+        role: a.role,
+        passwordHash,
+      },
+      create: {
+        username: a.username,
+        email: a.email,
+        displayName: a.displayName,
+        role: a.role,
+        passwordHash,
+      },
+    });
+  }
+  console.log(
+    `Seeded ${accounts.length} test users (3 user / 3 manager / 3 admin).`
+  );
 }
 
 async function upsertProcedure(
@@ -734,6 +830,8 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
         },
       },
     });
+
+    await seedUsers();
 
     console.log('Database seeded successfully.');
   } catch (error) {

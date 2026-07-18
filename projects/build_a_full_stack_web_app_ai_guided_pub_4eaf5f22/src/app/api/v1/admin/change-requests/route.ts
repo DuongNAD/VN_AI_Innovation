@@ -1,13 +1,13 @@
 import { AppError, handleRoute, jsonOk } from '@/lib/errors';
-import { requireAdmin } from '@/lib/auth';
+import { requireStaffAuth } from '@/lib/login-auth';
 import { prisma } from '@/lib/db';
 import { safeHttpsUrl } from '@/lib/schema-guards';
 
 export const dynamic = 'force-dynamic';
 
+/** GET change-requests — manager (read) + admin (cookie session or legacy token) */
 export const GET = handleRoute(async (req: Request) => {
-  // Enforce admin auth (this checks token and rate limits admin-auth failures)
-  requireAdmin(req);
+  await requireStaffAuth(req, 'manager');
 
   // Fetch change requests ordered by creation date descending
   const changeRequests = await prisma.changeRequest.findMany({

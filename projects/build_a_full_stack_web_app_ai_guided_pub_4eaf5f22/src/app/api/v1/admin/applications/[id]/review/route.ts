@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/auth';
+import { requireStaffAuth } from '@/lib/login-auth';
 import { prisma } from '@/lib/db';
 import { getProvider } from '@/lib/data-provider';
 import { AppError, handleRoute, jsonOk } from '@/lib/errors';
@@ -14,7 +14,7 @@ const MAX_NOTE_LENGTH = 1000;
  * approved, even if the queue data changed since it was listed.
  */
 export const POST = handleRoute(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
-  requireAdmin(req);
+  await requireStaffAuth(req, 'admin');
 
   const { id } = await params;
   const body = await readJsonBody(req);
