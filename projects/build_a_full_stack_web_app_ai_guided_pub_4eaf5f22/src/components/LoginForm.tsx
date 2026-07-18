@@ -39,6 +39,7 @@ export default function LoginForm({
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showVnid, setShowVnid] = useState(false);
@@ -219,17 +220,29 @@ export default function LoginForm({
           <label htmlFor="password" className="mb-1.5 block text-sm font-semibold text-slate-700">
             Mật khẩu
           </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20"
-            placeholder={PASSWORD_PLACEHOLDER}
-            required
-          />
+          <div className="relative">
+            <input
+              id="password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-4 pr-12 text-slate-900 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20"
+              placeholder={PASSWORD_PLACEHOLDER}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((visible) => !visible)}
+              aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+              aria-pressed={showPassword}
+              title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+              className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-xl text-slate-400 transition hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500"
+            >
+              <PasswordVisibilityIcon visible={showPassword} />
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -316,6 +329,25 @@ export default function LoginForm({
       )}
 
     </div>
+  );
+}
+
+function PasswordVisibilityIcon({ visible }: { visible: boolean }) {
+  return (
+    <svg
+      className="h-5 w-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+      <circle cx="12" cy="12" r="2.75" />
+      {!visible && <path d="m4 4 16 16" />}
+    </svg>
   );
 }
 

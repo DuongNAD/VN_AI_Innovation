@@ -15,9 +15,9 @@ const SIZE_MAP = {
   lg: { box: 'h-12 w-12', mark: 'text-lg', sub: 'text-xs' },
 } as const;
 
-const BRAND_NAME = 'VN AI Innovation';
+const BRAND_NAME = 'Guideline AI';
 const BRAND_TAGLINE = 'Trợ lý Thủ tục Hành chính';
-const BRAND_ARIA = 'VN AI Innovation — Trợ lý Thủ tục Hành chính';
+const BRAND_ARIA = 'Guideline AI — Trợ lý Thủ tục Hành chính';
 
 /**
  * Logo dự án: con dấu/khiên + hồ sơ số + mạng nơ-ron.

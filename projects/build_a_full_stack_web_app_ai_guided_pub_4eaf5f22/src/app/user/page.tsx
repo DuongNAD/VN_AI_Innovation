@@ -207,13 +207,6 @@ export default function Home() {
         </div>
 
         <div className="home-hero__content">
-          <div className="beta-badge">
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M10 2.2a5.2 5.2 0 0 0-5.2 5.2v3.1l-1.2 1.2c-.6.6-.2 1.6.7 1.6h11.4c.9 0 1.3-1 .7-1.6l-1.2-1.2V7.4A5.2 5.2 0 0 0 10 2.2Zm0 15.6a2.7 2.7 0 0 0 2.6-2H7.4a2.7 2.7 0 0 0 2.6 2Z" />
-            </svg>
-            Phiên bản Beta – Miễn phí hoàn toàn
-          </div>
-
           <h1 id="home-title" className="home-title">
             Trợ lý AI hướng dẫn
             <span>thủ tục hành chính</span>
@@ -285,26 +278,31 @@ export default function Home() {
 
       <section className="popular-section" aria-labelledby="popular-title">
         <div className="popular-section__inner">
-          <p className="section-eyebrow">Bắt đầu nhanh</p>
           <h2 id="popular-title">Thủ tục phổ biến</h2>
           <p className="section-lead">Chọn một thủ tục thường gặp để nhận hướng dẫn ngay.</p>
 
-          <p className="section-eyebrow" id="citizen-procedures">
-            Dành cho Công dân
-          </p>
-          <div className="procedure-grid" aria-labelledby="citizen-procedures">
-            {CITIZEN_CARDS.map((card) => (
-              <ProcedureCard key={card.href} card={card} />
-            ))}
-          </div>
+          <div className="procedure-groups">
+            <div className="procedure-group">
+              <h3 className="section-eyebrow procedure-group__title" id="citizen-procedures">
+                Dành cho Công dân
+              </h3>
+              <div className="procedure-grid" aria-labelledby="citizen-procedures">
+                {CITIZEN_CARDS.map((card) => (
+                  <ProcedureCard key={card.href} card={card} />
+                ))}
+              </div>
+            </div>
 
-          <p className="section-eyebrow" id="business-procedures">
-            Dành cho Doanh nghiệp
-          </p>
-          <div className="procedure-grid" aria-labelledby="business-procedures">
-            {BUSINESS_CARDS.map((card) => (
-              <ProcedureCard key={card.href} card={card} />
-            ))}
+            <div className="procedure-group">
+              <h3 className="section-eyebrow procedure-group__title" id="business-procedures">
+                Dành cho Doanh nghiệp
+              </h3>
+              <div className="procedure-grid" aria-labelledby="business-procedures">
+                {BUSINESS_CARDS.map((card) => (
+                  <ProcedureCard key={card.href} card={card} />
+                ))}
+              </div>
+            </div>
           </div>
 
           <Link href="/user/chat" className="all-procedures-link">

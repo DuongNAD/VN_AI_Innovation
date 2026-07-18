@@ -1,9 +1,18 @@
 import type { Metadata } from 'next';
+import { Be_Vietnam_Pro } from 'next/font/google';
 import './globals.css';
 import ChatWidget from '@/components/ChatWidget';
 
+const beVietnamPro = Be_Vietnam_Pro({
+  subsets: ['latin', 'vietnamese'],
+  weight: ['400', '500', '600', '700', '800'],
+  display: 'swap',
+  variable: '--font-be-vietnam-pro',
+  fallback: ['Segoe UI', 'Arial', 'sans-serif'],
+});
+
 export const metadata: Metadata = {
-  title: 'VN AI Innovation — Trợ lý Thủ tục Hành chính',
+  title: 'Guideline AI — Trợ lý Thủ tục Hành chính',
   description:
     'Trợ lý AI hướng dẫn người dân và doanh nghiệp thực hiện thủ tục hành chính công: hỏi đáp, giấy tờ, biểu mẫu và kiểm tra trước khi nộp.',
 };
@@ -29,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi">
+    <html lang="vi" className={beVietnamPro.variable}>
       <body className="relative min-h-screen overflow-x-hidden bg-gradient-to-b from-brand-50 via-surface-muted to-slate-100 font-sans text-body text-slate-900 antialiased">
         <AmbientMesh />
         <div className="relative z-10 flex min-h-screen flex-col">{children}</div>

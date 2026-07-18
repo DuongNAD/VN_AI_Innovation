@@ -631,37 +631,17 @@
   z-index: 5;
   width: min(850px, calc(100% - 36px));
   margin: 0 auto;
-  padding-top: clamp(30px, 5vh, 58px);
+  padding-top: clamp(68px, 8vh, 88px);
   text-align: center;
 }
 
-.beta-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 8px 18px;
-  border: 1px solid rgba(63, 131, 248, 0.12);
-  border-radius: 999px;
-  background: rgba(219, 234, 254, 0.88);
-  color: #0756cc;
-  font-size: 15px;
-  font-weight: 650;
-  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.08);
-  backdrop-filter: blur(8px);
-}
-
-.beta-badge svg {
-  width: 17px;
-  fill: currentColor;
-}
-
 .home-title {
-  margin: 26px 0 18px;
+  margin: 0 0 26px;
   color: var(--blue);
-  font-size: clamp(44px, 5.1vw, 72px);
-  font-weight: 850;
-  letter-spacing: -0.045em;
-  line-height: 0.99;
+  font-size: clamp(43px, 4.8vw, 68px);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.14;
   text-wrap: balance;
   text-shadow: 0 3px 0 rgba(255, 255, 255, 0.55);
 }
@@ -675,7 +655,8 @@
   margin: 0 auto;
   color: #1f2d4d;
   font-size: clamp(17px, 1.35vw, 21px);
-  line-height: 1.7;
+  font-weight: 400;
+  line-height: 1.82;
   text-wrap: balance;
 }
 
@@ -684,7 +665,7 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 22px;
   max-width: 760px;
-  margin: 34px auto 30px;
+  margin: 30px auto 26px;
 }
 
 .benefit {
@@ -815,17 +796,17 @@
   justify-content: center;
   align-items: center;
   gap: 8px;
-  margin: 11px auto 0;
+  margin: 14px auto 0;
   color: #405277;
   font-size: 13.5px;
-  padding: 20px;
+  padding: 0;
 }
 
 .process-wrap {
   position: relative;
   z-index: 20;
   width: min(840px, calc(100% - 32px));
-  margin: clamp(28px, 4vh, 46px) auto 0;
+  margin: clamp(34px, 4vh, 48px) auto 0;
   padding-bottom: 16px;
   transform: translateY(-44px);
 }
@@ -836,14 +817,15 @@
   color: #0e214c;
   font-size: clamp(22px, 2vw, 29px);
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   padding: 10px;
 }
 
 .process-bar {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  padding: 10px 15px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 48px;
+  padding: 10px 24px;
   border: 1px solid rgba(255, 255, 255, 0.78);
   border-radius: 17px;
   background: rgba(255, 253, 247, 0.86);
@@ -855,9 +837,10 @@
   position: relative;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   min-width: 0;
-  padding: 2px 16px;
+  padding: 2px 0;
 }
 
 .step-number {
@@ -898,21 +881,23 @@
 .step-copy strong {
   color: #152343;
   font-size: 15px;
+  font-weight: 700;
   line-height: 1.35;
 }
 
 .step-copy span {
   margin-top: 2px;
   color: #53617c;
-  font-size: 12.5px;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .step-arrow {
   position: absolute;
   z-index: 2;
   top: 50%;
-  right: -15px;
-  width: 31px;
+  right: -39px;
+  width: 30px;
   transform: translateY(-50%);
   fill: none;
   stroke: #2d4b78;
@@ -971,17 +956,26 @@
 }
 
 .popular-section h2 {
-  margin: 0;
+  margin: 0 0 14px;
   color: #0d1f45;
   font-size: clamp(30px, 3vw, 40px);
-  font-weight: 850;
-  letter-spacing: -0.035em;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .section-lead {
-  margin: 8px 0 34px;
+  margin: 0 0 40px;
   color: #5b6880;
   font-size: 16px;
+}
+
+.procedure-groups {
+  display: grid;
+  gap: 38px;
+}
+
+.procedure-group__title {
+  margin: 0 0 18px;
 }
 
 .procedure-grid {
@@ -1053,15 +1047,15 @@
   margin: 1px 0 7px;
   color: #13254c;
   font-size: 17px;
-  font-weight: 800;
-  line-height: 1.35;
+  font-weight: 700;
+  line-height: 1.44;
 }
 
 .procedure-card p {
   margin: 0;
   color: #5b6880;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.68;
 }
 
 .procedure-card__link {
@@ -1347,9 +1341,17 @@
     width: min(760px, calc(100% - 24px));
   }
 
+  .process-bar {
+    column-gap: 28px;
+    padding-inline: 16px;
+  }
+
   .process-segment {
-    padding: 2px 9px;
     gap: 8px;
+  }
+
+  .step-arrow {
+    right: -29px;
   }
 
   .step-number {
@@ -1402,15 +1404,10 @@
     bottom: 5%;
   }
 
-  .beta-badge {
-    padding: 7px 13px;
-    font-size: 12px;
-  }
-
   .home-title {
-    margin: 20px 0 14px;
+    margin: 0 0 14px;
     font-size: clamp(36px, 11.5vw, 48px);
-    line-height: 1.02;
+    line-height: 1.1;
   }
 
   .home-subtitle {
@@ -1453,6 +1450,7 @@
 
   .search-hint {
     max-width: 310px;
+    margin-top: 12px;
     font-size: 12px;
     line-height: 1.45;
   }
