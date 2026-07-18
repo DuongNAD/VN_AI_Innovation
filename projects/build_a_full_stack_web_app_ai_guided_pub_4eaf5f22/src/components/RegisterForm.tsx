@@ -66,8 +66,13 @@ export default function RegisterForm({ portal, title, subtitle }: Props) {
       setError('Tên tài khoản 3–50 ký tự, chỉ gồm a-z, 0-9, dấu chấm và gạch dưới.');
       return;
     }
+    const namePattern = /^[\p{L}\s\-'\.]{2,}$/u;
     if (displayName.trim().length < 1 || displayName.trim().length > 100) {
-      setError('Họ và tên không hợp lệ.');
+      setError('Họ và tên phải từ 1 đến 100 ký tự.');
+      return;
+    }
+    if (!namePattern.test(displayName.trim())) {
+      setError('Họ và tên không hợp lệ (không chứa số hoặc ký tự đặc biệt).');
       return;
     }
     if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
