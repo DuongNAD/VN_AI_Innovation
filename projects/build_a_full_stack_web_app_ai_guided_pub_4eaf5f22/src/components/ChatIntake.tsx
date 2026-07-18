@@ -223,7 +223,9 @@ export default function ChatIntake({
   const [knownProvince, setKnownProvince] = useState<string | null>(null);
   const [ecoBadge, setEcoBadge] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
   const [showEditList, setShowEditList] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
   // Active question schema tracking map
   const [questionSchemaMap, setQuestionSchemaMap] = useState<Record<string, Question>>({});
@@ -237,6 +239,7 @@ export default function ChatIntake({
   const audioChunksRef = useRef<Blob[]>([]);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sentinel ref for auto scroll
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -307,6 +310,7 @@ export default function ChatIntake({
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       if (recognitionRef.current) {
         recognitionRef.current.abort();
       }
@@ -323,6 +327,7 @@ export default function ChatIntake({
   const handleSearch = async (message: string) => {
     if (!message.trim() || busy) return;
     setBusy(true);
+    setIsTyping(true);
 
     setMessages((prev) => [
       ...prev,
@@ -339,6 +344,7 @@ export default function ChatIntake({
       body,
     });
 
+    setIsTyping(false);
     setBusy(false);
 
     if (res.ok) {
@@ -391,6 +397,7 @@ export default function ChatIntake({
   // START INTAKE HANDLER
   const startIntake = async (procedureCode: string, intentMessage: string) => {
     setBusy(true);
+    setIsTyping(true);
 
     const body: any = {
       procedureCode,
@@ -407,6 +414,7 @@ export default function ChatIntake({
       body,
     });
 
+    setIsTyping(false);
     setBusy(false);
 
     if (res.ok) {
@@ -443,6 +451,7 @@ export default function ChatIntake({
       return;
     }
     setBusy(true);
+    setIsTyping(true);
 
     const displayVal = displayLabel || String(value);
 
@@ -462,6 +471,7 @@ export default function ChatIntake({
       token: token,
     });
 
+    setIsTyping(false);
     setBusy(false);
 
     if (res.ok) {
@@ -558,6 +568,8 @@ export default function ChatIntake({
       return;
     }
 
+    setRecordingDuration(0);
+
     if (SpeechRecognition) {
       try {
         const rec = new SpeechRecognition();
@@ -567,6 +579,10 @@ export default function ChatIntake({
 
         rec.onstart = () => {
           setRecording(true);
+          // Start timer
+          recordingTimerRef.current = setInterval(() => {
+            setRecordingDuration((prev) => prev + 1);
+          }, 1000);
         };
 
         rec.onresult = (event: any) => {
@@ -580,10 +596,16 @@ export default function ChatIntake({
           console.error(event);
           appendBotMessage('Không sử dụng được micro trên thiết bị này. Bạn có thể gõ nội dung vào ô bên dưới.');
           setRecording(false);
+          if (recordingTimerRef.current) {
+            clearInterval(recordingTimerRef.current);
+          }
         };
 
         rec.onend = () => {
           setRecording(false);
+          if (recordingTimerRef.current) {
+            clearInterval(recordingTimerRef.current);
+          }
         };
 
         recognitionRef.current = rec;
@@ -637,11 +659,19 @@ export default function ChatIntake({
         mediaRecorder.start();
         setRecording(true);
 
+        // Start timer
+        recordingTimerRef.current = setInterval(() => {
+          setRecordingDuration((prev) => prev + 1);
+        }, 1000);
+
         timerRef.current = setTimeout(() => {
           if (mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
           }
           setRecording(false);
+          if (recordingTimerRef.current) {
+            clearInterval(recordingTimerRef.current);
+          }
         }, 10000);
 
       } catch (err) {
@@ -660,6 +690,11 @@ export default function ChatIntake({
       timerRef.current = null;
     }
 
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+
     if (recognitionRef.current) {
       // stop() (not abort()) so the pending recognition result is still delivered
       recognitionRef.current.stop();
@@ -672,6 +707,7 @@ export default function ChatIntake({
     }
 
     setRecording(false);
+    setRecordingDuration(0);
   };
 
   // ONE-SHOT INITIAL PROPS EFFECT
@@ -821,7 +857,7 @@ export default function ChatIntake({
   const isInputEnabled = phase === 'search' || (activeQuestion?.fieldType === 'text' && (phase === 'intake' || editingCode !== null));
 
   return (
-    <div className={`flex flex-col h-full bg-slate-900 text-slate-100 font-sans ${embed ? 'w-full h-full' : 'max-w-4xl mx-auto w-full h-[85vh] rounded-2xl shadow-xl border border-slate-800'}`}>
+    <div className={`flex flex-col h-full text-slate-100 font-sans ${embed ? 'w-full h-full bg-slate-900' : 'max-w-4xl mx-auto w-full h-[85vh] rounded-2xl shadow-xl border border-slate-800 bg-slate-900'}`}>
       
       {/* Header */}
       {!embed && (
@@ -863,6 +899,23 @@ export default function ChatIntake({
             </div>
           );
         })}
+
+        {/* Typing Indicator */}
+        {isTyping && (
+          <div className="flex items-start gap-2">
+            <div className="bg-slate-800/80 backdrop-blur border border-slate-700/50 rounded-2xl rounded-tl-none p-4 max-w-[85%] text-slate-200 shadow-md">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                  <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                  <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                </div>
+                <span className="text-sm text-slate-400">Đang suy nghĩ...</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div ref={bottomRef} />
       </div>
 
@@ -967,7 +1020,7 @@ export default function ChatIntake({
             <button
               type="button"
               onClick={startVoice}
-              className={`flex items-center justify-center rounded-full transition-all min-w-[48px] min-h-[48px] ${
+              className={`relative flex items-center justify-center rounded-full transition-all min-w-[48px] min-h-[48px] ${
                 recording
                   ? 'bg-rose-600 text-white animate-pulse'
                   : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
@@ -977,9 +1030,16 @@ export default function ChatIntake({
               aria-label={recording ? 'Dừng ghi âm' : 'Bắt đầu ghi âm bằng giọng nói'}
             >
               {recording ? (
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <rect x="6" y="6" width="12" height="12" rx="1.5" />
-                </svg>
+                <>
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <rect x="6" y="6" width="12" height="12" rx="1.5" />
+                  </svg>
+                  {recordingDuration > 0 && (
+                    <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-rose-600 text-white text-xs font-mono px-2 py-1 rounded-full whitespace-nowrap">
+                      {Math.floor(recordingDuration / 60)}:{String(recordingDuration % 60).padStart(2, '0')}
+                    </span>
+                  )}
+                </>
               ) : (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
