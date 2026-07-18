@@ -13,6 +13,14 @@ export function middleware(req: NextRequest) {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-pathname', pathname);
 
+  // Widget iframe: /user/chat?embed=1 — layout hides UserBar via this header
+  const isEmbed =
+    req.nextUrl.searchParams.get('embed') === '1' ||
+    req.nextUrl.searchParams.get('embed') === 'true';
+  if (isEmbed) {
+    requestHeaders.set('x-embed', '1');
+  }
+
   const isUserLogin = pathname === '/user/login' || pathname.startsWith('/user/login/');
   const isManagerLogin = pathname === '/manager/login' || pathname.startsWith('/manager/login/');
   const isAdminLogin = pathname === '/admin/login' || pathname.startsWith('/admin/login/');
