@@ -224,6 +224,11 @@ model User {
   phone        String?
   dateOfBirth  DateTime?
   address      String?
+  citizenId    String?        @unique
+  gender       String?
+  placeOfBirth String?
+  idIssuedAt   DateTime?
+  idExpiresAt  DateTime?
   /// scrypt-encoded password; null for OAuth/VNID-only accounts
   passwordHash String?
   /// user | manager | admin
@@ -233,6 +238,32 @@ model User {
   updatedAt    DateTime       @updatedAt
   loginSessions LoginSession[]
   oauthAccounts OAuthAccount[]
+  identityDocument IdentityDocument?
+}
+
+/// Encrypted temporary images of the citizen's identity card.
+/// Images are user-owned, never public, and are not proof of verified identity.
+model IdentityDocument {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status            String   @default("CAPTURED_NOT_VERIFIED")
+  frontCiphertext   Bytes
+  frontIv           Bytes
+  frontAuthTag      Bytes
+  frontMimeType     String
+  frontByteSize     Int
+  backCiphertext    Bytes
+  backIv            Bytes
+  backAuthTag       Bytes
+  backMimeType      String
+  backByteSize      Int
+  consentAt         DateTime
+  expiresAt         DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([expiresAt])
 }
 
 /// Linked social providers (Google, Facebook, …).

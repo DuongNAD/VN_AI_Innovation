@@ -26,9 +26,23 @@ export const PATCH = handleRoute(async (req: Request) => {
     return jsonOk({ user: publicUser(updated), message: 'Đã lưu thông tin cá nhân.' });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      throw new AppError(409, 'EMAIL_IN_USE', 'Email này đã được sử dụng bởi tài khoản khác.', {
-        field: 'email',
-      });
+      const target = Array.isArray(error.meta?.target)
+        ? error.meta.target.map(String)
+        : [String(error.meta?.target ?? '')];
+      if (target.some((field) => field.includes('citizenId'))) {
+        throw new AppError(
+          409,
+          'CITIZEN_ID_IN_USE',
+          'Số định danh này đã được liên kết với tài khoản khác.',
+          { field: 'citizenId' }
+        );
+      }
+      throw new AppError(
+        409,
+        'EMAIL_IN_USE',
+        'Email này đã được sử dụng bởi tài khoản khác.',
+        { field: 'email' }
+      );
     }
     throw error;
   }

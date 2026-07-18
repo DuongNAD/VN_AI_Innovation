@@ -246,6 +246,7 @@
 }
 
 .profile-field input,
+.profile-field select,
 .profile-field textarea {
   width: 100%;
   border: 1px solid #cbd5e1;
@@ -260,11 +261,13 @@
 }
 
 .profile-field input:hover,
+.profile-field select:hover,
 .profile-field textarea:hover {
   border-color: #94a3b8;
 }
 
 .profile-field input:focus,
+.profile-field select:focus,
 .profile-field textarea:focus {
   border-color: #075fe7;
   outline: none;

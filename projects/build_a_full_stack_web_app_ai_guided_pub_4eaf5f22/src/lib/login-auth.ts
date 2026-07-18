@@ -18,6 +18,11 @@ export type AuthUser = {
   phone: string | null;
   dateOfBirth: string | null;
   address: string | null;
+  citizenId: string | null;
+  gender: string | null;
+  placeOfBirth: string | null;
+  idIssuedAt: string | null;
+  idExpiresAt: string | null;
   role: AppRole;
   avatarUrl: string | null;
 };
@@ -34,6 +39,11 @@ export function publicUser(u: {
   phone: string | null;
   dateOfBirth: Date | null;
   address: string | null;
+  citizenId: string | null;
+  gender: string | null;
+  placeOfBirth: string | null;
+  idIssuedAt: Date | null;
+  idExpiresAt: Date | null;
   role: string;
   avatarUrl: string | null;
 }): AuthUser {
@@ -48,6 +58,11 @@ export function publicUser(u: {
     phone: u.phone,
     dateOfBirth: u.dateOfBirth ? u.dateOfBirth.toISOString().slice(0, 10) : null,
     address: u.address,
+    citizenId: u.citizenId,
+    gender: u.gender,
+    placeOfBirth: u.placeOfBirth,
+    idIssuedAt: u.idIssuedAt ? u.idIssuedAt.toISOString().slice(0, 10) : null,
+    idExpiresAt: u.idExpiresAt ? u.idExpiresAt.toISOString().slice(0, 10) : null,
     role: u.role,
     avatarUrl: u.avatarUrl,
   };

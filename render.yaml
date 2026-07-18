@@ -27,6 +27,8 @@ services:
         value: "1"
       - key: SESSION_TTL_HOURS
         value: "24"
+      - key: IDENTITY_DOCUMENT_KEY
+        generateValue: true
       - key: NODE_ENV
         value: production
       - key: RATE_LIMIT_PER_MINUTE
