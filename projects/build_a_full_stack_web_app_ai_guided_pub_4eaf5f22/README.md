@@ -25,6 +25,7 @@ Thực hiện theo kịch bản đường dẫn trải nghiệm mẫu dưới đ
 6. **Báo cáo kiểm tra trước khi nộp (`/result`):**
    - Bấm nút kiểm tra để nhận báo cáo từ công cụ quy tắc (rule engine).
    - Báo cáo hiển thị chi tiết **3 lỗi logic chuẩn (canonical errors)** bao gồm: thiếu ngày sinh của bên nữ, định dạng thẻ CCCD nam không hợp lệ, và mâu thuẫn thông tin (chưa kết hôn lần nào nhưng số lần kết hôn bằng 2) kèm theo giải thích chi tiết bằng ngôn ngữ tự nhiên từ Trợ lý AI.
+   - Khi hồ sơ đã **hợp lệ**, trang kết quả hiển thị **tờ khai điền sẵn theo đúng thể thức văn bản hành chính** (quốc hiệu, bảng bên nam/bên nữ, chữ ký) và nút **"Xuất PDF"** để in/tải tờ khai khổ A4 mang đi nộp.
 7. **Phê duyệt thay đổi cấu hình (`/admin`):** 
    - Đăng nhập bằng mã `ADMIN_TOKEN` bạn đã tự cấu hình trong tệp `.env` hoặc trên Render dashboard (không bao giờ sử dụng hoặc công khai giá trị mặc định của nhà phát triển).
    - Tìm yêu cầu thay đổi (Change Request) đang chờ xử lý và nhấn phê duyệt để kích hoạt biểu mẫu phiên bản `v2.0` ngay lập tức.

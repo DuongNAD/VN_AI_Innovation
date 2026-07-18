@@ -90,6 +90,12 @@ npm run dev              # http://localhost:3000
 > AI chỉ nhận **mã lỗi** (không thấy dữ liệu cá nhân thật) rồi diễn giải cho dễ hiểu —
 > xem dòng *'AI chỉ giải thích mã lỗi — nội dung pháp lý lấy từ cơ sở dữ liệu'*."
 
+**(Tùy chọn, nếu còn thời gian) Kết quả cuối của luồng:** khi hồ sơ đã hợp lệ, trang
+kết quả hiển thị **tờ khai đăng ký kết hôn điền sẵn** đúng thể thức văn bản (quốc hiệu,
+bảng bên nam/bên nữ, ngày ký, chữ ký) kèm nút **"Xuất PDF"** in đúng khổ A4:
+> "Người dân không phải chép tay lại gì cả — hệ thống điền sẵn tờ khai và xuất PDF
+> mang tới UBND. Đây là đầu ra thật của cả luồng số hóa."
+
 ---
 
 ## 4. (1:50 – 2:35) Mô phỏng thay đổi nghị định — *tiêu chí: chính xác + kiến trúc động*
