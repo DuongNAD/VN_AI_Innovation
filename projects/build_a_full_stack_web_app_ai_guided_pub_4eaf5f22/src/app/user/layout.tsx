@@ -7,12 +7,20 @@ export default async function UserLayout({ children }: { children: React.ReactNo
   const pathname = h.get('x-pathname') || '';
   const isEmbed = h.get('x-embed') === '1';
 
-  // Login page is public (middleware already allows it without cookie)
-  if (pathname === '/user/login' || pathname.startsWith('/user/login/')) {
+  // Public routes: login, register, chat AI (guest guidance — no login required)
+  if (
+    pathname === '/user/login' ||
+    pathname.startsWith('/user/login/') ||
+    pathname === '/user/register' ||
+    pathname.startsWith('/user/register/') ||
+    pathname === '/user/chat' ||
+    pathname.startsWith('/user/chat/')
+  ) {
+    // Embed chat: no chrome; full chat page: no AuthGate / UserBar either
     return <>{children}</>;
   }
 
-  // Widget iframe (?embed=1): keep auth gate, omit chrome UserBar
+  // Other embed paths (if any): no UserBar, still auth-gated
   if (isEmbed) {
     return (
       <AuthGate allow={['user']} loginPath="/user/login">

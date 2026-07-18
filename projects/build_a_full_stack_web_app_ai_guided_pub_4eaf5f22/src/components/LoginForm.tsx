@@ -1,10 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { AppRole } from '@/lib/roles';
 import type { LoginPortal } from '@/components/login/portal';
-import { portalHome, portalAccent } from '@/components/login/portal';
+import { portalHome, portalAccent, safeReturnPath } from '@/components/login/portal';
 import { GoogleIcon, FacebookIcon, VnidIcon } from '@/components/login/SocialIcons';
 
 export type { LoginPortal } from '@/components/login/portal';
@@ -12,6 +13,7 @@ export type { LoginPortal } from '@/components/login/portal';
 /** Module-level constants — identical on server & client (no hydration drift). */
 const USERNAME_PLACEHOLDER = 'Tài khoản hoặc email';
 const PASSWORD_PLACEHOLDER = '••••••••';
+const GENERIC_AUTH_ERROR = 'Tài khoản hoặc mật khẩu không đúng.';
 
 type Props = {
   portal: LoginPortal;
@@ -61,7 +63,7 @@ export default function LoginForm({
         if (cancelled || !data.authenticated || !data.user) return;
         const role = data.user.role;
         if (role === portal) {
-          router.replace(portalHome(portal));
+          router.replace(safeReturnPath(portal) ?? portalHome(portal));
         }
         // Wrong role (e.g. manager on /admin/login): stay on form, do not open admin
       } catch {
@@ -86,23 +88,17 @@ export default function LoginForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data?.error?.message || 'Đăng nhập thất bại.');
+        throw new Error(data?.error?.message || GENERIC_AUTH_ERROR);
       }
       // Defense in depth: never navigate if server returned a mismatched role
       const role = data?.user?.role as AppRole | undefined;
       if (role !== portal) {
-        throw new Error(
-          portal === 'admin'
-            ? 'Tài khoản không có quyền quản trị.'
-            : portal === 'manager'
-              ? 'Tài khoản không có quyền người quản lý.'
-              : 'Tài khoản không hợp lệ cho cổng này.'
-        );
+        throw new Error(GENERIC_AUTH_ERROR);
       }
-      router.replace(portalHome(portal));
+      router.replace(safeReturnPath(portal) ?? portalHome(portal));
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Đăng nhập thất bại.');
+      setError(err instanceof Error ? err.message : GENERIC_AUTH_ERROR);
     } finally {
       setLoading(false);
     }
@@ -241,6 +237,16 @@ export default function LoginForm({
         >
           {loading ? 'Đang đăng nhập…' : 'Đăng nhập'}
         </button>
+
+        <p className="text-center text-sm text-slate-600">
+          Chưa có tài khoản?{' '}
+          <Link
+            href={`${portalHome(portal)}/register`}
+            className="font-semibold text-brand-700 hover:underline"
+          >
+            Đăng ký
+          </Link>
+        </p>
       </form>
 
       {socialEnabled && (

@@ -122,20 +122,36 @@ describe('Intake Machine - Basic flow, pruning, and validation', () => {
     expect(validateAnswer(mockQuestions[0], true)).toBe(true);
 
     expect(() => validateAnswer(mockQuestions[0], 'maybe')).toThrowError(
-      new AppError(400, 'INVALID_ANSWER', 'Câu trả lời không hợp lệ.')
+      expect.objectContaining({
+        status: 400,
+        code: 'INVALID_ANSWER',
+        message: 'Câu trả lời không hợp lệ.',
+      })
     );
 
     expect(validateAnswer(mockQuestions[2], 'Hà Nội')).toBe('Hà Nội');
     expect(() => validateAnswer(mockQuestions[2], 'Nowhere')).toThrowError(
-      new AppError(400, 'INVALID_ANSWER', 'Câu trả lời không hợp lệ.')
+      expect.objectContaining({
+        status: 400,
+        code: 'INVALID_ANSWER',
+        message: 'Câu trả lời không hợp lệ.',
+      })
     );
 
     expect(validateAnswer(mockQuestions[3], '  Canada  ')).toBe('Canada');
     expect(() => validateAnswer(mockQuestions[3], '')).toThrowError(
-      new AppError(400, 'INVALID_ANSWER', 'Câu trả lời không hợp lệ.')
+      expect.objectContaining({
+        status: 400,
+        code: 'INVALID_ANSWER',
+        message: 'Câu trả lời không hợp lệ.',
+      })
     );
     expect(() => validateAnswer(mockQuestions[3], 'a'.repeat(501))).toThrowError(
-      new AppError(400, 'INVALID_ANSWER', 'Câu trả lời không hợp lệ.')
+      expect.objectContaining({
+        status: 400,
+        code: 'INVALID_ANSWER',
+        message: 'Câu trả lời không hợp lệ.',
+      })
     );
   });
 });
