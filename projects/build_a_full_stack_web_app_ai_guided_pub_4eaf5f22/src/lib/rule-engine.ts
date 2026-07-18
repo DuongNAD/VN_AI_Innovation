@@ -423,6 +423,42 @@ function appendMarriageDomainErrors(
   }
 }
 
+function appendNameFormatErrors(
+  fieldsMap: Map<string, FieldDef>,
+  data: Record<string, unknown>,
+  errors: ValidationErrorItem[]
+): void {
+  const namePattern = /^[\p{L}\s\-'\.]{2,}$/u;
+  const skipList = ['agency', 'company', 'organization', 'document', 'file', 'province', 'district', 'ward', 'username'];
+  
+  for (const [fieldId, fieldDef] of fieldsMap.entries()) {
+    const lowerId = fieldId.toLowerCase();
+    if (lowerId.includes('name')) {
+      if (skipList.some(skip => lowerId.includes(skip))) {
+        continue;
+      }
+      const value = data[fieldId];
+      if (typeof value !== 'string' || value.trim() === '') {
+        continue;
+      }
+      
+      if (fieldDef.visibleWhen && !evaluateCondition(fieldDef.visibleWhen, data)) {
+        continue;
+      }
+      
+      if (!namePattern.test(value)) {
+        errors.push({
+          code: 'INVALID_NAME_FORMAT',
+          field: fieldId,
+          message: 'Họ và tên không hợp lệ (không được chứa chữ số hoặc ký tự đặc biệt).',
+          suggestion: 'Vui lòng kiểm tra lại. Tên chỉ được gồm chữ cái, dấu cách, gạch ngang hoặc dấu chấm.',
+          severity: 'error',
+        });
+      }
+    }
+  }
+}
+
 export function runRules(
   fields: FieldDef[],
   rules: RuleDef[],
@@ -834,5 +870,6 @@ export function runRules(
   }
 
   appendMarriageDomainErrors(fieldsMap, data, errors);
+  appendNameFormatErrors(fieldsMap, data, errors);
   return errors;
 }
