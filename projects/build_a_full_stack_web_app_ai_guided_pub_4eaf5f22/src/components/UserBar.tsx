@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import BackButton from '@/components/BackButton';
 import BrandLogo from '@/components/BrandLogo';
 
 type Props = {
@@ -110,6 +111,7 @@ function LogoutIcon() {
 
 export default function UserBar({ displayName, username, roleLabel, homeHref }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -140,8 +142,10 @@ export default function UserBar({ displayName, username, roleLabel, homeHref }: 
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 text-sm shadow-[0_1px_0_rgba(255,255,255,0.8),0_8px_28px_rgba(15,23,42,0.06)] backdrop-blur-xl">
-      <div className="mx-auto flex min-h-[72px] w-full max-w-[1600px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+      <div className="mx-auto flex min-h-16 w-full max-w-[1600px] items-center justify-between gap-2.5 px-3 sm:px-5 lg:px-7">
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+          {pathname !== homeHref ? <BackButton fallbackHref={homeHref} /> : null}
+
           <span className="hidden sm:inline-flex">
             <BrandLogo size="sm" href={homeHref} />
           </span>
@@ -149,11 +153,11 @@ export default function UserBar({ displayName, username, roleLabel, homeHref }: 
             <BrandLogo size="sm" iconOnly href={homeHref} />
           </span>
 
-          <span className="hidden h-8 w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent sm:block" aria-hidden="true" />
+          <span className="hidden h-7 w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent sm:block" aria-hidden="true" />
 
           <Link
             href={homeHref}
-            className={`group flex min-w-0 items-center gap-2.5 rounded-xl border px-3 py-2 transition-all hover:-translate-y-0.5 hover:shadow-sm ${theme.badge}`}
+            className={`group flex min-w-0 items-center gap-2 rounded-xl border px-2.5 py-1.5 transition-all hover:-translate-y-0.5 hover:shadow-sm ${theme.badge}`}
           >
             <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-white/80 shadow-sm ring-1 ring-current/10 [&_svg]:size-4 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-[1.8] [&_svg]:stroke-linecap-round [&_svg]:stroke-linejoin-round">
               {theme.icon}
@@ -183,13 +187,13 @@ export default function UserBar({ displayName, username, roleLabel, homeHref }: 
             aria-controls="account-menu"
             aria-label={`Mở menu tài khoản của ${displayName}`}
             onClick={() => setMenuOpen((open) => !open)}
-            className={`group flex min-h-12 max-w-[min(58vw,330px)] items-center gap-2.5 rounded-2xl border px-2 py-1.5 text-left transition-all duration-200 ${
+            className={`group flex min-h-11 max-w-[min(58vw,330px)] items-center gap-2 rounded-xl border px-1.5 py-1 text-left transition-all duration-200 ${
               menuOpen
                 ? 'border-slate-200 bg-white shadow-lg shadow-slate-900/10'
                 : 'border-transparent hover:border-slate-200 hover:bg-white hover:shadow-md hover:shadow-slate-900/5'
             }`}
           >
-            <span className={`relative grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-sm font-extrabold uppercase text-white shadow-lg ${theme.avatar}`} aria-hidden="true">
+            <span className={`relative grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-xs font-extrabold uppercase text-white shadow-lg ${theme.avatar}`} aria-hidden="true">
               {userInitials}
               <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-white bg-emerald-500" />
             </span>

@@ -6,6 +6,8 @@ type BrandLogoProps = {
   iconOnly?: boolean;
   /** null = không bọc Link */
   href?: string | null;
+  /** Dùng thẻ a để dựng lại đầy đủ layout khi đi từ route công khai sang route có xác thực. */
+  reloadDocument?: boolean;
   className?: string;
 };
 
@@ -27,6 +29,7 @@ export default function BrandLogo({
   size = 'md',
   iconOnly = false,
   href = '/user',
+  reloadDocument = false,
   className = '',
 }: BrandLogoProps) {
   const s = SIZE_MAP[size];
@@ -89,6 +92,18 @@ export default function BrandLogo({
   );
 
   if (href) {
+    if (reloadDocument) {
+      return (
+        <a
+          href={href}
+          className="inline-flex rounded-lg outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-600"
+          aria-label={`${BRAND_ARIA} — trang chủ`}
+        >
+          {mark}
+        </a>
+      );
+    }
+
     return (
       <Link
         href={href}

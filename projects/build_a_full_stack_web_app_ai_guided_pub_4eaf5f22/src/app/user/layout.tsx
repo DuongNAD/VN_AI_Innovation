@@ -1,23 +1,43 @@
 import { headers } from 'next/headers';
 import AuthGate from '@/components/AuthGate';
 import UserBar from '@/components/UserBar';
+import { getAuthUserFromCookies } from '@/lib/login-auth';
 
 export default async function UserLayout({ children }: { children: React.ReactNode }) {
   const h = await headers();
   const pathname = h.get('x-pathname') || '';
   const isEmbed = h.get('x-embed') === '1';
 
-  // Public routes: login, register, chat AI (guest guidance — no login required)
+  // Login / register không hiển thị thanh điều hướng tài khoản.
   if (
     pathname === '/user/login' ||
     pathname.startsWith('/user/login/') ||
     pathname === '/user/register' ||
-    pathname.startsWith('/user/register/') ||
-    pathname === '/user/chat' ||
-    pathname.startsWith('/user/chat/')
+    pathname.startsWith('/user/register/')
   ) {
-    // Embed chat: no chrome; full chat page: no AuthGate / UserBar either
     return <>{children}</>;
+  }
+
+  const isChat = pathname === '/user/chat' || pathname.startsWith('/user/chat/');
+
+  // Chat vẫn cho khách sử dụng. Nếu đã đăng nhập, giữ UserBar để chuyển trang
+  // bằng client navigation không làm mất header của toàn bộ cổng người dùng.
+  if (isChat) {
+    if (isEmbed) return <>{children}</>;
+    const user = await getAuthUserFromCookies();
+    return (
+      <>
+        {user?.role === 'user' ? (
+          <UserBar
+            displayName={user.displayName}
+            username={user.username}
+            roleLabel="Công dân"
+            homeHref="/user"
+          />
+        ) : null}
+        {children}
+      </>
+    );
   }
 
   // Other embed paths (if any): no UserBar, still auth-gated

@@ -1,6 +1,7 @@
 'use client';
 
 import Breadcrumb, { ProgressIndicator } from '@/components/Breadcrumb';
+import BackButton from '@/components/BackButton';
 import BrandLogo from '@/components/BrandLogo';
 
 export const FLOW_STEPS = [
@@ -17,6 +18,8 @@ interface FlowChromeProps {
   current: FlowStepKey;
   /** Tiêu đề ngắn hiển thị cạnh breadcrumb (tuỳ chọn) */
   title?: string;
+  /** Chế độ độc lập cho trang không có UserBar (ví dụ chat khách). */
+  standalone?: boolean;
   className?: string;
 }
 
@@ -25,7 +28,7 @@ interface FlowChromeProps {
  * glass sticky header + BrandLogo + breadcrumb + progress stepper.
  * Không xử lý state nghiệp vụ — chỉ nhận `current` và render UI.
  */
-export default function FlowChrome({ current, title, className = '' }: FlowChromeProps) {
+export default function FlowChrome({ current, title, standalone = false, className = '' }: FlowChromeProps) {
   const idx = FLOW_STEPS.findIndex((s) => s.key === current);
   const safeIdx = idx < 0 ? 0 : idx;
 
@@ -46,15 +49,18 @@ export default function FlowChrome({ current, title, className = '' }: FlowChrom
         aria-hidden="true"
       />
 
-      <div className="relative mx-auto w-full max-w-4xl space-y-3 px-4 py-3 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-4">
-            <BrandLogo size="sm" href="/user" />
-            <div className="hidden h-8 w-px bg-slate-200 sm:block" aria-hidden="true" />
-            <Breadcrumb />
+      <div className="relative mx-auto w-full max-w-5xl space-y-2 px-3 py-2 sm:px-5 sm:py-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+            {standalone ? <BackButton fallbackHref="/user" /> : null}
+            {standalone ? <BrandLogo size="sm" href="/user" reloadDocument /> : null}
+            {standalone ? (
+              <div className="hidden h-7 w-px bg-slate-200 md:block" aria-hidden="true" />
+            ) : null}
+            <Breadcrumb className="hidden min-w-0 md:flex" />
           </div>
           {title ? (
-            <h1 className="text-title tracking-snugish text-slate-900">{title}</h1>
+            <h1 className="shrink-0 text-base font-bold tracking-snugish text-slate-900 sm:text-lg">{title}</h1>
           ) : null}
         </div>
 

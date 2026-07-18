@@ -17,16 +17,16 @@ export function ProgressIndicator({ steps, className = '' }: ProgressIndicatorPr
       <ol
         className="flex items-center justify-between"
         role="list"
-        aria-label="Tiáº¿n trĂ¬nh há»“ sÆ¡"
+        aria-label="Tiến trình hồ sơ"
       >
         {steps.map((step, index) => {
           const isLast = index === steps.length - 1;
           const statusLabel =
             step.status === 'completed'
-              ? 'Ä‘Ă£ hoĂ n thĂ nh'
+              ? 'đã hoàn thành'
               : step.status === 'current'
-              ? 'Ä‘ang thá»±c hiá»‡n'
-              : 'chÆ°a tá»›i';
+              ? 'đang thực hiện'
+              : 'chưa tới';
 
           return (
             <li
@@ -36,7 +36,7 @@ export function ProgressIndicator({ steps, className = '' }: ProgressIndicatorPr
             >
               <div className="flex flex-col items-center min-w-0">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
+                  className={`flex size-9 items-center justify-center rounded-full text-sm font-semibold transition-all ${
                     step.status === 'completed'
                       ? 'bg-green-600 text-white'
                       : step.status === 'current'
@@ -58,7 +58,7 @@ export function ProgressIndicator({ steps, className = '' }: ProgressIndicatorPr
                   )}
                 </div>
                 <span
-                  className={`mt-2 text-xs font-medium text-center truncate max-w-[5.5rem] sm:max-w-none ${
+                  className={`mt-1.5 max-w-[5.5rem] truncate text-center text-xs font-medium sm:max-w-none ${
                     step.status === 'current' ? 'text-blue-700' : 'text-slate-600'
                   }`}
                 >
