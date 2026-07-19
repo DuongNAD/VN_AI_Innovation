@@ -347,25 +347,33 @@ export default function DocumentPreview({
         import('html2canvas'),
         import('jspdf'),
       ]);
-      const canvas = await html2canvas(documentRef.current, {
+      // Manually clone the document to force a 794px width for accurate html2canvas bounds
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.className = 'print-area';
+      document.body.appendChild(container);
+
+      const clone = documentRef.current.cloneNode(true) as HTMLElement;
+      clone.style.width = '794px';
+      clone.style.maxWidth = '794px';
+      clone.style.padding = '36px 44px';
+      clone.style.border = '0';
+      clone.style.borderRadius = '0';
+      clone.style.boxShadow = 'none';
+      clone.style.overflow = 'visible';
+      clone.querySelectorAll('.no-print, .no-pdf').forEach((node) => node.remove());
+      container.appendChild(clone);
+
+      const canvas = await html2canvas(clone, {
         scale: Math.max(2, Math.min(3, window.devicePixelRatio || 2)),
         backgroundColor: '#ffffff',
         useCORS: true,
         logging: false,
-        windowWidth: 900,
-        onclone: (clonedDocument) => {
-          const clonedSheet = clonedDocument.querySelector<HTMLElement>('[data-pdf-document]');
-          if (!clonedSheet) return;
-          clonedSheet.querySelectorAll('.no-print, .no-pdf').forEach((node) => node.remove());
-          clonedSheet.style.width = '794px';
-          clonedSheet.style.maxWidth = '794px';
-          clonedSheet.style.padding = '36px 44px';
-          clonedSheet.style.border = '0';
-          clonedSheet.style.borderRadius = '0';
-          clonedSheet.style.boxShadow = 'none';
-          clonedSheet.style.overflow = 'visible';
-        },
       });
+
+      document.body.removeChild(container);
 
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -375,12 +383,13 @@ export default function DocumentPreview({
       });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 8;
-      const maxWidth = pageWidth - margin * 2;
-      const maxHeight = pageHeight - margin * 2;
+      const horizontalMargin = 8;
+      const topMargin = 12;
+      const bottomMargin = 8;
+      const maxWidth = pageWidth - horizontalMargin * 2;
+      const maxHeight = pageHeight - topMargin - bottomMargin;
       const renderWidth = maxWidth;
       const totalHeight = (canvas.height * renderWidth) / canvas.width;
-
       pdf.setProperties({
         title: `Tờ khai ${procedureName}`,
         subject: `Biểu mẫu ${procedureName} phiên bản ${formVersion}`,
@@ -398,7 +407,7 @@ export default function DocumentPreview({
           canvas,
           'PNG',
           (pageWidth - scaledWidth) / 2,
-          (pageHeight - renderHeight) / 2,
+          topMargin,
           scaledWidth,
           renderHeight,
           undefined,
@@ -420,8 +429,8 @@ export default function DocumentPreview({
           pdf.addImage(
             bandCanvas,
             'PNG',
-            margin,
-            margin,
+            horizontalMargin,
+            topMargin,
             renderWidth,
             (bandPx * renderWidth) / canvas.width,
             undefined,
