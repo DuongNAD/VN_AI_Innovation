@@ -89,6 +89,10 @@ interface SignatureCheckInfo {
   status: 'PASSED' | 'REVIEW' | 'REJECTED' | 'SKIPPED';
   reason: string;
   confidence: number;
+  /** Null = the AI did not (or could not) compare names. */
+  nameMatch: boolean | null;
+  /** Names the AI read on the signed declaration, for the officer to compare. */
+  namesSeen: string[];
 }
 
 interface SignedDeclarationInfo {
@@ -459,10 +463,20 @@ function parseSignedDeclaration(raw: unknown): SignedDeclarationInfo | null {
       c.status === 'REJECTED' ||
       c.status === 'SKIPPED'
     ) {
+      const namesSeen: string[] = [];
+      if (Array.isArray(c.namesSeen) && c.namesSeen.length <= 8) {
+        for (const name of c.namesSeen) {
+          if (isBoundedString(name, 200)) {
+            namesSeen.push(name as string);
+          }
+        }
+      }
       check = {
         status: c.status,
         reason: isBoundedString(c.reason, 500) ? (c.reason as string) : '',
         confidence: isFiniteNumber(c.confidence) ? (c.confidence as number) : 0,
+        nameMatch: typeof c.nameMatch === 'boolean' ? c.nameMatch : null,
+        namesSeen,
       };
     }
   }
@@ -1552,31 +1566,53 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                       </div>
                       {app.signedDeclaration?.check && (
                         <div className="mt-2">
-                          <span
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                              app.signedDeclaration.check.status === 'PASSED'
-                                ? 'border-emerald-200 bg-emerald-100 text-emerald-800'
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span
+                              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                                app.signedDeclaration.check.status === 'PASSED'
+                                  ? 'border-emerald-200 bg-emerald-100 text-emerald-800'
+                                  : app.signedDeclaration.check.status === 'REVIEW'
+                                  ? 'border-amber-200 bg-amber-100 text-amber-800'
+                                  : app.signedDeclaration.check.status === 'REJECTED'
+                                  ? 'border-rose-200 bg-rose-100 text-rose-800'
+                                  : 'border-slate-200 bg-slate-100 text-slate-600'
+                              }`}
+                            >
+                              <span aria-hidden="true">🤖</span>
+                              {app.signedDeclaration.check.status === 'PASSED'
+                                ? 'AI: có chữ ký, hợp lệ'
                                 : app.signedDeclaration.check.status === 'REVIEW'
-                                ? 'border-amber-200 bg-amber-100 text-amber-800'
+                                ? 'AI: cần kiểm tra thêm'
                                 : app.signedDeclaration.check.status === 'REJECTED'
-                                ? 'border-rose-200 bg-rose-100 text-rose-800'
-                                : 'border-slate-200 bg-slate-100 text-slate-600'
-                            }`}
-                          >
-                            <span aria-hidden="true">🤖</span>
-                            {app.signedDeclaration.check.status === 'PASSED'
-                              ? 'AI: có chữ ký, hợp lệ'
-                              : app.signedDeclaration.check.status === 'REVIEW'
-                              ? 'AI: cần kiểm tra thêm'
-                              : app.signedDeclaration.check.status === 'REJECTED'
-                              ? 'AI: chưa đạt'
-                              : 'AI: chưa kiểm tra tự động'}
-                          </span>
+                                ? 'AI: chưa đạt'
+                                : 'AI: chưa kiểm tra tự động'}
+                            </span>
+                            {app.signedDeclaration.check.nameMatch !== null && (
+                              <span
+                                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                                  app.signedDeclaration.check.nameMatch
+                                    ? 'border-emerald-200 bg-emerald-100 text-emerald-800'
+                                    : 'border-amber-200 bg-amber-100 text-amber-800'
+                                }`}
+                              >
+                                {app.signedDeclaration.check.nameMatch
+                                  ? 'Tên khớp hồ sơ'
+                                  : 'Tên chưa khớp hồ sơ'}
+                              </span>
+                            )}
+                          </div>
                           {app.signedDeclaration.check.reason && (
                             <p className="mt-1 text-xs text-slate-500">
                               {app.signedDeclaration.check.reason}
                             </p>
                           )}
+                          {app.signedDeclaration.check.nameMatch === false &&
+                            app.signedDeclaration.check.namesSeen.length > 0 && (
+                              <p className="mt-1 text-xs text-slate-500">
+                                Tên AI đọc được trên tờ khai:{' '}
+                                {app.signedDeclaration.check.namesSeen.join('; ')}
+                              </p>
+                            )}
                         </div>
                       )}
                     </div>

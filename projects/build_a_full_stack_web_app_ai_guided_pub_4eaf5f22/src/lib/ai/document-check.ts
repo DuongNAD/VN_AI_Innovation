@@ -1,15 +1,19 @@
 import { fetchUpstreamJson } from './upstream';
 import { logAiUsage } from './usage';
 import { getAiProvider } from '@/lib/config';
+import type { FieldDef } from '@/lib/schema-guards';
 
 /**
  * AI verification of a citizen's signed declaration (tờ khai đã ký) before it
  * reaches the reviewing officer. A vision model looks at the uploaded image and
- * assesses three things: is this the right kind of administrative declaration,
- * does it carry a signature, and is it legible. The verdict is advisory —
- * consistent with the app's grounded design, the AI never makes the final legal
- * decision — but a confident "this is not a signed declaration" blocks the
- * upload so obviously-wrong files never enter the review queue.
+ * assesses: is this the right kind of administrative declaration, does it carry
+ * a signature, is it legible, and do the signer names printed on it match the
+ * names declared in the application. The verdict is advisory — consistent with
+ * the app's grounded design, the AI never makes the final legal decision — but
+ * a confident "this is not a signed declaration" blocks the upload so
+ * obviously-wrong files never enter the review queue. A name mismatch is never
+ * an outright block (OCR of Vietnamese names is error-prone); it flags the file
+ * for the officer instead.
  */
 
 export type SignatureCheckStatus = 'PASSED' | 'REVIEW' | 'REJECTED' | 'SKIPPED';
@@ -19,6 +23,10 @@ export type SignatureCheck = {
   isDeclaration: boolean | null;
   hasSignature: boolean | null;
   legible: boolean | null;
+  /** Do the names on the declaration match the application data? Null = not assessed. */
+  nameMatch: boolean | null;
+  /** Signer names the model could read on the document (bounded, may be empty). */
+  namesSeen: string[];
   /** Overall model confidence, 0..1. */
   confidence: number;
   /** Short Vietnamese explanation shown to the citizen and the officer. */
@@ -48,22 +56,79 @@ Yêu cầu:
 2. is_declaration: ảnh có phải là một tờ khai/biểu mẫu hành chính (có tiêu đề quốc hiệu, bảng thông tin, mục người khai ký) hay không.
 3. has_signature: có nhìn thấy chữ ký tay hoặc chữ ký ở khu vực người khai ký hay không.
 4. is_legible: ảnh có đủ rõ, không quá mờ, không bị che khuất phần chữ ký hay không.
-5. confidence: mức độ tin cậy tổng thể của bạn cho các đánh giá trên, từ 0 đến 1.
-6. reason: 1-2 câu tiếng Việt, phổ thông, giải thích ngắn gọn nhận định. Nếu từ chối, nêu rõ người dân cần làm gì (ví dụ: ký vào mục người khai rồi chụp lại rõ nét).
-7. Chỉ trả về JSON đúng cấu trúc:
+5. name_match: tin nhắn của người dùng có thể kèm danh sách "Tên người khai theo hồ sơ". Nếu có, hãy đọc tên in trên tờ khai (bảng thông tin và khu vực ký tên) rồi so sánh: coi là khớp khi trùng nhau sau khi bỏ dấu tiếng Việt, không phân biệt hoa thường và thứ tự. Trả về true nếu khớp, false nếu rõ ràng là tên KHÁC, null nếu không đọc được tên hoặc không có danh sách để so.
+6. names_seen: các tên người khai bạn đọc được trên tờ khai (mảng chuỗi, tối đa 4, có thể rỗng).
+7. confidence: mức độ tin cậy tổng thể của bạn cho các đánh giá trên, từ 0 đến 1.
+8. reason: 1-2 câu tiếng Việt, phổ thông, giải thích ngắn gọn nhận định. Nếu từ chối hoặc tên không khớp, nêu rõ người dân cần làm gì.
+9. Chỉ trả về JSON đúng cấu trúc:
 {
   "is_declaration": boolean,
   "has_signature": boolean,
   "is_legible": boolean,
+  "name_match": boolean | null,
+  "names_seen": string[],
   "confidence": number,
   "reason": string
 }`;
+
+const MAX_SIGNER_NAMES = 4;
+const MAX_NAME_LENGTH = 120;
+
+function foldVietnamese(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/đ/g, 'd');
+}
+
+/**
+ * Pulls the declarant names out of the application data so the vision model can
+ * cross-check them against what is printed on the signed declaration. A field
+ * counts as a person-name field when its id or label says so (full_name,
+ * "Họ, chữ đệm, tên", "Họ và tên", …). Pure and bounded for unit testing.
+ */
+export function extractSignerNames(
+  fields: Pick<FieldDef, 'id' | 'type' | 'label'>[],
+  data: Record<string, unknown>
+): string[] {
+  const names: string[] = [];
+  for (const field of fields) {
+    if (field.type !== 'text') continue;
+    const idHit = /(^|_)(full_name|ho_ten)($|_)|_name$/.test(field.id);
+    const foldedLabel = foldVietnamese(field.label);
+    const labelHit = /ho,? (chu dem,? )?ten|ho va ten|ho ten/.test(foldedLabel);
+    if (!idHit && !labelHit) continue;
+    const value = data[field.id];
+    if (typeof value !== 'string') continue;
+    const trimmed = value.replace(/\s+/g, ' ').trim().slice(0, MAX_NAME_LENGTH);
+    if (trimmed.length === 0 || names.includes(trimmed)) continue;
+    names.push(trimmed);
+    if (names.length >= MAX_SIGNER_NAMES) break;
+  }
+  return names;
+}
 
 function clampConfidence(value: unknown): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return 0;
   }
   return Math.max(0, Math.min(1, value));
+}
+
+function parseNamesSeen(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const names: string[] = [];
+  for (const item of value) {
+    if (typeof item !== 'string') continue;
+    const trimmed = item.replace(/\s+/g, ' ').trim().slice(0, MAX_NAME_LENGTH);
+    if (trimmed.length === 0 || names.includes(trimmed)) continue;
+    names.push(trimmed);
+    if (names.length >= MAX_SIGNER_NAMES) break;
+  }
+  return names;
 }
 
 function cleanReason(value: unknown, fallback: string): string {
@@ -83,6 +148,8 @@ export function decideSignatureCheck(raw: unknown, model: string, checkedAt: str
   const isDeclaration = typeof obj.is_declaration === 'boolean' ? obj.is_declaration : null;
   const hasSignature = typeof obj.has_signature === 'boolean' ? obj.has_signature : null;
   const legible = typeof obj.is_legible === 'boolean' ? obj.is_legible : null;
+  const nameMatch = typeof obj.name_match === 'boolean' ? obj.name_match : null;
+  const namesSeen = parseNamesSeen(obj.names_seen);
   const confidence = clampConfidence(obj.confidence);
 
   let status: SignatureCheckStatus;
@@ -97,9 +164,19 @@ export function decideSignatureCheck(raw: unknown, model: string, checkedAt: str
   } else if (legible === false) {
     status = 'REVIEW';
     defaultReason = 'Ảnh tờ khai hơi mờ hoặc khó đọc; cán bộ sẽ kiểm tra kỹ khi tiếp nhận.';
+  } else if (nameMatch === false) {
+    // Reading Vietnamese names from a photo is error-prone, so a mismatch is
+    // never an outright block — it goes to the officer with the names the model
+    // read, for a human comparison.
+    status = 'REVIEW';
+    defaultReason =
+      'Tên trên tờ khai có vẻ chưa khớp với thông tin đã khai trong hồ sơ; cán bộ sẽ đối chiếu khi tiếp nhận. Nếu bạn tải nhầm tờ khai của người khác, hãy thay bằng đúng bản của mình.';
   } else if (isDeclaration === true && hasSignature === true) {
     status = 'PASSED';
-    defaultReason = 'Đã nhận diện tờ khai có chữ ký.';
+    defaultReason =
+      nameMatch === true
+        ? 'Đã nhận diện tờ khai có chữ ký, tên người khai khớp với hồ sơ.'
+        : 'Đã nhận diện tờ khai có chữ ký.';
   } else {
     // Model was unsure (nulls or low confidence): let it through but flag it.
     status = 'REVIEW';
@@ -111,6 +188,8 @@ export function decideSignatureCheck(raw: unknown, model: string, checkedAt: str
     isDeclaration,
     hasSignature,
     legible,
+    nameMatch,
+    namesSeen,
     confidence,
     reason: cleanReason(obj.reason, defaultReason),
     model,
@@ -124,6 +203,8 @@ function skipped(reason: string, checkedAt: string): SignatureCheck {
     isDeclaration: null,
     hasSignature: null,
     legible: null,
+    nameMatch: null,
+    namesSeen: [],
     confidence: 0,
     reason,
     model: 'none',
@@ -140,6 +221,8 @@ function skipped(reason: string, checkedAt: string): SignatureCheck {
 export async function verifySignedDeclaration(input: {
   bytes: Uint8Array;
   mimeType: string;
+  /** Declarant names from the application data, for the name cross-check. */
+  expectedNames?: string[];
 }): Promise<SignatureCheck> {
   const checkedAt = new Date().toISOString();
 
@@ -149,6 +232,12 @@ export async function verifySignedDeclaration(input: {
   if (!VISION_IMAGE_MIME.has(input.mimeType)) {
     return skipped('Tệp PDF không kiểm tra tự động bằng ảnh; cán bộ sẽ xem trực tiếp bản đã ký.', checkedAt);
   }
+
+  const expectedNames = (input.expectedNames ?? []).slice(0, MAX_SIGNER_NAMES);
+  const userText =
+    expectedNames.length > 0
+      ? `Đây là ảnh tờ khai người dân đã ký. Tên người khai theo hồ sơ: ${expectedNames.join('; ')}. Hãy kiểm tra theo yêu cầu, bao gồm đối chiếu tên.`
+      : 'Đây là ảnh tờ khai người dân đã ký. Không có danh sách tên để đối chiếu (name_match: null). Hãy kiểm tra các mục còn lại theo yêu cầu.';
 
   const dataUri = `data:${input.mimeType};base64,${Buffer.from(input.bytes).toString('base64')}`;
   const body = JSON.stringify({
@@ -160,7 +249,7 @@ export async function verifySignedDeclaration(input: {
       {
         role: 'user',
         content: [
-          { type: 'text', text: 'Đây là ảnh tờ khai người dân đã ký. Hãy kiểm tra theo yêu cầu.' },
+          { type: 'text', text: userText },
           { type: 'image_url', image_url: { url: dataUri } },
         ],
       },

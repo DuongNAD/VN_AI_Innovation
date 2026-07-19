@@ -12,7 +12,7 @@ import {
   sanitizeAttachmentFileName,
   SIGNED_DECLARATION_FIELD_ID,
 } from '@/lib/application-attachments';
-import { verifySignedDeclaration } from '@/lib/ai/document-check';
+import { extractSignerNames, verifySignedDeclaration } from '@/lib/ai/document-check';
 import type { Prisma } from '@prisma/client';
 
 /**
@@ -94,7 +94,7 @@ export const POST = handleRoute(async (
     throw new AppError(413, 'ATTACHMENT_TOO_LARGE', 'Tệp tờ khai không được vượt quá 10 MB.');
   }
 
-  const { application } = await loadOwnedApplication(id, req);
+  const { application, pinned } = await loadOwnedApplication(id, req);
   if (!(EDITABLE_STATUSES as readonly string[]).includes(application.status)) {
     throw new AppError(409, 'APPLICATION_NOT_EDITABLE', 'Hồ sơ đã nộp nên không thể thay đổi tờ khai đã ký.');
   }
@@ -124,9 +124,20 @@ export const POST = handleRoute(async (
   }
 
   // Let an AI vision model look at the signed copy before it can reach the
-  // officer. A confident "this is not a signed declaration" blocks the upload;
-  // anything else is stored with the verdict for the officer to weigh.
-  const check = await verifySignedDeclaration({ bytes, mimeType: detectedMime });
+  // officer: right kind of declaration, signed, legible, and the printed names
+  // cross-checked against the declarant names in the application data. A
+  // confident "this is not a signed declaration" blocks the upload; anything
+  // else (including a name mismatch) is stored with the verdict for the
+  // officer to weigh.
+  const storedData =
+    application.dataJson && typeof application.dataJson === 'object' && !Array.isArray(application.dataJson)
+      ? (application.dataJson as Record<string, unknown>)
+      : {};
+  const check = await verifySignedDeclaration({
+    bytes,
+    mimeType: detectedMime,
+    expectedNames: extractSignerNames(pinned.fields, storedData),
+  });
   if (check.status === 'REJECTED') {
     throw new AppError(422, 'SIGNED_DECLARATION_INVALID', check.reason, {
       check,

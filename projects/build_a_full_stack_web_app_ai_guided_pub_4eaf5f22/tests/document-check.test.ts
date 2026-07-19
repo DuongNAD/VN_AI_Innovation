@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { decideSignatureCheck } from '@/lib/ai/document-check';
+import { decideSignatureCheck, extractSignerNames } from '@/lib/ai/document-check';
 
 const AT = '2026-01-01T00:00:00.000Z';
 const decide = (raw: unknown) => decideSignatureCheck(raw, 'test-vision', AT);
@@ -48,5 +48,94 @@ describe('decideSignatureCheck', () => {
     expect(decide({ confidence: 5 }).confidence).toBe(1);
     expect(decide({ confidence: -3 }).confidence).toBe(0);
     expect(decide({ confidence: 'x' as unknown as number }).confidence).toBe(0);
+  });
+
+  it('flags a name mismatch as REVIEW (never REJECTED) and keeps the names read', () => {
+    const r = decide({
+      is_declaration: true,
+      has_signature: true,
+      is_legible: true,
+      name_match: false,
+      names_seen: ['Nguyễn Văn B'],
+      confidence: 0.9,
+      reason: '',
+    });
+    expect(r.status).toBe('REVIEW');
+    expect(r.nameMatch).toBe(false);
+    expect(r.namesSeen).toEqual(['Nguyễn Văn B']);
+  });
+
+  it('passes with a confirmed name match and null-safe when names are absent', () => {
+    const matched = decide({ is_declaration: true, has_signature: true, is_legible: true, name_match: true, confidence: 0.9 });
+    expect(matched.status).toBe('PASSED');
+    expect(matched.nameMatch).toBe(true);
+
+    const noNames = decide({ is_declaration: true, has_signature: true, is_legible: true, name_match: null, confidence: 0.9 });
+    expect(noNames.status).toBe('PASSED');
+    expect(noNames.nameMatch).toBeNull();
+  });
+
+  it('bounds and sanitizes names_seen from the model', () => {
+    const r = decide({
+      is_declaration: true,
+      has_signature: true,
+      name_match: false,
+      confidence: 0.9,
+      names_seen: ['  A  B ', 'A B', 42, 'C', 'D', 'E', 'F'],
+    });
+    expect(r.namesSeen).toEqual(['A B', 'C', 'D', 'E']);
+  });
+});
+
+describe('extractSignerNames', () => {
+  const fields = [
+    { id: 'male_full_name', type: 'text' as const, label: 'Họ, chữ đệm, tên (nam)' },
+    { id: 'female_full_name', type: 'text' as const, label: 'Họ, chữ đệm, tên (nữ)' },
+    { id: 'residence', type: 'text' as const, label: 'Nơi cư trú' },
+    { id: 'ho_ten', type: 'text' as const, label: 'Thông tin' },
+    { id: 'attachment', type: 'file' as const, label: 'Họ và tên (file)' },
+  ];
+
+  it('picks name fields by id or label, skipping non-name and non-text fields', () => {
+    const names = extractSignerNames(fields, {
+      male_full_name: ' Nguyễn Văn A ',
+      female_full_name: 'Trần Thị B',
+      residence: 'Hà Nội',
+      ho_ten: 'Lê Văn C',
+      attachment: 'x.pdf',
+    });
+    expect(names).toEqual(['Nguyễn Văn A', 'Trần Thị B', 'Lê Văn C']);
+  });
+
+  it('matches by label alone (diacritics-insensitive)', () => {
+    const names = extractSignerNames(
+      [{ id: 'declarant', type: 'text', label: 'Họ và tên người khai' }],
+      { declarant: 'Phạm D' }
+    );
+    expect(names).toEqual(['Phạm D']);
+  });
+
+  it('dedupes, ignores empty/non-string values, and caps at 4 names', () => {
+    const many = Array.from({ length: 6 }, (_, i) => ({
+      id: `p${i}_full_name`,
+      type: 'text' as const,
+      label: `Người ${i}`,
+    }));
+    const data: Record<string, unknown> = {};
+    many.forEach((f, i) => {
+      data[f.id] = i === 0 ? '' : i === 1 ? 7 : `Người ${i}`;
+    });
+    const names = extractSignerNames(many, data);
+    expect(names).toEqual(['Người 2', 'Người 3', 'Người 4', 'Người 5']);
+
+    expect(
+      extractSignerNames(
+        [
+          { id: 'a_full_name', type: 'text', label: 'A' },
+          { id: 'b_full_name', type: 'text', label: 'B' },
+        ],
+        { a_full_name: 'Trùng Tên', b_full_name: 'Trùng Tên' }
+      )
+    ).toEqual(['Trùng Tên']);
   });
 });
