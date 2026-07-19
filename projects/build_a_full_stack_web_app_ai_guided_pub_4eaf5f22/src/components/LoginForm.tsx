@@ -444,11 +444,29 @@ export default function LoginForm({
           </p>
           <div className="grid grid-cols-1 gap-2">
             <a
-              href="/api/v1/auth/oauth/google/start?portal=user"
+              href={
+                '/api/v1/auth/oauth/google/start?portal=user' +
+                // Equivalent of next-auth signIn("google", undefined, { prompt: "select_account" })
+                // Server also enforces prompt=consent select_account + access_type=offline.
+                '&prompt=' +
+                encodeURIComponent('consent select_account')
+              }
               className={`flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 ${isLocked ? 'pointer-events-none opacity-60' : ''}`}
               aria-disabled={isLocked}
               onClick={(e) => {
-                if (isLocked) e.preventDefault();
+                if (isLocked) {
+                  e.preventDefault();
+                  return;
+                }
+                // Hard navigation so every click starts a fresh OAuth authorize URL
+                // (avoid SPA caching of a previous redirect without prompt).
+                e.preventDefault();
+                const startUrl =
+                  '/api/v1/auth/oauth/google/start?portal=user&prompt=' +
+                  encodeURIComponent('consent select_account') +
+                  '&t=' +
+                  String(Date.now());
+                window.location.assign(startUrl);
               }}
             >
               <GoogleIcon />

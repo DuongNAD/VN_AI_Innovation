@@ -1320,14 +1320,14 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
             </div>
           </div>
 
-          <div className="card space-y-4 border border-slate-100 shadow-sm flex flex-col justify-between">
+          <div className="card space-y-4 border border-slate-100 shadow-sm flex flex-col justify-start h-full">
             <div className="space-y-2">
               <h3 className="text-lg font-bold text-slate-900 border-b pb-2">Quan trắc Sử dụng Trí tuệ Nhân tạo (AI)</h3>
               <p className="text-sm text-slate-500">
                 Thống kê hiệu năng, lưu lượng, tỷ lệ cache và ước tính chi phí tích lũy theo từng phân hệ.
               </p>
             </div>
-            
+
             <div className="overflow-x-auto border border-slate-100 rounded-lg">
               <table className="min-w-full divide-y divide-slate-200 text-sm">
                 <thead className="bg-slate-50">

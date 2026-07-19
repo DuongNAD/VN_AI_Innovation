@@ -40,13 +40,24 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
   if (provider === 'google') {
     const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
     if (clientId) {
+      // Equivalent of NextAuth GoogleProvider authorization.params — always force
+      // the account chooser + consent, never silently reuse the browser Google session.
+      // Client may pass ?prompt=... but we never allow a weaker value than select_account.
+      const clientPrompt = (url.searchParams.get('prompt') || '').trim();
+      const prompt =
+        clientPrompt.includes('select_account') && clientPrompt.includes('consent')
+          ? clientPrompt
+          : 'consent select_account';
+
       const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
       authUrl.searchParams.set('client_id', clientId);
       authUrl.searchParams.set('redirect_uri', callback);
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('scope', 'openid email profile');
       authUrl.searchParams.set('state', state);
-      authUrl.searchParams.set('prompt', 'select_account');
+      authUrl.searchParams.set('access_type', 'offline');
+      authUrl.searchParams.set('include_granted_scopes', 'false');
+      authUrl.searchParams.set('prompt', prompt);
       return Response.redirect(authUrl.toString(), 302);
     }
   }
@@ -63,7 +74,12 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
     }
   }
 
-  // Demo fallback — no real OAuth credentials configured
+  // Demo fallback — no real OAuth credentials configured.
+  // This path NEVER opens Google's account chooser; it invents a local session.
+  // Set GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET (or FACEBOOK_APP_ID) in .env to use real OAuth.
+  console.warn(
+    `[oauth/${provider}] missing client credentials — using demo callback (no Google account picker).`
+  );
   const demo = new URL(callback);
   demo.searchParams.set('demo', '1');
   demo.searchParams.set('state', state);
