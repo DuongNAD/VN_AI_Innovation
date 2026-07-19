@@ -13,6 +13,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:bootstrap": "tsx prisma/bootstrap.ts",
     "db:init-users": "tsx prisma/init-users.ts",
+    "db:seed-demo": "tsx prisma/seed-demo-applications.ts",
     "pregen:tts": "tsx prisma/pregen-tts.ts",
     "seed": "npm run db:seed",
     "test": "vitest run",

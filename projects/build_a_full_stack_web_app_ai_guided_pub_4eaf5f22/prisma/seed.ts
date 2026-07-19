@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { parseFieldDefs, parseRuleDefs, parseMigrationHints } from '../src/lib/schema-guards';
 import { OFFICIAL_PROCEDURE_SOURCE_URLS } from '../src/lib/official-procedures';
 import { hashPassword } from '../src/lib/password';
+import { seedDemoApplications } from './seed-demo-applications';
 import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
@@ -1276,6 +1277,8 @@ export async function main(options: { allowProductionBootstrap?: boolean } = {})
     await seedImportedCatalog();
 
     await seedUsers();
+
+    await seedDemoApplications(prisma);
 
     console.log('Database seeded successfully.');
   } catch (error) {
