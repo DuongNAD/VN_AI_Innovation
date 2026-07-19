@@ -355,25 +355,28 @@ export default function DocumentPreview({
       container.className = 'print-area';
       document.body.appendChild(container);
 
-      const clone = documentRef.current.cloneNode(true) as HTMLElement;
-      clone.style.width = '794px';
-      clone.style.maxWidth = '794px';
-      clone.style.padding = '36px 44px';
-      clone.style.border = '0';
-      clone.style.borderRadius = '0';
-      clone.style.boxShadow = 'none';
-      clone.style.overflow = 'visible';
-      clone.querySelectorAll('.no-print, .no-pdf').forEach((node) => node.remove());
-      container.appendChild(clone);
+      let canvas: HTMLCanvasElement;
+      try {
+        const clone = documentRef.current.cloneNode(true) as HTMLElement;
+        clone.style.width = '794px';
+        clone.style.maxWidth = '794px';
+        clone.style.padding = '36px 44px';
+        clone.style.border = '0';
+        clone.style.borderRadius = '0';
+        clone.style.boxShadow = 'none';
+        clone.style.overflow = 'visible';
+        clone.querySelectorAll('.no-print, .no-pdf').forEach((node) => node.remove());
+        container.appendChild(clone);
 
-      const canvas = await html2canvas(clone, {
-        scale: Math.max(2, Math.min(3, window.devicePixelRatio || 2)),
-        backgroundColor: '#ffffff',
-        useCORS: true,
-        logging: false,
-      });
-
-      document.body.removeChild(container);
+        canvas = await html2canvas(clone, {
+          scale: Math.max(2, Math.min(3, window.devicePixelRatio || 2)),
+          backgroundColor: '#ffffff',
+          useCORS: true,
+          logging: false,
+        });
+      } finally {
+        document.body.removeChild(container);
+      }
 
       const pdf = new jsPDF({
         orientation: 'portrait',
