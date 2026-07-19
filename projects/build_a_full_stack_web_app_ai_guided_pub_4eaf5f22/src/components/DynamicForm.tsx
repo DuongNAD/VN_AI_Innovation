@@ -741,7 +741,7 @@ export default function DynamicForm({
 
     return (
       <div
-        key={`${field.id}:${hasError ? validationAttempt : 'stable'}`}
+        key={field.id}
         id={'fieldwrap-' + field.id}
         className={
           'validation-field space-y-2 ' +
@@ -781,7 +781,7 @@ export default function DynamicForm({
         )}
         {renderInput(field, value, hasError, errorId)}
         {hasError && (
-          <div id={errorId} className="validation-field__message" role="alert">
+          <div key={'attempt-' + validationAttempt} id={errorId} className="validation-field__message" role="alert">
             <span className="validation-field__status-icon" aria-hidden="true">!</span>
             <div>
               {fieldErrors.map((err, i) => (
