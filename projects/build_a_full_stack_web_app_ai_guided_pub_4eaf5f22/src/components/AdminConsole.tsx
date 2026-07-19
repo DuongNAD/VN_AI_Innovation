@@ -85,6 +85,18 @@ interface ApprovalResult {
   effectiveFrom: string;
 }
 
+interface SignatureCheckInfo {
+  status: 'PASSED' | 'REVIEW' | 'REJECTED' | 'SKIPPED';
+  reason: string;
+  confidence: number;
+}
+
+interface SignedDeclarationInfo {
+  fileName: string;
+  uploadedAt: string | null;
+  check: SignatureCheckInfo | null;
+}
+
 interface CitizenApplication {
   id: string;
   status: 'SUBMITTED' | 'APPROVED' | 'RETURNED';
@@ -97,6 +109,7 @@ interface CitizenApplication {
   procedureName: string;
   data: Record<string, unknown>;
   fields: FieldDef[];
+  signedDeclaration: SignedDeclarationInfo | null;
 }
 
 type AccountRole = 'user' | 'manager' | 'admin';
@@ -428,6 +441,38 @@ function parseChangeRequests(body: unknown): ChangeRequest[] | null {
   return parsedCRs;
 }
 
+/** Signed declaration metadata + AI verdict, defensively validated for display. */
+function parseSignedDeclaration(raw: unknown): SignedDeclarationInfo | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return null;
+  }
+  const s = raw as Record<string, unknown>;
+  if (!isBoundedString(s.fileName, 300)) {
+    return null;
+  }
+  let check: SignatureCheckInfo | null = null;
+  if (s.check && typeof s.check === 'object' && !Array.isArray(s.check)) {
+    const c = s.check as Record<string, unknown>;
+    if (
+      c.status === 'PASSED' ||
+      c.status === 'REVIEW' ||
+      c.status === 'REJECTED' ||
+      c.status === 'SKIPPED'
+    ) {
+      check = {
+        status: c.status,
+        reason: isBoundedString(c.reason, 500) ? (c.reason as string) : '',
+        confidence: isFiniteNumber(c.confidence) ? (c.confidence as number) : 0,
+      };
+    }
+  }
+  return {
+    fileName: s.fileName as string,
+    uploadedAt: isNullableBoundedString(s.uploadedAt, 500) ? ((s.uploadedAt as string) ?? null) : null,
+    check,
+  };
+}
+
 /**
  * Officer-queue payload: keep ids/statuses strictly validated, pass the field
  * schema through loosely — it comes from our own provider and is only used
@@ -491,6 +536,7 @@ function parseCitizenApplications(body: unknown): CitizenApplication[] | null {
       procedureName: a.procedureName,
       data,
       fields,
+      signedDeclaration: parseSignedDeclaration(a.signedDeclaration),
     });
   }
   return parsed;
@@ -1478,6 +1524,61 @@ export default function AdminConsole({ role = 'admin' }: StaffConsoleProps): Rea
                           )}
                         </tbody>
                       </table>
+                    </div>
+
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                          <span aria-hidden="true">✍️</span>
+                          Tờ khai đã ký
+                        </div>
+                        {app.signedDeclaration ? (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="max-w-[16rem] truncate text-sm text-slate-600">
+                              {app.signedDeclaration.fileName}
+                            </span>
+                            <AttachmentPreviewLink
+                              applicationId={app.id}
+                              fieldId="signed-declaration"
+                              fileName={app.signedDeclaration.fileName}
+                              url={`/api/v1/applications/${encodeURIComponent(app.id)}/signed-declaration`}
+                              compact
+                              label="Xem tờ khai đã ký"
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-sm font-medium text-rose-700">Chưa có tờ khai đã ký</span>
+                        )}
+                      </div>
+                      {app.signedDeclaration?.check && (
+                        <div className="mt-2">
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                              app.signedDeclaration.check.status === 'PASSED'
+                                ? 'border-emerald-200 bg-emerald-100 text-emerald-800'
+                                : app.signedDeclaration.check.status === 'REVIEW'
+                                ? 'border-amber-200 bg-amber-100 text-amber-800'
+                                : app.signedDeclaration.check.status === 'REJECTED'
+                                ? 'border-rose-200 bg-rose-100 text-rose-800'
+                                : 'border-slate-200 bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            <span aria-hidden="true">🤖</span>
+                            {app.signedDeclaration.check.status === 'PASSED'
+                              ? 'AI: có chữ ký, hợp lệ'
+                              : app.signedDeclaration.check.status === 'REVIEW'
+                              ? 'AI: cần kiểm tra thêm'
+                              : app.signedDeclaration.check.status === 'REJECTED'
+                              ? 'AI: chưa đạt'
+                              : 'AI: chưa kiểm tra tự động'}
+                          </span>
+                          {app.signedDeclaration.check.reason && (
+                            <p className="mt-1 text-xs text-slate-500">
+                              {app.signedDeclaration.check.reason}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {app.status === 'RETURNED' && app.reviewNote && (

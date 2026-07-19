@@ -6,6 +6,7 @@ import { compareVersions } from '@/lib/form-migration';
 import { sanitizeFormData } from '@/lib/rule-engine';
 import { readJsonBody } from '@/lib/http';
 import { loadOwnedApplication, EDITABLE_STATUSES } from '@/lib/application-access';
+import { SIGNED_DECLARATION_FIELD_ID } from '@/lib/application-attachments';
 
 export const GET = handleRoute(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   enforceRateLimit('applications-id', req);
@@ -25,6 +26,13 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
   const newer = await provider.getActiveFormVersion(formCode);
   const updateAvailable = !!newer && compareVersions(newer.version, pinned.version) > 0;
 
+  const signed = await prisma.applicationAttachment.findUnique({
+    where: {
+      applicationId_fieldId: { applicationId: application.id, fieldId: SIGNED_DECLARATION_FIELD_ID },
+    },
+    select: { fileName: true, mimeType: true, byteSize: true, updatedAt: true, checkJson: true },
+  });
+
   const responseBody: any = {
     applicationId: application.id,
     formCode,
@@ -39,6 +47,15 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
     fields: pinned.fields,
     rules,
     updateAvailable,
+    signedDeclaration: signed
+      ? {
+          fileName: signed.fileName,
+          mimeType: signed.mimeType,
+          byteSize: signed.byteSize,
+          uploadedAt: signed.updatedAt,
+          check: signed.checkJson ?? null,
+        }
+      : null,
     procedure: {
       name: procedure.name,
       sourceUrl: procedure.sourceUrl,
@@ -168,6 +185,12 @@ export const PUT = handleRoute(async (req: Request, { params }: { params: Promis
     );
   }
 
+  // The declaration content just changed, so any previously uploaded signed copy
+  // no longer matches: force the citizen to re-download, re-sign and re-upload.
+  await prisma.applicationAttachment.deleteMany({
+    where: { applicationId: application.id, fieldId: SIGNED_DECLARATION_FIELD_ID },
+  });
+
   return jsonOk({
     applicationId: application.id,
     formCode,
@@ -175,5 +198,6 @@ export const PUT = handleRoute(async (req: Request, { params }: { params: Promis
     status: application.status,
     data: sanitized,
     revision: revision + 1,
+    signedDeclaration: null,
   });
 });

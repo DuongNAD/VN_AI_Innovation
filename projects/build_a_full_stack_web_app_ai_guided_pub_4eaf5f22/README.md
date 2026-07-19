@@ -27,9 +27,10 @@ Thực hiện theo kịch bản đường dẫn trải nghiệm mẫu dưới đ
    - Banner đỏ liệt kê từng lỗi — **bấm vào lỗi là nhảy thẳng tới trường cần sửa**, con trỏ tự đứng ở lỗi đầu tiên; dưới mỗi trường có hướng dẫn **"Cách khắc phục"** lấy từ quy định, kèm hộp **Trợ lý AI giải thích lỗi** (AI chỉ nhận mã lỗi, có nút nghe bằng giọng nói).
 7. **Kiểm tra và nộp hồ sơ (`/result`):**
    - Khi đã sửa hết lỗi, hệ thống mới cho chuyển sang trang kết quả: thẻ xanh **"Hồ sơ hợp lệ"** cùng **tờ khai điền sẵn theo đúng thể thức văn bản hành chính** (quốc hiệu, bảng bên nam/bên nữ, chữ ký) và nút **"Xuất PDF"** để in/tải tờ khai khổ A4.
-   - Bấm **"Nộp hồ sơ để cán bộ duyệt"** — hồ sơ chuyển trạng thái **"Đã nộp — chờ cán bộ xét duyệt"** và bị khóa chỉnh sửa trong thời gian chờ.
+   - **Ký tờ khai (bắt buộc):** người dân tải PDF, ký tay rồi chụp/scan (hoặc ký số) và **tải bản đã ký lên hệ thống**. Bản tải lên được **AI thị giác kiểm tra tự động** (đúng là tờ khai, có chữ ký, đủ rõ) — nếu rõ ràng không hợp lệ sẽ bị chặn ngay kèm hướng dẫn khắc phục; các trường hợp còn lại được lưu kèm nhận định của AI để cán bộ đối chiếu.
+   - Chỉ khi đã có tờ khai đã ký, nút **"Nộp hồ sơ để cán bộ duyệt"** mới bật — hồ sơ chuyển trạng thái **"Đã nộp — chờ cán bộ xét duyệt"** và bị khóa chỉnh sửa. (Sửa lại dữ liệu hoặc tệp đính kèm sẽ tự gỡ tờ khai đã ký để người dân ký lại đúng nội dung mới.)
 8. **Cán bộ xét duyệt hồ sơ (`/admin`):**
-   - Mục **"Hồ sơ công dân chờ xét duyệt"** hiển thị hồ sơ vừa nộp với đầy đủ dữ liệu đã khai theo nhãn trường.
+   - Mục **"Hồ sơ công dân chờ xét duyệt"** hiển thị hồ sơ vừa nộp với đầy đủ dữ liệu đã khai theo nhãn trường, **kèm tờ khai đã ký (xem trực tiếp) và nhãn nhận định của AI** về bản ký.
    - Cán bộ **"Phê duyệt hồ sơ"** hoặc **"Trả lại để bổ sung"** (bắt buộc ghi lý do). Hệ thống không cho phê duyệt hồ sơ còn lỗi theo quy định.
    - Người dân bấm **"Cập nhật trạng thái"** trên trang kết quả để nhận kết quả ngay: thẻ xanh **"Hồ sơ đã được phê duyệt"** (kèm tên cán bộ, thời điểm) hoặc thẻ vàng kèm **lý do trả lại** — sửa xong nộp lại được ngay.
 9. **Phê duyệt thay đổi cấu hình (`/admin`):** 

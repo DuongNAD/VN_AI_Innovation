@@ -8,6 +8,10 @@ type AttachmentPreviewLinkProps = {
   fileName: string;
   token?: string;
   compact?: boolean;
+  /** Override the fetch URL (e.g. the dedicated signed-declaration endpoint). */
+  url?: string;
+  /** Override the trigger button label. */
+  label?: string;
 };
 
 export default function AttachmentPreviewLink({
@@ -16,6 +20,8 @@ export default function AttachmentPreviewLink({
   fileName,
   token,
   compact = false,
+  url: urlOverride,
+  label,
 }: AttachmentPreviewLinkProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +50,8 @@ export default function AttachmentPreviewLink({
     setError(null);
     try {
       const res = await fetch(
-        `/api/v1/applications/${encodeURIComponent(applicationId)}/attachments/${encodeURIComponent(fieldId)}`,
+        urlOverride ??
+          `/api/v1/applications/${encodeURIComponent(applicationId)}/attachments/${encodeURIComponent(fieldId)}`,
         {
           headers: token ? { 'X-Session-Token': token } : undefined,
           cache: 'no-store',
@@ -85,7 +92,7 @@ export default function AttachmentPreviewLink({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
           <circle cx="12" cy="12" r="2.5" strokeWidth={1.8} />
         </svg>
-        {loading ? 'Đang mở…' : 'Xem trước'}
+        {loading ? 'Đang mở…' : (label ?? 'Xem trước')}
       </button>
 
       {error && (

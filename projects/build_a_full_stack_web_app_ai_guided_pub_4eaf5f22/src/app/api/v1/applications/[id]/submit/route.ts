@@ -1,9 +1,11 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { getProvider } from '@/lib/data-provider';
 import { AppError, jsonOk, handleRoute } from '@/lib/errors';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { sanitizeFormData, runRules } from '@/lib/rule-engine';
 import { loadOwnedApplication, EDITABLE_STATUSES } from '@/lib/application-access';
+import { SIGNED_DECLARATION_FIELD_ID } from '@/lib/application-attachments';
 
 /**
  * Citizen hands the application over to the receiving agency. The rule engine
@@ -46,24 +48,63 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
   }
 
   const now = new Date();
-  // Revision in the claim closes the race with a concurrent save: whatever was
-  // validated above is exactly what enters the review queue.
-  const updateResult = await prisma.application.updateMany({
-    where: {
-      id: application.id,
-      revision: application.revision,
-      status: { in: [...EDITABLE_STATUSES] },
-    },
-    data: {
-      status: 'SUBMITTED',
-      submittedAt: now,
-      reviewedAt: null,
-      reviewedBy: null,
-      reviewNote: null,
-    },
-  });
+  // A tờ khai must be signed before it reaches the officer: the citizen has to
+  // download the generated declaration, sign it (by hand + scan, or digitally)
+  // and upload the signed copy. Editing the form or any attachment clears the
+  // signed copy, so what is on file always reflects the exact data submitted.
+  //
+  // The signature check and the status flip run in one serializable transaction
+  // so a concurrent DELETE of the signed copy cannot slip an unsigned
+  // application into the queue — attachment writes do not bump `revision`, so
+  // the revision claim alone would not detect it.
+  let updatedCount: number;
+  try {
+    updatedCount = await prisma.$transaction(
+      async (tx) => {
+        const signed = await tx.applicationAttachment.findUnique({
+          where: {
+            applicationId_fieldId: { applicationId: application.id, fieldId: SIGNED_DECLARATION_FIELD_ID },
+          },
+          select: { id: true },
+        });
+        if (!signed) {
+          throw new AppError(
+            422,
+            'SIGNATURE_REQUIRED',
+            'Vui lòng tải lên tờ khai đã ký trước khi nộp hồ sơ.'
+          );
+        }
+        // Revision in the claim closes the race with a concurrent save: whatever
+        // was validated above is exactly what enters the review queue.
+        const res = await tx.application.updateMany({
+          where: {
+            id: application.id,
+            revision: application.revision,
+            status: { in: [...EDITABLE_STATUSES] },
+          },
+          data: {
+            status: 'SUBMITTED',
+            submittedAt: now,
+            reviewedAt: null,
+            reviewedBy: null,
+            reviewNote: null,
+          },
+        });
+        return res.count;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+  } catch (err) {
+    if (err instanceof AppError) {
+      throw err;
+    }
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2034') {
+      throw new AppError(409, 'CONCURRENT_UPDATE', 'Hồ sơ vừa thay đổi ở nơi khác. Vui lòng tải lại và thử lại.');
+    }
+    throw err;
+  }
 
-  if (updateResult.count === 0) {
+  if (updatedCount === 0) {
     throw new AppError(409, 'CONCURRENT_UPDATE', 'Hồ sơ vừa thay đổi ở nơi khác. Vui lòng tải lại và thử lại.');
   }
 

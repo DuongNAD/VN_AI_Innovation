@@ -1,6 +1,15 @@
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 export const MAX_ATTACHMENT_REQUEST_BYTES = MAX_ATTACHMENT_BYTES + 256 * 1024;
 
+/**
+ * Reserved attachment key for the citizen's signed declaration (tờ khai đã ký).
+ * The leading underscores mean it can never collide with a real form field id
+ * (field ids must match /^[a-z][a-z0-9_]{0,49}$/), so the signed copy lives in
+ * the same encrypted-at-rest ApplicationAttachment table without ever being
+ * mistaken for — or reachable through — the generic file-field routes.
+ */
+export const SIGNED_DECLARATION_FIELD_ID = '__signed_declaration__';
+
 export const ATTACHMENT_ACCEPT =
   'application/pdf,image/jpeg,image/png,image/webp';
 

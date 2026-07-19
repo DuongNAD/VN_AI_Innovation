@@ -8,6 +8,7 @@ import { getProvider } from '@/lib/data-provider';
 import { compareVersions, computeMigration } from '@/lib/form-migration';
 import { parseFieldDefs, parseMigrationHints } from '@/lib/schema-guards';
 import { sanitizeFormData } from '@/lib/rule-engine';
+import { SIGNED_DECLARATION_FIELD_ID } from '@/lib/application-attachments';
 
 function parseMigrateBody(raw: unknown): { confirm: boolean; resolutions: Record<string, string> } {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
@@ -302,6 +303,12 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
         if (updateResult.count === 0) {
           concurrentUpdate();
         }
+
+        // Migrating rewrites the declaration data, so a signed copy would no
+        // longer match — clear it in the same transaction.
+        await tx.applicationAttachment.deleteMany({
+          where: { applicationId: id, fieldId: SIGNED_DECLARATION_FIELD_ID },
+        });
 
         return {
           fromVersion: fresh.formVersion.version,

@@ -159,6 +159,9 @@ model ApplicationAttachment {
   mimeType      String
   byteSize      Int
   content       Bytes
+  /// AI verdict for the signed declaration (tờ khai đã ký): whether it looks like
+  /// the right form, is signed and legible. Null for ordinary file-field uploads.
+  checkJson     Json?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 

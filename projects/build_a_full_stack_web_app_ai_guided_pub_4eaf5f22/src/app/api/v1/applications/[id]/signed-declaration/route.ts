@@ -12,25 +12,22 @@ import {
   sanitizeAttachmentFileName,
   SIGNED_DECLARATION_FIELD_ID,
 } from '@/lib/application-attachments';
-
-// Field ids start with a lowercase letter, so the reserved signed-declaration
-// key (leading underscores) can never be addressed through this generic route.
-const FIELD_ID_RE = /^[a-z][a-z0-9_]{0,49}$/;
+import { verifySignedDeclaration } from '@/lib/ai/document-check';
+import type { Prisma } from '@prisma/client';
 
 /**
- * A supporting file changed, so the tờ khai that referenced it no longer matches
- * any signed copy on file: drop the signed declaration to force re-signing.
+ * The signed declaration (tờ khai đã ký) a citizen must upload before an
+ * application can be handed over for review: they download the generated PDF,
+ * sign it (by hand + scan/photo, or a digital signature), and upload the signed
+ * copy here. It is stored in the same encrypted ApplicationAttachment table
+ * under a reserved key, and the submit route refuses to queue an application
+ * that has no signed copy.
  */
-async function invalidateSignedDeclaration(applicationId: string): Promise<void> {
-  await prisma.applicationAttachment.deleteMany({
-    where: { applicationId, fieldId: SIGNED_DECLARATION_FIELD_ID },
-  });
-}
 
-async function requireAttachmentAccess(
-  req: Request,
-  applicationId: string
-): Promise<void> {
+const FIELD = SIGNED_DECLARATION_FIELD_ID;
+
+/** Owner (X-Session-Token) or a reviewing officer may read the signed copy. */
+async function requireSignedDeclarationAccess(req: Request, applicationId: string): Promise<void> {
   if (req.headers.get('x-session-token')) {
     await loadOwnedApplication(applicationId, req);
     return;
@@ -39,7 +36,7 @@ async function requireAttachmentAccess(
   await requireStaffRole(
     req,
     STAFF_PERMISSIONS.reviewCitizenApplications,
-    'Chỉ cán bộ xét duyệt hồ sơ mới được xem tệp đính kèm.'
+    'Chỉ cán bộ xét duyệt hồ sơ mới được xem tờ khai đã ký.'
   );
   const application = await prisma.application.findFirst({
     where: {
@@ -49,31 +46,24 @@ async function requireAttachmentAccess(
     select: { id: true },
   });
   if (!application) {
-    throw new AppError(404, 'ATTACHMENT_NOT_FOUND', 'Không tìm thấy tệp đính kèm.');
+    throw new AppError(404, 'ATTACHMENT_NOT_FOUND', 'Không tìm thấy tờ khai đã ký.');
   }
 }
 
 export const GET = handleRoute(async (
   req: Request,
-  { params }: { params: Promise<{ id: string; fieldId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) => {
   enforceRateLimit('application-attachment-read', req, { limit: 60, windowMs: 60_000 });
-  const { id, fieldId } = await params;
-  if (!FIELD_ID_RE.test(fieldId)) {
-    throw new AppError(404, 'ATTACHMENT_NOT_FOUND', 'Không tìm thấy tệp đính kèm.');
-  }
+  const { id } = await params;
 
-  await requireAttachmentAccess(req, id);
+  await requireSignedDeclarationAccess(req, id);
 
   const attachment = await prisma.applicationAttachment.findUnique({
-    where: { applicationId_fieldId: { applicationId: id, fieldId } },
+    where: { applicationId_fieldId: { applicationId: id, fieldId: FIELD } },
   });
   if (!attachment) {
-    throw new AppError(
-      404,
-      'ATTACHMENT_NOT_FOUND',
-      'Tệp này chưa được tải lên hệ thống. Vui lòng chọn và tải lại tệp.'
-    );
+    throw new AppError(404, 'ATTACHMENT_NOT_FOUND', 'Hồ sơ chưa có tờ khai đã ký.');
   }
 
   const url = new URL(req.url);
@@ -94,40 +84,33 @@ export const GET = handleRoute(async (
 
 export const POST = handleRoute(async (
   req: Request,
-  { params }: { params: Promise<{ id: string; fieldId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) => {
   enforceRateLimit('application-attachment-upload', req, { limit: 20, windowMs: 10 * 60_000 });
-  const { id, fieldId } = await params;
-  if (!FIELD_ID_RE.test(fieldId)) {
-    throw new AppError(400, 'INVALID_ATTACHMENT_FIELD', 'Trường tệp đính kèm không hợp lệ.');
-  }
+  const { id } = await params;
 
   const declaredLength = Number(req.headers.get('content-length'));
   if (Number.isFinite(declaredLength) && declaredLength > MAX_ATTACHMENT_REQUEST_BYTES) {
-    throw new AppError(413, 'ATTACHMENT_TOO_LARGE', 'Tệp đính kèm không được vượt quá 10 MB.');
+    throw new AppError(413, 'ATTACHMENT_TOO_LARGE', 'Tệp tờ khai không được vượt quá 10 MB.');
   }
 
-  const { application, pinned } = await loadOwnedApplication(id, req);
+  const { application } = await loadOwnedApplication(id, req);
   if (!(EDITABLE_STATUSES as readonly string[]).includes(application.status)) {
-    throw new AppError(409, 'APPLICATION_NOT_EDITABLE', 'Hồ sơ đã nộp nên không thể thay đổi tệp đính kèm.');
-  }
-  const field = pinned.fields.find((item) => item.id === fieldId);
-  if (!field || field.type !== 'file') {
-    throw new AppError(400, 'INVALID_ATTACHMENT_FIELD', 'Trường tệp đính kèm không hợp lệ.');
+    throw new AppError(409, 'APPLICATION_NOT_EDITABLE', 'Hồ sơ đã nộp nên không thể thay đổi tờ khai đã ký.');
   }
 
   let form: FormData;
   try {
     form = await req.formData();
   } catch {
-    throw new AppError(400, 'INVALID_ATTACHMENT', 'Không đọc được tệp đính kèm.');
+    throw new AppError(400, 'INVALID_ATTACHMENT', 'Không đọc được tệp tờ khai.');
   }
   const file = form.get('file');
   if (!(file instanceof File)) {
-    throw new AppError(400, 'INVALID_ATTACHMENT', 'Vui lòng chọn một tệp để tải lên.');
+    throw new AppError(400, 'INVALID_ATTACHMENT', 'Vui lòng chọn tệp tờ khai đã ký để tải lên.');
   }
   if (file.size < 1 || file.size > MAX_ATTACHMENT_BYTES) {
-    throw new AppError(413, 'ATTACHMENT_TOO_LARGE', 'Tệp đính kèm phải có dung lượng từ 1 byte đến 10 MB.');
+    throw new AppError(413, 'ATTACHMENT_TOO_LARGE', 'Tệp tờ khai phải có dung lượng từ 1 byte đến 10 MB.');
   }
 
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -136,54 +119,62 @@ export const POST = handleRoute(async (
     throw new AppError(
       415,
       'ATTACHMENT_TYPE_NOT_ALLOWED',
-      'Chỉ chấp nhận tệp PDF hoặc ảnh JPG, PNG, WebP.'
+      'Chỉ chấp nhận tờ khai dạng PDF hoặc ảnh JPG, PNG, WebP.'
     );
   }
 
+  // Let an AI vision model look at the signed copy before it can reach the
+  // officer. A confident "this is not a signed declaration" blocks the upload;
+  // anything else is stored with the verdict for the officer to weigh.
+  const check = await verifySignedDeclaration({ bytes, mimeType: detectedMime });
+  if (check.status === 'REJECTED') {
+    throw new AppError(422, 'SIGNED_DECLARATION_INVALID', check.reason, {
+      check,
+    });
+  }
+
   const fileName = sanitizeAttachmentFileName(file.name);
+  const checkJson = check as unknown as Prisma.InputJsonValue;
   await prisma.applicationAttachment.upsert({
-    where: { applicationId_fieldId: { applicationId: id, fieldId } },
+    where: { applicationId_fieldId: { applicationId: id, fieldId: FIELD } },
     update: {
       fileName,
       mimeType: detectedMime,
       byteSize: bytes.byteLength,
       content: Buffer.from(bytes),
+      checkJson,
     },
     create: {
       applicationId: id,
-      fieldId,
+      fieldId: FIELD,
       fileName,
       mimeType: detectedMime,
       byteSize: bytes.byteLength,
       content: Buffer.from(bytes),
+      checkJson,
     },
   });
-  await invalidateSignedDeclaration(id);
 
   return jsonOk({
-    fieldId,
     fileName,
     mimeType: detectedMime,
     byteSize: bytes.byteLength,
+    check,
   }, { status: 201 });
 });
 
 export const DELETE = handleRoute(async (
   req: Request,
-  { params }: { params: Promise<{ id: string; fieldId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) => {
   enforceRateLimit('application-attachment-delete', req, { limit: 20, windowMs: 10 * 60_000 });
-  const { id, fieldId } = await params;
-  if (!FIELD_ID_RE.test(fieldId)) {
-    throw new AppError(400, 'INVALID_ATTACHMENT_FIELD', 'Trường tệp đính kèm không hợp lệ.');
-  }
+  const { id } = await params;
   const { application } = await loadOwnedApplication(id, req);
   if (!(EDITABLE_STATUSES as readonly string[]).includes(application.status)) {
-    throw new AppError(409, 'APPLICATION_NOT_EDITABLE', 'Hồ sơ đã nộp nên không thể thay đổi tệp đính kèm.');
+    throw new AppError(409, 'APPLICATION_NOT_EDITABLE', 'Hồ sơ đã nộp nên không thể thay đổi tờ khai đã ký.');
   }
   await prisma.applicationAttachment.deleteMany({
-    where: { applicationId: id, fieldId },
+    where: { applicationId: id, fieldId: FIELD },
   });
-  await invalidateSignedDeclaration(id);
-  return jsonOk({ removed: true, fieldId });
+  return jsonOk({ removed: true });
 });

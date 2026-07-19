@@ -3,6 +3,7 @@ import { STAFF_PERMISSIONS } from '@/lib/roles';
 import { prisma } from '@/lib/db';
 import { getProvider, type FormVersionDto } from '@/lib/data-provider';
 import { handleRoute, jsonOk } from '@/lib/errors';
+import { SIGNED_DECLARATION_FIELD_ID } from '@/lib/application-attachments';
 
 /**
  * Officer queue: citizen applications that were handed over for review,
@@ -42,11 +43,35 @@ export const GET = handleRoute(async (req: Request) => {
     }
   }
 
+  // The signed declaration each citizen uploaded before submitting, fetched in
+  // one query for the whole queue (metadata only — never the file bytes).
+  const signedByApplication = new Map<
+    string,
+    { fileName: string; uploadedAt: Date; check: unknown }
+  >();
+  if (rows.length > 0) {
+    const signedRows = await prisma.applicationAttachment.findMany({
+      where: {
+        applicationId: { in: rows.map((row) => row.id) },
+        fieldId: SIGNED_DECLARATION_FIELD_ID,
+      },
+      select: { applicationId: true, fileName: true, updatedAt: true, checkJson: true },
+    });
+    for (const signed of signedRows) {
+      signedByApplication.set(signed.applicationId, {
+        fileName: signed.fileName,
+        uploadedAt: signed.updatedAt,
+        check: signed.checkJson ?? null,
+      });
+    }
+  }
+
   const applications = rows.flatMap((row) => {
     const pinned = versionById.get(row.formVersionId);
     if (!pinned) {
       return [];
     }
+    const signed = signedByApplication.get(row.id);
     return [{
       id: row.id,
       status: row.status,
@@ -59,6 +84,9 @@ export const GET = handleRoute(async (req: Request) => {
       procedureName: procedureNameByFormCode.get(pinned.formCode) ?? pinned.formCode,
       data: row.dataJson,
       fields: pinned.fields,
+      signedDeclaration: signed
+        ? { fileName: signed.fileName, uploadedAt: signed.uploadedAt, check: signed.check }
+        : null,
     }];
   });
 

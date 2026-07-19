@@ -7,6 +7,7 @@ import SourceFooter from '@/components/SourceFooter';
 import DocumentPreview from '@/components/DocumentPreview';
 import FlowChrome from '@/components/FlowChrome';
 import SubmissionPanel from '@/components/SubmissionPanel';
+import SignedDeclarationPanel, { type SignedDeclaration } from '@/components/SignedDeclarationPanel';
 
 interface ApplicationData {
   formCode: string;
@@ -18,6 +19,7 @@ interface ApplicationData {
   reviewNote?: string | null;
   data: Record<string, any>;
   fields?: any[];
+  signedDeclaration?: SignedDeclaration | null;
   procedure?: {
     name?: string;
     sourceUrl?: string;
@@ -151,6 +153,12 @@ function ResultPageContent() {
 
   const appStatus = appData.status ?? 'DRAFT';
   const lifecycleActive = appStatus === 'SUBMITTED' || appStatus === 'APPROVED' || appStatus === 'RETURNED';
+  const editable = appStatus === 'DRAFT' || appStatus === 'RETURNED';
+  const signedDeclaration = appData.signedDeclaration ?? null;
+  const hasSignedDeclaration = !!signedDeclaration;
+
+  const setSignedDeclaration = (next: SignedDeclaration | null) =>
+    setAppData((prev) => (prev ? { ...prev, signedDeclaration: next } : prev));
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
@@ -177,6 +185,7 @@ function ResultPageContent() {
             token={sessionToken}
             status={appStatus}
             valid={validationResult.valid}
+            signed={hasSignedDeclaration}
             submittedAt={appData.submittedAt}
             reviewedAt={appData.reviewedAt}
             reviewedBy={appData.reviewedBy}
@@ -207,6 +216,7 @@ function ResultPageContent() {
             token={sessionToken}
             status={appStatus}
             valid={validationResult.valid}
+            signed={hasSignedDeclaration}
             submittedAt={appData.submittedAt}
             reviewedAt={appData.reviewedAt}
             reviewedBy={appData.reviewedBy}
@@ -226,6 +236,16 @@ function ResultPageContent() {
             formVersion={validationResult.formVersion || appData.formVersion}
             fields={appData.fields}
             data={appData.data}
+          />
+        )}
+
+        {validationResult.valid && (editable || hasSignedDeclaration) && (
+          <SignedDeclarationPanel
+            applicationId={applicationId!}
+            token={sessionToken}
+            signed={signedDeclaration}
+            editable={editable}
+            onSignedChange={setSignedDeclaration}
           />
         )}
 
