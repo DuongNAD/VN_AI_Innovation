@@ -76,9 +76,9 @@ const CITIZEN_CARDS: ProcedureCardDef[] = [
     ),
   },
   {
-    href: '/user/chat?q=đăng%20ký%20thường%20trú',
-    title: 'Đăng ký thường trú',
-    description: 'Hướng dẫn thủ tục đăng ký thường trú cho cá nhân và hộ gia đình.',
+    href: '/user/chat?procedure=TEMP_RESIDENCE_REGISTRATION',
+    title: 'Đăng ký tạm trú',
+    description: 'Khai báo tạm trú theo mẫu CT01: chuẩn bị giấy tờ và nộp hồ sơ tại công an cấp xã.',
     tone: 'orange',
     icon: (
       <svg viewBox="0 0 24 24" aria-hidden="true">

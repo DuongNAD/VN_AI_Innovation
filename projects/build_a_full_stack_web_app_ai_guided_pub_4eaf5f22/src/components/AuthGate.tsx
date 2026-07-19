@@ -1,3 +1,4 @@
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getAuthUserFromCookies, type AuthUser } from '@/lib/login-auth';
 import type { AppRole } from '@/lib/roles';
@@ -26,7 +27,15 @@ export default async function AuthGate({ allow, loginPath, children, renderChrom
   const user = await getAuthUserFromCookies();
 
   if (!user) {
-    redirect(loginPath);
+    // Cookie còn nhưng phiên đã hết hạn server-side: giữ đích đến (kể cả
+    // query như ?sessionId=…) để sau đăng nhập quay đúng chỗ — middleware chỉ
+    // lo được trường hợp thiếu cookie.
+    const currentPath = (await headers()).get('x-pathname');
+    const next =
+      currentPath && currentPath.startsWith('/') && !currentPath.startsWith('//')
+        ? `?next=${encodeURIComponent(currentPath)}`
+        : '';
+    redirect(`${loginPath}${next}`);
   }
 
   if (!allow.includes(user.role)) {

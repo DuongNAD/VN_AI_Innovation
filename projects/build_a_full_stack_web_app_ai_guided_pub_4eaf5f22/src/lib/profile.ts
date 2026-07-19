@@ -40,11 +40,14 @@ function parseDate(
   }
   const date = new Date(`${text}T00:00:00.000Z`);
   const earliest = new Date('1900-01-01T00:00:00.000Z');
+  // So sánh theo ngày ở múi giờ Việt Nam (UTC+7): buổi tối giờ VN, "hôm nay"
+  // theo lịch VN đã vượt trước ngày UTC — thẻ cấp trong ngày không được bị chặn.
+  const todayVietnam = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
   if (
     Number.isNaN(date.getTime()) ||
     date.toISOString().slice(0, 10) !== text ||
     date < earliest ||
-    ((key === 'dateOfBirth' || key === 'idIssuedAt') && date > new Date())
+    ((key === 'dateOfBirth' || key === 'idIssuedAt') && text > todayVietnam)
   ) {
     throw new AppError(400, 'INVALID_INPUT', 'Ngày tháng không hợp lệ.', { field: key });
   }

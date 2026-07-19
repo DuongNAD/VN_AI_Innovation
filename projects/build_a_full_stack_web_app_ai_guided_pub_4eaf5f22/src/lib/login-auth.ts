@@ -88,6 +88,35 @@ export function buildClearLoginCookie(): string {
   return parts.join('; ');
 }
 
+// Cookie ràng buộc state OAuth với đúng trình duyệt đã khởi tạo — thiếu nó,
+// một URL callback bị đánh cắp/giả mạo có thể hoàn tất đăng nhập ở máy khác
+// (login CSRF) trong cửa sổ 15 phút của state.
+export const OAUTH_STATE_COOKIE = 'psp_oauth_state';
+
+export function buildOAuthStateCookie(state: string): string {
+  const parts = [
+    `${OAUTH_STATE_COOKIE}=${encodeURIComponent(state)}`,
+    'Path=/api/v1/auth/oauth',
+    'HttpOnly',
+    'SameSite=Lax',
+    'Max-Age=900',
+  ];
+  if (isProd()) parts.push('Secure');
+  return parts.join('; ');
+}
+
+export function buildClearOAuthStateCookie(): string {
+  const parts = [`${OAUTH_STATE_COOKIE}=`, 'Path=/api/v1/auth/oauth', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0'];
+  if (isProd()) parts.push('Secure');
+  return parts.join('; ');
+}
+
+export function getOAuthStateFromRequest(req: Request): string | null {
+  const cookiesMap = parseCookieHeader(req.headers.get('cookie'));
+  const value = cookiesMap[OAUTH_STATE_COOKIE];
+  return value && value.length <= 500 ? value : null;
+}
+
 function parseCookieHeader(header: string | null): Record<string, string> {
   const out: Record<string, string> = {};
   if (!header) return out;

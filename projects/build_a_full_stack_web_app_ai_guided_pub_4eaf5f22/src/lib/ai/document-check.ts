@@ -2,6 +2,10 @@ import { fetchUpstreamJson } from './upstream';
 import { logAiUsage } from './usage';
 import { getAiProvider } from '@/lib/config';
 import type { FieldDef } from '@/lib/schema-guards';
+import {
+  PdfVisionError,
+  renderPdfPagesForVision,
+} from '@/lib/ai/pdf-vision';
 
 /**
  * AI verification of a citizen's signed declaration (tờ khai đã ký) before it
@@ -35,13 +39,25 @@ export type SignatureCheck = {
   checkedAt: string;
 };
 
+/**
+ * Only a completed AI decision may enter the review queue. REVIEW is allowed
+ * because it explicitly hands an uncertain/name-mismatch case to an officer;
+ * SKIPPED means no content check happened at all and must not be presented as
+ * a valid signed declaration.
+ */
+export function documentCheckAllowsSubmission(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const status = (value as Record<string, unknown>).status;
+  return status === 'PASSED' || status === 'REVIEW';
+}
+
 // Vision models are addressed on the same /chat/completions path (billed as the
 // llm service). DeepSeek-V4-Flash is text-only, so the vision model is named
 // separately and defaults to a widely available multimodal model.
 const VISION_MODEL = process.env.VISION_MODEL || 'gpt-4o-mini';
 
-// Only raster images can be sent inline to a vision model. PDFs (typically a
-// digital signature) are passed straight to the officer for manual review.
 const VISION_IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 // A confident negative from the model is required to block a citizen's upload;
@@ -49,7 +65,7 @@ const VISION_IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const REJECT_CONFIDENCE = 0.6;
 
 const SYSTEM_PROMPT_VERIFY = `Bạn là trợ lý kiểm tra hình ảnh tờ khai hành chính công của Việt Nam trước khi chuyển cho cán bộ một cửa.
-Người dân tải lên ảnh chụp/scan bản tờ khai họ đã KÝ. Hãy quan sát ảnh và đánh giá khách quan.
+Người dân tải lên ảnh chụp/scan hoặc PDF của bản tờ khai họ đã KÝ. PDF đã được chuyển thành ảnh từng trang. Hãy quan sát tất cả ảnh và đánh giá khách quan.
 
 Yêu cầu:
 1. Chỉ đánh giá những gì NHÌN THẤY trên ảnh. Không suy diễn nội dung pháp lý, không đưa ra lời khuyên pháp lý, không quyết định hồ sơ được duyệt hay không.
@@ -67,6 +83,23 @@ Yêu cầu:
   "is_legible": boolean,
   "name_match": boolean | null,
   "names_seen": string[],
+  "confidence": number,
+  "reason": string
+}`;
+
+const SYSTEM_PROMPT_SUPPORTING_DOCUMENT = `Bạn là trợ lý kiểm tra giấy tờ đính kèm của hồ sơ hành chính công Việt Nam.
+Người dân tải lên ảnh hoặc PDF. PDF đã được chuyển thành ảnh từng trang. Hãy đối chiếu với tên loại giấy tờ được yêu cầu trong tin nhắn người dùng.
+
+Yêu cầu:
+1. Chỉ đánh giá nội dung NHÌN THẤY, không suy diễn giá trị pháp lý và không quyết định hồ sơ được duyệt.
+2. is_expected_document: tài liệu có đúng loại giấy tờ được yêu cầu hay không. Ví dụ, một hóa đơn, giáo trình hoặc tài liệu không liên quan không phải là văn bản ủy quyền.
+3. is_legible: nội dung chính có đủ rõ để cán bộ đọc và đối chiếu hay không.
+4. confidence: mức tin cậy từ 0 đến 1.
+5. reason: 1-2 câu tiếng Việt, nêu ngắn gọn vì sao đạt/chưa đạt và cách khắc phục.
+6. Chỉ trả về JSON:
+{
+  "is_expected_document": boolean,
+  "is_legible": boolean,
   "confidence": number,
   "reason": string
 }`;
@@ -197,6 +230,53 @@ export function decideSignatureCheck(raw: unknown, model: string, checkedAt: str
   };
 }
 
+export type SupportingDocumentCheck = {
+  status: SignatureCheckStatus;
+  isExpectedDocument: boolean | null;
+  legible: boolean | null;
+  confidence: number;
+  reason: string;
+  model: string;
+  checkedAt: string;
+};
+
+export function decideSupportingDocumentCheck(
+  raw: unknown,
+  model: string,
+  checkedAt: string
+): SupportingDocumentCheck {
+  const obj = (
+    raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
+  ) as Record<string, unknown>;
+  const isExpectedDocument =
+    typeof obj.is_expected_document === 'boolean' ? obj.is_expected_document : null;
+  const legible = typeof obj.is_legible === 'boolean' ? obj.is_legible : null;
+  const confidence = clampConfidence(obj.confidence);
+
+  let status: SignatureCheckStatus;
+  let fallback: string;
+  if (isExpectedDocument === false && confidence >= REJECT_CONFIDENCE) {
+    status = 'REJECTED';
+    fallback = 'Tệp tải lên không đúng loại giấy tờ được yêu cầu. Vui lòng chọn đúng tài liệu.';
+  } else if (isExpectedDocument === true && legible === true) {
+    status = 'PASSED';
+    fallback = 'Đã nhận diện đúng loại giấy tờ và nội dung có thể đọc được.';
+  } else {
+    status = 'REVIEW';
+    fallback = 'Chưa thể khẳng định chắc chắn; cán bộ sẽ kiểm tra kỹ tài liệu này.';
+  }
+
+  return {
+    status,
+    isExpectedDocument,
+    legible,
+    confidence,
+    reason: cleanReason(obj.reason, fallback),
+    model,
+    checkedAt,
+  };
+}
+
 function skipped(reason: string, checkedAt: string): SignatureCheck {
   return {
     status: 'SKIPPED',
@@ -212,11 +292,26 @@ function skipped(reason: string, checkedAt: string): SignatureCheck {
   };
 }
 
+function rejectedPdf(reason: string, checkedAt: string): SignatureCheck {
+  return {
+    status: 'REJECTED',
+    isDeclaration: null,
+    hasSignature: null,
+    legible: null,
+    nameMatch: null,
+    namesSeen: [],
+    confidence: 1,
+    reason,
+    model: 'pdf-renderer',
+    checkedAt,
+  };
+}
+
 /**
- * Runs the vision check on an uploaded signed declaration. Never throws: any
- * configuration or upstream problem degrades to a SKIPPED verdict so a signed
- * file still reaches manual review rather than blocking the citizen on an
- * infrastructure issue.
+ * Runs the vision check on an uploaded signed declaration. Never throws: a
+ * configuration or upstream problem becomes SKIPPED. Upload routes reject that
+ * status with a retryable error, while final submission also blocks unchecked
+ * legacy records, so an unchecked file is never presented as valid.
  */
 export async function verifySignedDeclaration(input: {
   bytes: Uint8Array;
@@ -225,21 +320,42 @@ export async function verifySignedDeclaration(input: {
   expectedNames?: string[];
 }): Promise<SignatureCheck> {
   const checkedAt = new Date().toISOString();
+  let visionImages: { bytes: Uint8Array; mimeType: string }[];
+
+  if (input.mimeType === 'application/pdf') {
+    try {
+      visionImages = await renderPdfPagesForVision(input.bytes);
+    } catch (error) {
+      if (error instanceof PdfVisionError && error.kind === 'invalid') {
+        return rejectedPdf(error.message, checkedAt);
+      }
+      return skipped(
+        'Máy chủ chưa thể chuyển PDF thành ảnh để kiểm tra; cán bộ sẽ xem trực tiếp bản đã ký.',
+        checkedAt
+      );
+    }
+  } else if (VISION_IMAGE_MIME.has(input.mimeType)) {
+    visionImages = [{ bytes: input.bytes, mimeType: input.mimeType }];
+  } else {
+    return rejectedPdf('Định dạng tờ khai không được hỗ trợ.', checkedAt);
+  }
 
   if (getAiProvider() !== 'openai') {
     return skipped('Bản demo không bật AI nên tờ khai chưa được kiểm tra tự động; cán bộ sẽ xem trực tiếp.', checkedAt);
-  }
-  if (!VISION_IMAGE_MIME.has(input.mimeType)) {
-    return skipped('Tệp PDF không kiểm tra tự động bằng ảnh; cán bộ sẽ xem trực tiếp bản đã ký.', checkedAt);
   }
 
   const expectedNames = (input.expectedNames ?? []).slice(0, MAX_SIGNER_NAMES);
   const userText =
     expectedNames.length > 0
-      ? `Đây là ảnh tờ khai người dân đã ký. Tên người khai theo hồ sơ: ${expectedNames.join('; ')}. Hãy kiểm tra theo yêu cầu, bao gồm đối chiếu tên.`
-      : 'Đây là ảnh tờ khai người dân đã ký. Không có danh sách tên để đối chiếu (name_match: null). Hãy kiểm tra các mục còn lại theo yêu cầu.';
+      ? `Đây là các trang của tờ khai người dân đã ký. Tên người khai theo hồ sơ: ${expectedNames.join('; ')}. Hãy kiểm tra toàn bộ các trang theo yêu cầu, bao gồm đối chiếu tên.`
+      : 'Đây là các trang của tờ khai người dân đã ký. Không có danh sách tên để đối chiếu (name_match: null). Hãy kiểm tra các mục còn lại.';
 
-  const dataUri = `data:${input.mimeType};base64,${Buffer.from(input.bytes).toString('base64')}`;
+  const imageContent = visionImages.map((image) => ({
+    type: 'image_url',
+    image_url: {
+      url: `data:${image.mimeType};base64,${Buffer.from(image.bytes).toString('base64')}`,
+    },
+  }));
   const body = JSON.stringify({
     model: VISION_MODEL,
     temperature: 0,
@@ -250,7 +366,7 @@ export async function verifySignedDeclaration(input: {
         role: 'user',
         content: [
           { type: 'text', text: userText },
-          { type: 'image_url', image_url: { url: dataUri } },
+          ...imageContent,
         ],
       },
     ],
@@ -293,4 +409,122 @@ export async function verifySignedDeclaration(input: {
   }
 
   return decideSignatureCheck(parsed, VISION_MODEL, checkedAt);
+}
+
+function supportingSkipped(reason: string, checkedAt: string): SupportingDocumentCheck {
+  return {
+    status: 'SKIPPED',
+    isExpectedDocument: null,
+    legible: null,
+    confidence: 0,
+    reason,
+    model: 'none',
+    checkedAt,
+  };
+}
+
+function supportingRejected(reason: string, checkedAt: string): SupportingDocumentCheck {
+  return {
+    status: 'REJECTED',
+    isExpectedDocument: null,
+    legible: null,
+    confidence: 1,
+    reason,
+    model: 'pdf-renderer',
+    checkedAt,
+  };
+}
+
+export async function verifySupportingDocument(input: {
+  bytes: Uint8Array;
+  mimeType: string;
+  expectedDocument: string;
+}): Promise<SupportingDocumentCheck> {
+  const checkedAt = new Date().toISOString();
+  let visionImages: { bytes: Uint8Array; mimeType: string }[];
+
+  if (input.mimeType === 'application/pdf') {
+    try {
+      visionImages = await renderPdfPagesForVision(input.bytes);
+    } catch (error) {
+      if (error instanceof PdfVisionError && error.kind === 'invalid') {
+        return supportingRejected(error.message, checkedAt);
+      }
+      return supportingSkipped(
+        'Máy chủ chưa thể chuyển PDF thành ảnh để kiểm tra nội dung.',
+        checkedAt
+      );
+    }
+  } else if (VISION_IMAGE_MIME.has(input.mimeType)) {
+    visionImages = [{ bytes: input.bytes, mimeType: input.mimeType }];
+  } else {
+    return supportingRejected('Định dạng giấy tờ không được hỗ trợ.', checkedAt);
+  }
+
+  if (getAiProvider() !== 'openai') {
+    return supportingSkipped(
+      'Bản demo không bật AI nên giấy tờ chưa được kiểm tra nội dung.',
+      checkedAt
+    );
+  }
+
+  const expectedDocument = input.expectedDocument.replace(/\s+/g, ' ').trim().slice(0, 200);
+  const imageContent = visionImages.map((image) => ({
+    type: 'image_url',
+    image_url: {
+      url: `data:${image.mimeType};base64,${Buffer.from(image.bytes).toString('base64')}`,
+    },
+  }));
+  const body = JSON.stringify({
+    model: VISION_MODEL,
+    temperature: 0,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT_SUPPORTING_DOCUMENT },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: `Loại giấy tờ hồ sơ đang yêu cầu: "${expectedDocument}". Hãy kiểm tra tất cả các trang được gửi kèm.`,
+          },
+          ...imageContent,
+        ],
+      },
+    ],
+  });
+
+  const startTime = Date.now();
+  let response: any;
+  try {
+    response = await fetchUpstreamJson(
+      '/chat/completions',
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body },
+      { service: 'vision' }
+    );
+  } catch {
+    return supportingSkipped(
+      'Chưa kiểm tra được nội dung tự động lúc này. Vui lòng thử tải lại.',
+      checkedAt
+    );
+  }
+
+  const usage = response?.usage;
+  logAiUsage({
+    serviceType: 'llm',
+    model: VISION_MODEL,
+    latencyMs: Date.now() - startTime,
+    ...(typeof usage?.prompt_tokens === 'number' ? { promptTokens: usage.prompt_tokens } : {}),
+    ...(typeof usage?.completion_tokens === 'number' ? { completionTokens: usage.completion_tokens } : {}),
+  });
+
+  const reply = response?.choices?.[0]?.message?.content;
+  if (typeof reply !== 'string') {
+    return supportingSkipped('Chưa đọc được kết quả kiểm tra. Vui lòng thử tải lại.', checkedAt);
+  }
+  try {
+    return decideSupportingDocumentCheck(JSON.parse(reply), VISION_MODEL, checkedAt);
+  } catch {
+    return supportingSkipped('Chưa đọc được kết quả kiểm tra. Vui lòng thử tải lại.', checkedAt);
+  }
 }

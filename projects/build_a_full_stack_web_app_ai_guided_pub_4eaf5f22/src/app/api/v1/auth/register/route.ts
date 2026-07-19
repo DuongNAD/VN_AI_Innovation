@@ -48,8 +48,10 @@ export const POST = handleRoute(async (req: Request) => {
     );
   }
 
-  if (displayName.length < 1 || displayName.length > 100) {
-    throw new AppError(400, 'INVALID_INPUT', 'Họ và tên không hợp lệ.', { field: 'displayName' });
+  // Tối thiểu 2 ký tự — khớp với chính sách cập nhật hồ sơ (profile.ts), nếu
+  // không tài khoản tạo tên 1 ký tự sẽ không lưu được profile về sau.
+  if (displayName.length < 2 || displayName.length > 100) {
+    throw new AppError(400, 'INVALID_INPUT', 'Họ và tên cần có ít nhất 2 ký tự.', { field: 'displayName' });
   }
 
   if (!isStrongEnoughPassword(password)) {

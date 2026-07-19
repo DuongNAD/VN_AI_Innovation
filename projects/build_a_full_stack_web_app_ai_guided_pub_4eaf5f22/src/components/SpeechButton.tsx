@@ -34,9 +34,21 @@ export default function SpeechButton({
     };
   }, []);
 
-  const handleClick = async () => {
-    if (state === 'error') return;
+  // Cắt tại ranh giới câu thay vì giữa chừng khi vượt hạn mức TTS phía server.
+  const ttsClientText = (raw: string): string => {
+    if (raw.length <= LIMITS.TTS_CLIENT_MAX) return raw;
+    const slice = raw.slice(0, LIMITS.TTS_CLIENT_MAX);
+    const cut = Math.max(
+      slice.lastIndexOf('.'),
+      slice.lastIndexOf('!'),
+      slice.lastIndexOf('?'),
+      slice.lastIndexOf(';'),
+      slice.lastIndexOf('\n')
+    );
+    return cut > 200 ? slice.slice(0, cut + 1) : slice;
+  };
 
+  const handleClick = async () => {
     if (state === 'playing' || state === 'loading') {
       if (cancelFetchRef.current) {
         cancelFetchRef.current();
@@ -66,7 +78,8 @@ export default function SpeechButton({
       utterance.onstart = () => setState('playing');
       utterance.onend = () => setState('idle');
       utterance.onerror = (e) => {
-        if (e.error !== 'interrupted') {
+        // 'interrupted'/'canceled' = người dùng chủ động dừng — không phải lỗi.
+        if (e.error !== 'interrupted' && e.error !== 'canceled') {
           setState('error');
         } else {
           setState('idle');
@@ -90,7 +103,7 @@ export default function SpeechButton({
             'Content-Type': 'application/json',
             ...(token ? { 'X-Session-Token': token } : {}),
           },
-          body: JSON.stringify({ text: text.slice(0, LIMITS.TTS_CLIENT_MAX) }),
+          body: JSON.stringify({ text: ttsClientText(text) }),
         });
 
         if (!active) return;
@@ -215,7 +228,7 @@ export default function SpeechButton({
   };
 
   const displayLabel =
-    state === 'playing' ? 'Dừng' : state === 'loading' ? 'Đang tải…' : state === 'error' ? 'Không hỗ trợ' : label;
+    state === 'playing' ? 'Dừng' : state === 'loading' ? 'Đang tải…' : state === 'error' ? 'Thử lại' : label;
 
   const ariaLabel =
     state === 'playing'
@@ -223,15 +236,14 @@ export default function SpeechButton({
       : state === 'loading'
       ? 'Đang tải âm thanh'
       : state === 'error'
-      ? 'Thiết bị không hỗ trợ đọc'
+      ? 'Đọc chưa thành công — bấm để thử lại'
       : 'Nghe đọc nội dung';
 
   return (
     <button
       type="button"
       onClick={handleClick}
-      disabled={state === 'error'}
-      title={state === 'error' ? 'Thiết bị không hỗ trợ đọc' : ariaLabel}
+      title={ariaLabel}
       aria-pressed={state === 'playing'}
       aria-label={ariaLabel}
       className={
@@ -240,14 +252,14 @@ export default function SpeechButton({
               state === 'playing'
                 ? 'border-accent-400 bg-accent-100 text-accent-900'
                 : state === 'error'
-                ? 'cursor-not-allowed border-surface-border bg-surface-muted text-slate-400 opacity-60'
+                ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
                 : 'border-surface-border bg-surface text-brand-800 hover:bg-brand-50'
             }`
           : `btn inline-flex min-h-touch min-w-[8.5rem] items-center justify-center gap-2 rounded-lg border px-4 py-2 font-semibold transition-all duration-200 ${
               state === 'playing'
                 ? 'border-accent-300 bg-accent-100 text-accent-900'
                 : state === 'error'
-                ? 'cursor-not-allowed border-surface-border bg-surface-muted text-slate-400 opacity-60'
+                ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
                 : 'border-surface-border bg-surface text-slate-700 hover:bg-surface-muted'
             }`
       }

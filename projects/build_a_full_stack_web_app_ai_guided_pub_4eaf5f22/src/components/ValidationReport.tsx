@@ -20,6 +20,8 @@ interface ValidationReportProps {
   formVersion: string;
   aiMode?: string;
   degraded?: boolean;
+  /** Nhãn tiếng Việt cho từng field id — hiển thị thay cho mã kỹ thuật. */
+  fieldLabels?: Record<string, string>;
 }
 
 export default function ValidationReport({
@@ -30,14 +32,17 @@ export default function ValidationReport({
   formVersion,
   aiMode,
   degraded,
+  fieldLabels,
 }: ValidationReportProps) {
+  const blockingCount = errors.filter((e) => e.severity === 'error').length;
+  const warningCount = errors.length - blockingCount;
   // Construct plain text of all errors and the AI explanation for TTS
   const errorsText = errors
     .map((e) => `${e.message}. Cách khắc phục: ${e.suggestion}`)
     .join(' ');
   const speechText = `${errorsText}${aiExplanation ? ` ${aiExplanation}` : ''}`;
 
-  if (valid) {
+  if (valid && errors.length === 0) {
     return (
       <div className="validation-result-enter w-full max-w-3xl mx-auto p-4 space-y-6">
         <div className="card border border-emerald-200 bg-emerald-50 p-6 rounded-xl shadow-sm text-center space-y-4">
@@ -85,9 +90,13 @@ export default function ValidationReport({
         )}
       </div>
 
-      {/* Red Summary Box */}
-      <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm flex items-start space-x-3">
-        <div className="text-red-500 mt-0.5">
+      {/* Summary Box — đỏ khi còn lỗi chặn, hổ phách khi chỉ có cảnh báo */}
+      <div
+        className={`border-l-4 p-4 rounded-r-lg shadow-sm flex items-start space-x-3 ${
+          blockingCount > 0 ? 'bg-red-50 border-red-500' : 'bg-amber-50 border-amber-500'
+        }`}
+      >
+        <div className={`mt-0.5 ${blockingCount > 0 ? 'text-red-500' : 'text-amber-500'}`}>
           <svg
             className="w-5 h-5"
             fill="none"
@@ -103,12 +112,26 @@ export default function ValidationReport({
           </svg>
         </div>
         <div>
-          <h2 className="font-bold text-red-900">
-            Phát hiện {errors.length} lỗi cần sửa trước khi nộp
-          </h2>
-          <p className="text-xs text-red-700 mt-1">
-            Vui lòng sửa các trường thông tin bên dưới và thử lại.
-          </p>
+          {blockingCount > 0 ? (
+            <>
+              <h2 className="font-bold text-red-900">
+                Phát hiện {blockingCount} lỗi cần sửa trước khi nộp
+                {warningCount > 0 ? ` (kèm ${warningCount} cảnh báo)` : ''}
+              </h2>
+              <p className="text-xs text-red-700 mt-1">
+                Vui lòng sửa các trường thông tin bên dưới và thử lại.
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 className="font-bold text-amber-900">
+                Có {warningCount} cảnh báo — bạn vẫn có thể nộp hồ sơ
+              </h2>
+              <p className="text-xs text-amber-700 mt-1">
+                Nên kiểm tra lại các mục dưới đây trước khi nộp để tránh bị trả hồ sơ.
+              </p>
+            </>
+          )}
         </div>
       </div>
 
@@ -147,13 +170,13 @@ export default function ValidationReport({
                   </span>
                   {fieldIds.length > 0 && (
                     <div className="flex flex-wrap gap-1 items-center">
-                      <span className="text-[11px] text-slate-500 font-medium">Mã trường:</span>
+                      <span className="text-[11px] text-slate-500 font-medium">Trường:</span>
                       {fieldIds.map((fid) => (
                         <code
                           key={fid}
-                          className="text-[11px] font-mono font-bold bg-white/80 border border-slate-200 text-slate-700 px-1.5 py-0.5 rounded"
+                          className="text-[11px] font-bold bg-white/80 border border-slate-200 text-slate-700 px-1.5 py-0.5 rounded"
                         >
-                          {fid}
+                          {fieldLabels?.[fid] ?? fid}
                         </code>
                       ))}
                     </div>

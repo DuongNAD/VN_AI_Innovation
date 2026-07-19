@@ -202,6 +202,20 @@ export default function LoginForm({
         body: JSON.stringify({ username, password, portal }),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 429) {
+        // Server đã khóa tạm — hiển thị thời gian chờ của server, không tính
+        // vào bộ đếm khóa phía client (hai cửa sổ khác nhau, cộng dồn gây rối).
+        const retrySeconds = Number(data?.error?.retryAfterSeconds);
+        const waitText =
+          Number.isFinite(retrySeconds) && retrySeconds > 0
+            ? ` Vui lòng thử lại sau ${Math.ceil(retrySeconds / 60)} phút.`
+            : ' Vui lòng thử lại sau ít phút.';
+        setError(
+          (typeof data?.error?.message === 'string' ? data.error.message : 'Bạn đã thử quá nhiều lần.') +
+            waitText
+        );
+        return;
+      }
       if (!res.ok) {
         recordFailedAttempt(
           typeof data?.error?.message === 'string' ? data.error.message : GENERIC_AUTH_ERROR

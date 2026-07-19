@@ -214,6 +214,7 @@ export default function ChatIntake({
   // Sentinel ref for auto scroll
   const bottomRef = useRef<HTMLDivElement>(null);
   const initialRef = useRef(false);
+  const composerInputRef = useRef<HTMLInputElement>(null);
 
   // Auto scroll effect — gọi đồng bộ trong effect (DOM đã cập nhật ở thời điểm
   // này) để thẻ AI giải thích mới gắn vào luồng cũng nằm trọn trong tầm nhìn.
@@ -407,6 +408,32 @@ export default function ChatIntake({
 
       const startFlow: Flow = toFlow(data);
 
+      // Phiên mới — xoá sạch trạng thái của thủ tục trước, nếu không danh sách
+      // "Sửa câu trả lời" sẽ trộn câu trả lời của thủ tục cũ vào phiên này.
+      setEditingCode(null);
+      setShowEditList(false);
+      if (knownProvince) {
+        // Tỉnh/thành được điền sẵn từ ngữ cảnh trước: đưa vào danh sách đã trả
+        // lời để người dân nhìn thấy và sửa được thay vì "biến mất".
+        const provinceQuestion: Question = {
+          questionCode: 'province',
+          label: 'Bạn muốn làm thủ tục tại tỉnh hoặc thành phố nào?',
+          fieldType: 'province',
+        };
+        setQuestionSchemaMap({ province: provinceQuestion });
+        setAnsweredList([
+          {
+            questionCode: 'province',
+            label: provinceQuestion.label,
+            value: knownProvince,
+            displayValue: knownProvince,
+          },
+        ]);
+      } else {
+        setQuestionSchemaMap({});
+        setAnsweredList([]);
+      }
+
       setSession(newSessionId, token);
       setSessionId(newSessionId);
       setFlow(startFlow);
@@ -504,12 +531,18 @@ export default function ChatIntake({
       }
 
       if (!newFlow.next) {
+        // Chỉ chào "đủ thông tin" một lần — sửa câu trả lời khi đã hoàn tất
+        // không lặp lại thông báo.
+        if (phase !== 'done') {
+          appendBotMessage('Đã thu thập đủ thông tin!');
+        }
         setPhase('done');
-        appendBotMessage('Đã thu thập đủ thông tin!');
       } else {
         setPhase('intake');
         appendBotMessage(`Câu ${newFlow.answered + 1}/${newFlow.total}: ${newFlow.next.label}`);
       }
+    } else if (res.status === 401 || res.status === 403 || res.status === 404) {
+      handleExpiry();
     } else {
       appendBotMessage(res.message);
     }
@@ -528,7 +561,8 @@ export default function ChatIntake({
       method: 'POST',
       body: {
         sessionId: sessionId,
-        messageId: randomUUID(),
+        // Cùng khóa idempotency với trang checklist: mỗi phiên chỉ một hồ sơ nháp.
+        messageId: `create-application:${sessionId}`,
       },
       token: token,
     });
@@ -537,6 +571,8 @@ export default function ChatIntake({
 
     if (res.ok) {
       router.push(`/user/form/${res.data.applicationId}`, { scroll: true });
+    } else if (res.status === 401 || res.status === 403 || res.status === 404) {
+      handleExpiry();
     } else {
       appendBotMessage(res.message);
     }
@@ -574,11 +610,18 @@ export default function ChatIntake({
         };
 
         rec.onerror = (event: any) => {
-          console.error(event);
-          appendBotMessage('Không sử dụng được micro trên thiết bị này. Bạn có thể gõ nội dung vào ô bên dưới.');
           setRecording(false);
           if (recordingTimerRef.current) {
             clearInterval(recordingTimerRef.current);
+          }
+          const code = event?.error;
+          // 'no-speech' = người dùng im lặng, 'aborted' = tự dừng — không phải
+          // lỗi thiết bị, đừng dọa người dùng là micro hỏng.
+          if (code === 'no-speech') {
+            appendBotMessage('Mình chưa nghe rõ. Bạn bấm micro nói lại, hoặc gõ nội dung vào ô bên dưới.');
+          } else if (code !== 'aborted') {
+            console.error(event);
+            appendBotMessage('Không sử dụng được micro trên thiết bị này. Bạn có thể gõ nội dung vào ô bên dưới.');
           }
         };
 
@@ -693,7 +736,6 @@ export default function ChatIntake({
     if (initialProcedure) {
       startIntake(initialProcedure, initialQuery || '');
     } else if (initialQuery) {
-      setInput(initialQuery);
       handleSearch(initialQuery);
     }
   }, [initialQuery, initialProcedure]);
@@ -1017,11 +1059,11 @@ export default function ChatIntake({
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => handleSearch('Tôi cần hỗ trợ thủ tục hành chính')}
+                onClick={() => composerInputRef.current?.focus()}
                 className="card-premium p-4 text-left hover:border-brand-300 disabled:opacity-60"
               >
                 <span className="block text-sm font-bold text-slate-800">Mô tả nhu cầu</span>
-                <span className="mt-1 block text-xs text-slate-500">AI nhận diện thủ tục</span>
+                <span className="mt-1 block text-xs text-slate-500">Gõ nhu cầu — AI nhận diện thủ tục</span>
               </button>
             </div>
           </div>
@@ -1057,7 +1099,7 @@ export default function ChatIntake({
                                 {Array.from({ length: qTotal }).map((_, i) => (
                                   <span
                                     key={i}
-                                    className={`h-1 w-3.5 rounded-full ${i < qIndex ? 'bg-brand-500' : 'bg-slate-200'}`}
+                                    className={`h-1 w-3.5 rounded-full ${i + 1 < qIndex ? 'bg-brand-500' : 'bg-slate-200'}`}
                                   />
                                 ))}
                               </span>
@@ -1217,6 +1259,7 @@ export default function ChatIntake({
           <form onSubmit={handleSend} className="border-t border-white/60 bg-white/80 px-3 py-2.5 backdrop-blur-glass sm:px-4">
             <div className="mx-auto flex max-w-4xl items-center gap-1.5 rounded-full border-2 border-brand-100 bg-white px-1.5 py-1 shadow-shell focus-within:border-brand-500 focus-within:shadow-glow motion-safe:transition-shadow motion-safe:duration-300">
               <input
+                ref={composerInputRef}
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}

@@ -145,6 +145,14 @@ export const POST = handleRoute(async (
       check,
     });
   }
+  if (check.status === 'SKIPPED') {
+    throw new AppError(
+      503,
+      'DOCUMENT_CHECK_UNAVAILABLE',
+      `${check.reason} Tệp chưa được nhận; vui lòng thử tải lại.`,
+      { check }
+    );
+  }
 
   const fileName = sanitizeAttachmentFileName(file.name);
   const checkJson = check as unknown as Prisma.InputJsonValue;

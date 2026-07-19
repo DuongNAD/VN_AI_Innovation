@@ -63,7 +63,9 @@ export function buildGuidance(input: {
         originals: doc.originals,
         copies: doc.copies,
         submissionType: doc.submissionType,
-        reason: isConditional ? (doc.reasonText || doc.reason || null) : null,
+        // reasonText được soạn cả cho giấy tờ không điều kiện (vd căn cứ
+        // NĐ 104/2022 của tra cứu cư trú) — hiển thị luôn, không chỉ khi có điều kiện.
+        reason: doc.reasonText || doc.reason || null,
       });
     }
   }

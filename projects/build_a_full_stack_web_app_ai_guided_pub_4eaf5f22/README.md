@@ -28,7 +28,7 @@ Thực hiện theo kịch bản đường dẫn trải nghiệm mẫu dưới đ
 7. **Kiểm tra và nộp hồ sơ (`/result`):**
    - Khi đã sửa hết lỗi, hệ thống mới cho chuyển sang trang kết quả: thẻ xanh **"Hồ sơ hợp lệ"** cùng **tờ khai điền sẵn theo đúng thể thức văn bản hành chính** (quốc hiệu, bảng bên nam/bên nữ, chữ ký) và nút **"Xuất PDF"** để in/tải tờ khai khổ A4.
    - **Ký tờ khai (bắt buộc):** người dân tải PDF, ký tay rồi chụp/scan (hoặc ký số) và **tải bản đã ký lên hệ thống**. Bản tải lên được **AI thị giác kiểm tra tự động** (đúng là tờ khai, có chữ ký, đủ rõ, **tên người khai trên tờ khai khớp với hồ sơ**) — nếu rõ ràng không hợp lệ sẽ bị chặn ngay kèm hướng dẫn khắc phục; tên chưa khớp hoặc chưa chắc chắn được lưu kèm nhận định của AI để cán bộ đối chiếu.
-   - Chỉ khi đã có tờ khai đã ký, nút **"Nộp hồ sơ để cán bộ duyệt"** mới bật — hồ sơ chuyển trạng thái **"Đã nộp — chờ cán bộ xét duyệt"** và bị khóa chỉnh sửa. (Sửa lại dữ liệu hoặc tệp đính kèm sẽ tự gỡ tờ khai đã ký để người dân ký lại đúng nội dung mới.)
+   - Chỉ khi tờ khai đã ký đã được kiểm tra nội dung (đạt hoặc được gắn cờ để cán bộ đối chiếu), hồ sơ mới được phép nộp và chuyển trạng thái **"Đã nộp — chờ cán bộ xét duyệt"**. Tệp bị bỏ qua/chưa kiểm tra không được coi là hợp lệ. (Sửa lại dữ liệu hoặc tệp đính kèm sẽ tự gỡ tờ khai đã ký để người dân ký lại đúng nội dung mới.)
 8. **Cán bộ xét duyệt hồ sơ (`/admin`):**
    - Mục **"Hồ sơ công dân chờ xét duyệt"** hiển thị hồ sơ vừa nộp với đầy đủ dữ liệu đã khai theo nhãn trường, **kèm tờ khai đã ký (xem trực tiếp) và nhãn nhận định của AI** về bản ký.
    - Cán bộ **"Phê duyệt hồ sơ"** hoặc **"Trả lại để bổ sung"** (bắt buộc ghi lý do). Hệ thống không cho phê duyệt hồ sơ còn lỗi theo quy định.
@@ -48,6 +48,10 @@ Thực hiện theo kịch bản đường dẫn trải nghiệm mẫu dưới đ
 Chạy các lệnh sau để khởi động dự án trên môi trường cục bộ:
 
 ```bash
+# Cần Poppler để chuyển PDF đã ký thành ảnh cho AI kiểm tra:
+# macOS: brew install poppler
+# Ubuntu/Debian: sudo apt-get install -y poppler-utils
+
 cp .env.example .env   # tạo cấu hình cục bộ (DB, token demo) — chỉnh sửa nếu cần
 npm install
 docker compose up -d db
@@ -84,6 +88,7 @@ Mô tả các biến cấu hình trong tệp `.env.example`:
 | `AI_PROVIDER` | `mock` | Trình cung cấp dịch vụ AI: `mock` (phản hồi mô phỏng cục bộ, không cần khóa API) hoặc `openai` (endpoint tương thích OpenAI — hiện dùng FPT AI Marketplace, yêu cầu khóa API). |
 | `OPENAI_API_KEY` | `(Trống)` | Khóa API dùng chung cho cả 3 dịch vụ (fallback khi không đặt khóa riêng từng dịch vụ). |
 | `LLM_API_KEY` / `STT_API_KEY` / `TTS_API_KEY` | `(Trống)` | Khóa API riêng từng dịch vụ, ưu tiên hơn `OPENAI_API_KEY` — phù hợp với FPT AI Marketplace vốn cấp khóa theo từng model. |
+| `VISION_API_KEY` / `VISION_MODEL` | `(Trống)` / `gpt-4o-mini` | Khóa và mô hình thị giác dùng để kiểm tra ảnh hoặc PDF tờ khai đã ký. PDF được render bằng Poppler trước khi gửi kiểm tra. |
 | `OPENAI_BASE_URL` | `https://mkp-api.fptcloud.com/v1` | URL gốc của endpoint tương thích OpenAI (HTTPS bắt buộc trong production; production chỉ cho phép `api.openai.com` hoặc `mkp-api.fptcloud.com`). |
 | `LLM_MODEL` | `DeepSeek-V4-Flash` | Mô hình ngôn ngữ dùng cho phân loại ý định và giải thích lỗi logic. |
 | `STT_MODEL` | `FPT.AI-whisper-large-v3-turbo` | Mô hình nhận dạng giọng nói thành văn bản (Whisper tinh chỉnh cho tiếng Việt). |

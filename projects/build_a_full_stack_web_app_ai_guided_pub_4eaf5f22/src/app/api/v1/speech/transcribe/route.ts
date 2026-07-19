@@ -1,6 +1,7 @@
 import { handleRoute, AppError, jsonOk } from '@/lib/errors';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { requireLiveSession } from '@/lib/auth';
+import { getAuthUserFromRequest } from '@/lib/login-auth';
 import { LIMITS } from '@/lib/constants';
 import { inspectAudio } from '@/lib/ai/audio';
 import { getSttProvider } from '@/lib/ai/stt';
@@ -58,7 +59,16 @@ async function readBodyCapped(req: Request, maxBytes: number): Promise<Uint8Arra
 
 export const POST = handleRoute(async (req: Request) => {
   enforceRateLimit('transcribe', req);
-  await requireLiveSession(req);
+  // Micro dùng được cả ở giai đoạn tìm kiếm (chưa có phiên intake): chấp nhận
+  // phiên intake HOẶC tài khoản đã đăng nhập; rate-limit vẫn áp dụng.
+  if (req.headers.get('x-session-token')) {
+    await requireLiveSession(req);
+  } else {
+    const user = await getAuthUserFromRequest(req);
+    if (!user) {
+      throw new AppError(401, 'UNAUTHORIZED', 'Phiên truy cập không hợp lệ hoặc đã hết hạn.');
+    }
+  }
 
   const contentType = req.headers.get('content-type');
   if (!contentType || !contentType.toLowerCase().startsWith('multipart/form-data')) {

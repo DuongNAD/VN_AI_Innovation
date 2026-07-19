@@ -292,8 +292,8 @@ export default function ChecklistView({
         )}
       </div>
 
-      {/* Footer area with legal basis text and SourceFooter */}
-      <div className="mt-8 pt-6 border-t border-slate-100 text-xs text-slate-500 space-y-2">
+      {/* Footer area with legal basis text and SourceFooter (footer tự kẻ đường phân cách) */}
+      <div className="mt-8 text-xs text-slate-500 space-y-2">
         {guidance.procedure.legalBasisText && (
           <p className="font-medium">
             Căn cứ pháp lý: {guidance.procedure.legalBasisText}

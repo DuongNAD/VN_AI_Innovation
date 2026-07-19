@@ -96,7 +96,9 @@ function ChecklistContent() {
         },
         body: JSON.stringify({
           sessionId,
-          messageId: randomUUID(),
+          // Khóa idempotency ổn định theo phiên: bấm lại "Điền biểu mẫu" trả về
+          // đúng hồ sơ nháp đã tạo thay vì tạo bản DRAFT mới.
+          messageId: `create-application:${sessionId}`,
         }),
       });
 

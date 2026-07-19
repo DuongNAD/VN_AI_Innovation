@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { decideSignatureCheck, extractSignerNames } from '@/lib/ai/document-check';
+import {
+  decideSignatureCheck,
+  decideSupportingDocumentCheck,
+  documentCheckAllowsSubmission,
+  extractSignerNames,
+} from '@/lib/ai/document-check';
+import { selectPdfPagesForVision } from '@/lib/ai/pdf-vision';
 
 const AT = '2026-01-01T00:00:00.000Z';
 const decide = (raw: unknown) => decideSignatureCheck(raw, 'test-vision', AT);
@@ -87,6 +93,51 @@ describe('decideSignatureCheck', () => {
   });
 });
 
+describe('documentCheckAllowsSubmission', () => {
+  it('allows completed decisions that are ready for automated or officer review', () => {
+    expect(documentCheckAllowsSubmission({ status: 'PASSED' })).toBe(true);
+    expect(documentCheckAllowsSubmission({ status: 'REVIEW' })).toBe(true);
+  });
+
+  it('blocks unchecked, rejected, legacy, and malformed records', () => {
+    expect(documentCheckAllowsSubmission({ status: 'SKIPPED' })).toBe(false);
+    expect(documentCheckAllowsSubmission({ status: 'REJECTED' })).toBe(false);
+    expect(documentCheckAllowsSubmission(null)).toBe(false);
+    expect(documentCheckAllowsSubmission({})).toBe(false);
+  });
+});
+
+describe('decideSupportingDocumentCheck', () => {
+  const decideDocument = (raw: unknown) =>
+    decideSupportingDocumentCheck(raw, 'test-vision', AT);
+
+  it('rejects a confidently wrong supporting document', () => {
+    const result = decideDocument({
+      is_expected_document: false,
+      is_legible: true,
+      confidence: 0.95,
+      reason: 'Đây là hóa đơn, không phải văn bản ủy quyền.',
+    });
+    expect(result.status).toBe('REJECTED');
+  });
+
+  it('passes the requested legible document', () => {
+    expect(
+      decideDocument({
+        is_expected_document: true,
+        is_legible: true,
+        confidence: 0.9,
+      }).status
+    ).toBe('PASSED');
+  });
+
+  it('sends uncertain documents to officer review', () => {
+    expect(decideDocument({ is_expected_document: false, confidence: 0.3 }).status)
+      .toBe('REVIEW');
+    expect(decideDocument({}).status).toBe('REVIEW');
+  });
+});
+
 describe('extractSignerNames', () => {
   const fields = [
     { id: 'male_full_name', type: 'text' as const, label: 'Họ, chữ đệm, tên (nam)' },
@@ -137,5 +188,23 @@ describe('extractSignerNames', () => {
         { a_full_name: 'Trùng Tên', b_full_name: 'Trùng Tên' }
       )
     ).toEqual(['Trùng Tên']);
+  });
+});
+
+describe('selectPdfPagesForVision', () => {
+  it('renders every page of a short declaration', () => {
+    expect(selectPdfPagesForVision(1)).toEqual([1]);
+    expect(selectPdfPagesForVision(6)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it('renders the first and last three pages of a long declaration', () => {
+    expect(selectPdfPagesForVision(7)).toEqual([1, 2, 3, 5, 6, 7]);
+    expect(selectPdfPagesForVision(20)).toEqual([1, 2, 3, 18, 19, 20]);
+  });
+
+  it('rejects invalid or excessive page counts', () => {
+    expect(selectPdfPagesForVision(0)).toEqual([]);
+    expect(selectPdfPagesForVision(21)).toEqual([]);
+    expect(selectPdfPagesForVision(1.5)).toEqual([]);
   });
 });

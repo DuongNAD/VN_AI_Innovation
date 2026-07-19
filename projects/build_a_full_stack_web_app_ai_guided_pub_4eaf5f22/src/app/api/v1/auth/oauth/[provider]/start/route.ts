@@ -1,6 +1,16 @@
 import { AppError, handleRoute } from '@/lib/errors';
-import { oauthStateToken } from '@/lib/login-auth';
+import { buildOAuthStateCookie, oauthStateToken } from '@/lib/login-auth';
 import { enforceRateLimit } from '@/lib/rate-limit';
+
+function redirectWithStateCookie(location: string, state: string): Response {
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: location,
+      'Set-Cookie': buildOAuthStateCookie(state),
+    },
+  });
+}
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -47,7 +57,7 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
       authUrl.searchParams.set('scope', 'openid email profile');
       authUrl.searchParams.set('state', state);
       authUrl.searchParams.set('prompt', 'select_account');
-      return Response.redirect(authUrl.toString(), 302);
+      return redirectWithStateCookie(authUrl.toString(), state);
     }
   }
 
@@ -59,7 +69,7 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
       authUrl.searchParams.set('redirect_uri', callback);
       authUrl.searchParams.set('state', state);
       authUrl.searchParams.set('scope', 'email,public_profile');
-      return Response.redirect(authUrl.toString(), 302);
+      return redirectWithStateCookie(authUrl.toString(), state);
     }
   }
 
@@ -67,5 +77,5 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
   const demo = new URL(callback);
   demo.searchParams.set('demo', '1');
   demo.searchParams.set('state', state);
-  return Response.redirect(demo.toString(), 302);
+  return redirectWithStateCookie(demo.toString(), state);
 });

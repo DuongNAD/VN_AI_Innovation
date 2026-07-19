@@ -50,7 +50,11 @@ export default function ProfileForm({ user }: Props) {
   const namePattern = /^[\p{L}\s\-'\.]{2,}$/u;
   const phonePattern = /^(?:\+84|0)[0-9]{9,10}$/;
 
-  const today = new Date().toISOString().slice(0, 10);
+  // "Hôm nay" theo lịch địa phương (VN), không phải UTC — buổi tối giờ VN,
+  // toISOString() vẫn trả ngày hôm trước và chặn nhầm thẻ cấp trong ngày.
+  const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
 
   function updateField<K extends keyof ProfileFields>(key: K, value: ProfileFields[K]) {
     setFields((current) => ({ ...current, [key]: value }));

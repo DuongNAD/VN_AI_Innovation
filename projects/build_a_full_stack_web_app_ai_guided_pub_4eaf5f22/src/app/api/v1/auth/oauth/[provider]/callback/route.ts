@@ -1,6 +1,12 @@
 import { prisma } from '@/lib/db';
 import { AppError, handleRoute } from '@/lib/errors';
-import { createLoginSession, fingerprintEmail, parseOAuthState } from '@/lib/login-auth';
+import {
+  buildClearOAuthStateCookie,
+  createLoginSession,
+  fingerprintEmail,
+  getOAuthStateFromRequest,
+  parseOAuthState,
+} from '@/lib/login-auth';
 import { enforceRateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -73,6 +79,12 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
   const state = url.searchParams.get('state') || '';
   const parsed = parseOAuthState(state);
   if (!parsed || parsed.provider !== provider) {
+    throw new AppError(400, 'INVALID_INPUT', 'Phiên OAuth không hợp lệ hoặc đã hết hạn.');
+  }
+  // State phải khớp cookie đặt lúc bắt đầu — chặn callback bị dán từ trình
+  // duyệt khác (login CSRF) dù chữ ký state vẫn hợp lệ.
+  const stateCookie = getOAuthStateFromRequest(req);
+  if (!stateCookie || stateCookie !== state) {
     throw new AppError(400, 'INVALID_INPUT', 'Phiên OAuth không hợp lệ hoặc đã hết hạn.');
   }
 
@@ -173,11 +185,8 @@ export const GET = handleRoute(async (req: Request, { params }: { params: Promis
   const session = await createLoginSession(user.id, req);
   const redirectTo = `${url.origin}/user?logged_in=1&via=${provider}`;
 
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: redirectTo,
-      'Set-Cookie': session.cookie,
-    },
-  });
+  const headers = new Headers({ Location: redirectTo });
+  headers.append('Set-Cookie', session.cookie);
+  headers.append('Set-Cookie', buildClearOAuthStateCookie());
+  return new Response(null, { status: 302, headers });
 });

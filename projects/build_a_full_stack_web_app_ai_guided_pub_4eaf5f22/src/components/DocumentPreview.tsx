@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { evaluateCondition } from '@/lib/rule-engine';
 import type { FieldDef } from '@/lib/schema-guards';
 import AttachmentPreviewLink from '@/components/AttachmentPreviewLink';
 
@@ -153,10 +154,13 @@ function MarriageDocument({
 
   const previouslyMarried = data.previously_married === true;
   const priorMarriages = Number(data.marriage_number);
-  const marriageOrder =
-    previouslyMarried && Number.isFinite(priorMarriages) && priorMarriages > 0
+  // Đã từng kết hôn nhưng bỏ trống số lần (trường không bắt buộc): in dấu chấm
+  // để người khai tự điền — không được in "lần đầu" sai sự thật.
+  const marriageOrder = previouslyMarried
+    ? Number.isFinite(priorMarriages) && priorMarriages > 0
       ? `lần thứ ${priorMarriages + 1}`
-      : 'lần đầu';
+      : 'lần thứ ……'
+    : 'lần đầu';
 
   const pairRows: { label: string; male: string; female: string }[] = [
     { label: 'Họ, chữ đệm, tên', male: val('male_full_name'), female: val('female_full_name') },
@@ -265,7 +269,11 @@ function GenericDocument({ applicationId, token, procedureName, fields, data }: 
   fields: FieldDef[];
   data: Record<string, unknown>;
 }) {
+  // Trường đang ẩn theo visibleWhen không được in ra tờ khai — giá trị cũ của
+  // trường ẩn vẫn được giữ trong dữ liệu (chủ ý của form) nhưng không thuộc
+  // nội dung khai hiện tại (vd "Số CCCD cũ" khi đã đổi lý do thành cấp mới).
   const rows = fields
+    .filter((f) => !f.visibleWhen || evaluateCondition(f.visibleWhen, data))
     .filter((f) => f.type !== 'file' || !isEmpty(data[f.id]))
     .map((f) => ({ field: f, label: f.label, value: data[f.id] }));
 
@@ -370,22 +378,59 @@ export default function DocumentPreview({
       const margin = 8;
       const maxWidth = pageWidth - margin * 2;
       const maxHeight = pageHeight - margin * 2;
-      let renderWidth = maxWidth;
-      let renderHeight = (canvas.height * renderWidth) / canvas.width;
+      const renderWidth = maxWidth;
+      const totalHeight = (canvas.height * renderWidth) / canvas.width;
 
-      if (renderHeight > maxHeight) {
-        renderHeight = maxHeight;
-        renderWidth = (canvas.width * renderHeight) / canvas.height;
-      }
-
-      const offsetX = (pageWidth - renderWidth) / 2;
-      const offsetY = (pageHeight - renderHeight) / 2;
       pdf.setProperties({
         title: `Tờ khai ${procedureName}`,
         subject: `Biểu mẫu ${procedureName} phiên bản ${formVersion}`,
         creator: 'VN AI Innovation',
       });
-      pdf.addImage(canvas, 'PNG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST');
+
+      // Tờ khai dài hơn một trang A4 phải được cắt thành nhiều trang; co cả
+      // ảnh vào một trang làm chữ nhỏ tới mức không in/ký được.
+      const bandContext = document.createElement('canvas').getContext('2d');
+      if (totalHeight <= maxHeight || !bandContext) {
+        const renderHeight = Math.min(totalHeight, maxHeight);
+        const scaledWidth =
+          totalHeight > maxHeight ? (canvas.width * renderHeight) / canvas.height : renderWidth;
+        pdf.addImage(
+          canvas,
+          'PNG',
+          (pageWidth - scaledWidth) / 2,
+          (pageHeight - renderHeight) / 2,
+          scaledWidth,
+          renderHeight,
+          undefined,
+          'FAST'
+        );
+      } else {
+        const bandCanvas = bandContext.canvas;
+        const pageBandPx = Math.max(1, Math.floor((maxHeight / renderWidth) * canvas.width));
+        let offsetPx = 0;
+        let page = 0;
+        while (offsetPx < canvas.height) {
+          const bandPx = Math.min(pageBandPx, canvas.height - offsetPx);
+          bandCanvas.width = canvas.width;
+          bandCanvas.height = bandPx;
+          bandContext.fillStyle = '#ffffff';
+          bandContext.fillRect(0, 0, bandCanvas.width, bandCanvas.height);
+          bandContext.drawImage(canvas, 0, offsetPx, canvas.width, bandPx, 0, 0, canvas.width, bandPx);
+          if (page > 0) pdf.addPage();
+          pdf.addImage(
+            bandCanvas,
+            'PNG',
+            margin,
+            margin,
+            renderWidth,
+            (bandPx * renderWidth) / canvas.width,
+            undefined,
+            'FAST'
+          );
+          offsetPx += bandPx;
+          page += 1;
+        }
+      }
 
       const fileName = pdfFileName(procedureName);
       const url = URL.createObjectURL(pdf.output('blob'));

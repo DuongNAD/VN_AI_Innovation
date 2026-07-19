@@ -5,6 +5,8 @@ FROM ${NODE_IMAGE}
 
 WORKDIR /app
 
+RUN apk add --no-cache poppler-utils
+
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 

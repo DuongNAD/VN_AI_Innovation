@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { prisma } from '@/lib/db';
 import { AppError, handleRoute, jsonOk } from '@/lib/errors';
 import { readJsonBody } from '@/lib/http';
@@ -44,14 +45,13 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
     );
   }
 
-  const citizenId =
-    typeof body.citizenId === 'string' && /^[0-9]{9,12}$/.test(body.citizenId)
-      ? body.citizenId
-      : '001099012345';
-  const fullName =
-    typeof body.fullName === 'string' && body.fullName.trim().length > 0
-      ? body.fullName.trim().slice(0, 120)
-      : 'Công dân VNeID (demo)';
+  // KHÔNG nhận citizenId/fullName từ client: endpoint này không xác thực,
+  // nếu tin body thì bất kỳ ai cũng đăng nhập được vào tài khoản vnid_<số>
+  // của người khác. Danh tính demo sinh từ chính challenge — mỗi lượt quét
+  // một tài khoản riêng, xác nhận lặp lại vẫn ra cùng tài khoản.
+  const digest = createHash('sha256').update(`vnid-demo:${id}`).digest('hex');
+  const citizenId = String(BigInt('0x' + digest.slice(0, 12)) % 1000000000000n).padStart(12, '0');
+  const fullName = 'Công dân VNeID (demo)';
 
   const username = `vnid_${citizenId}`;
   const email = `vnid.${citizenId}@vnid.local`;

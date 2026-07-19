@@ -10,16 +10,12 @@ const LOGIN_COOKIE = 'psp_login';
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Đường dẫn + query hiện tại cho server components (AuthGate dùng làm ?next=).
+  // Luôn ghi đè để client không thể tự gửi giá trị giả; x-embed cũ đã bỏ
+  // (trang chat đọc searchParams.embed trực tiếp).
   const requestHeaders = new Headers(req.headers);
-  requestHeaders.set('x-pathname', pathname);
-
-  // Widget iframe: /user/chat?embed=1 — layout hides UserBar via this header
-  const isEmbed =
-    req.nextUrl.searchParams.get('embed') === '1' ||
-    req.nextUrl.searchParams.get('embed') === 'true';
-  if (isEmbed) {
-    requestHeaders.set('x-embed', '1');
-  }
+  requestHeaders.delete('x-embed');
+  requestHeaders.set('x-pathname', `${pathname}${req.nextUrl.search || ''}`);
 
   const isUserPublic =
     pathname === '/user/login' ||

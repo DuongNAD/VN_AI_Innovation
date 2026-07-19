@@ -428,7 +428,8 @@ function appendNameFormatErrors(
   data: Record<string, unknown>,
   errors: ValidationErrorItem[]
 ): void {
-  const namePattern = /^[\p{L}\s\-'\.]{2,}$/u;
+  // Bao gồm dấu nháy cong ’ do bàn phím iOS/Word tự thay cho dấu nháy thẳng.
+  const namePattern = /^[\p{L}\s\-'’\.]{2,}$/u;
   const skipList = [
     'agency', 'company', 'organization', 'document', 'file', 
     'province', 'district', 'ward', 'username',
@@ -468,9 +469,10 @@ function appendGenericTextFormatErrors(
   data: Record<string, unknown>,
   errors: ValidationErrorItem[]
 ): void {
-  // Cho phép chữ cái (kể cả tiếng Việt), số, khoảng trắng (gồm cả dấu xuống dòng), 
-  // và các dấu câu thông thường. Cấm các ký tự đặc biệt như @#$%^*<>{}[]~`|=_\
-  const invalidCharPattern = /[^\p{L}\p{N}\s,\.\-\/\(\):'";&+]/u;
+  // Cho phép chữ cái (kể cả tiếng Việt), số, khoảng trắng (gồm cả dấu xuống dòng),
+  // và các dấu câu thông thường — kể cả gạch ngang dài –/— và nháy cong ‘’“”
+  // do Word/iOS tự thay thế. Cấm các ký tự đặc biệt như @#$%^*<>{}[]~`|=_\
+  const invalidCharPattern = /[^\p{L}\p{N}\s,\.\-–—\/\(\):'’‘“”";&+]/u;
   const skipList = ['email', 'password', 'url', 'link', 'username'];
   const numericFieldList = ['phone', 'number', 'identity', 'cccd', 'zip', 'quantity', 'amount', 'price', 'year', 'month', 'day'];
   

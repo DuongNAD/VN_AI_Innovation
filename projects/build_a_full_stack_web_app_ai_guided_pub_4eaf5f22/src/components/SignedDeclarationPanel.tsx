@@ -65,6 +65,9 @@ export default function SignedDeclarationPanel({
   const [error, setError] = useState<string | null>(null);
 
   const signedUrl = `/api/v1/applications/${encodeURIComponent(applicationId)}/signed-declaration`;
+  const checkStatus = signed?.check?.status;
+  const checkPassed = checkStatus === 'PASSED';
+  const checkPending = checkStatus === 'REVIEW' || checkStatus === 'SKIPPED';
 
   const upload = async (file: File) => {
     if (busy) return;
@@ -128,27 +131,47 @@ export default function SignedDeclarationPanel({
     <section
       aria-label="Tờ khai đã ký"
       className={`card border p-6 ${
-        signed ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-white'
+        checkPassed
+          ? 'border-emerald-300 bg-emerald-50'
+          : checkPending
+            ? 'border-amber-300 bg-amber-50'
+            : signed
+              ? 'border-slate-300 bg-slate-50'
+              : 'border-slate-200 bg-white'
       }`}
     >
       <div className="flex items-start gap-3">
         <span aria-hidden="true" className="text-2xl leading-none">
-          {signed ? '✅' : '✍️'}
+          {checkPassed ? '✅' : signed ? '⏳' : '✍️'}
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="text-xl font-bold text-slate-900">
-            {signed ? 'Đã có tờ khai ký' : 'Ký tờ khai trước khi nộp'}
+            {checkPassed
+              ? 'Tờ khai đã được kiểm tra'
+              : signed
+                ? 'Đã tải tờ khai - cần kiểm tra'
+                : 'Ký tờ khai trước khi nộp'}
           </h2>
           <p className="mt-1 text-base text-slate-600">
-            {signed
-              ? 'Bạn đã tải lên tờ khai có chữ ký. Bạn có thể xem lại, thay tệp khác hoặc tiếp tục nộp hồ sơ.'
+            {checkPassed
+              ? 'Hệ thống đã nhận diện đây là tờ khai có chữ ký. Bạn có thể xem lại hoặc tiếp tục nộp hồ sơ.'
+              : signed
+                ? 'Tệp đã được tải lên nhưng chưa được xác nhận hoàn toàn; trạng thái kiểm tra được hiển thị bên dưới.'
               : 'Tải PDF ở phần “Xem trước tờ khai”, ký tay rồi chụp/scan (hoặc ký số), sau đó tải bản đã ký lên đây. Bắt buộc phải có tờ khai đã ký mới nộp được hồ sơ.'}
           </p>
 
           {signed && (
             <>
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-sm font-semibold text-emerald-800">
+                <span
+                  className={`inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-1.5 text-sm font-semibold ${
+                    checkPassed
+                      ? 'border-emerald-200 text-emerald-800'
+                      : checkPending
+                        ? 'border-amber-200 text-amber-800'
+                        : 'border-slate-200 text-slate-700'
+                  }`}
+                >
                   <span aria-hidden="true">📄</span>
                   <span className="max-w-[16rem] truncate">{signed.fileName}</span>
                 </span>

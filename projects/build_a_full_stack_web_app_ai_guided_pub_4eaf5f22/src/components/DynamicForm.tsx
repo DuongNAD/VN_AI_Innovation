@@ -8,6 +8,7 @@ import {
   evaluateCondition,
   isValidIsoDate,
   runRules,
+  sanitizeFormData,
   type ValidationErrorItem,
 } from '@/lib/rule-engine';
 import type { FieldDef, RuleDef } from '@/lib/schema-guards';
@@ -46,9 +47,19 @@ function getFieldSection(field: FieldDef, hasChildFields: boolean): { key: strin
     id === 'permanent_address' ||
     id === 'temporary_address' ||
     id === 'province' ||
-    id === 'phone_number'
+    id === 'phone_number' ||
+    // CT01: chi tiết tạm trú phải đứng cùng nhóm với địa chỉ nó tham chiếu,
+    // nếu không heuristic gộp sẽ kéo chúng lên trước phần địa chỉ.
+    id === 'temp_from_date' ||
+    id === 'temp_to_date' ||
+    id === 'relationship_to_owner' ||
+    id === 'host_consent' ||
+    id === 'legal_accommodation_doc'
   ) {
     return { key: 'address', title: 'Địa chỉ & liên hệ' };
+  }
+  if (id === 'has_old_passport' || id === 'old_passport_number' || id === 'old_passport_file') {
+    return { key: 'papers', title: 'Hộ chiếu đã cấp' };
   }
   if (
     id === 'previously_married' ||
@@ -144,7 +155,7 @@ function formatIsoDateForInput(value: unknown): string {
   return `${day}/${month}/${year}`;
 }
 
-function formatDateDigits(value: string): string {
+export function formatDateDigits(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 8);
   if (digits.length <= 2) {
     return digits;
@@ -153,6 +164,16 @@ function formatDateDigits(value: string): string {
     return `${digits.slice(0, 2)}/${digits.slice(2)}`;
   }
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+/**
+ * Do not re-mask a partial date while the citizen is typing. Replacing the
+ * controlled input value after every key moves the caret in Chromium-based
+ * browsers; when editing in the middle, the next digit then lands in another
+ * date segment. Only a complete 8-digit value is safe to format.
+ */
+export function formatCompletedDateInput(value: string): string {
+  return value.replace(/\D/g, '').length === 8 ? formatDateDigits(value) : value;
 }
 
 function dateInputToIso(value: string): string | null {
@@ -175,6 +196,7 @@ type DateEntryInputProps = {
   required: boolean;
   describedBy?: string;
   onValueChange(value: string): void;
+  onBlur(): void;
 };
 
 function DateEntryInput({
@@ -185,17 +207,30 @@ function DateEntryInput({
   required,
   describedBy,
   onValueChange,
+  onBlur,
 }: DateEntryInputProps) {
   const [draft, setDraft] = useState(() => formatIsoDateForInput(value));
   const isoValue = typeof value === 'string' && isValidIsoDate(value) ? value : '';
 
   const updateFromText = (raw: string) => {
-    const formatted = formatDateDigits(raw);
-    setDraft(formatted);
-    const iso = dateInputToIso(formatted);
+    // Keep the exact partial draft so React never rewrites the value/caret
+    // between keystrokes. maxLength handles the ordinary typing path; slice
+    // also bounds programmatic fills/pastes.
+    const nextDraft = raw.slice(0, 10);
+    setDraft(nextDraft);
+    const iso = dateInputToIso(nextDraft);
     // Giữ bản nháp để rule engine báo đúng lỗi nếu ngày đã đủ 8 số nhưng
     // không tồn tại; khi hợp lệ mới chuyển sang chuẩn ISO cho máy chủ.
-    onValueChange(iso ?? formatted);
+    onValueChange(iso ?? nextDraft);
+  };
+
+  const commitTextDraft = () => {
+    const formatted = formatCompletedDateInput(draft);
+    if (formatted !== draft) {
+      setDraft(formatted);
+      onValueChange(dateInputToIso(formatted) ?? formatted);
+    }
+    onBlur();
   };
 
   const updateFromPicker = (iso: string) => {
@@ -215,6 +250,7 @@ function DateEntryInput({
         maxLength={10}
         placeholder="dd/mm/yyyy"
         onChange={(event) => updateFromText(event.target.value)}
+        onBlur={commitTextDraft}
         aria-invalid={invalid || undefined}
         aria-required={required || undefined}
         aria-describedby={describedBy}
@@ -245,6 +281,11 @@ type DynamicFormProps = {
   onDirtyChange?(dirty: boolean): void;
 };
 
+type AttachmentCheck = {
+  status: 'PASSED' | 'REVIEW' | 'REJECTED' | 'SKIPPED';
+  reason?: string;
+};
+
 export default function DynamicForm({
   fields,
   rules,
@@ -259,6 +300,7 @@ export default function DynamicForm({
   const [formData, setFormData] = useState<Record<string, unknown>>(() =>
     syncVisibility(fields, initialData ?? {})
   );
+  const formDataRef = useRef(formData);
   const [clientErrors, setClientErrors] = useState<ValidationErrorItem[]>([]);
   const [hasValidated, setHasValidated] = useState(false);
   const [validationAttempt, setValidationAttempt] = useState(0);
@@ -267,53 +309,72 @@ export default function DynamicForm({
   const [guidedErrorIndex, setGuidedErrorIndex] = useState(0);
   const [uploadingFieldId, setUploadingFieldId] = useState<string | null>(null);
   const [attachmentErrors, setAttachmentErrors] = useState<Record<string, string>>({});
+  const [attachmentChecks, setAttachmentChecks] = useState<Record<string, AttachmentCheck>>({});
 
-  const affectedFieldIds = (errors: ValidationErrorItem[]): Set<string> => {
-    const ids = new Set<string>();
-    for (const error of errors) {
-      if (error.field) {
-        ids.add(error.field);
-      }
-      for (const id of error.fields ?? []) {
-        ids.add(id);
-      }
-    }
-    return ids;
+  // Bản chiếu dữ liệu cho rule engine: trim/coerce như server sanitize, để
+  // client không báo lỗi trên giá trị mà server sẽ chấp nhận (vd dán kèm
+  // khoảng trắng thừa). Giá trị gốc trong form state giữ nguyên.
+  const rulesView = (data: Record<string, unknown>): Record<string, unknown> => {
+    const result = sanitizeFormData(fields, data);
+    return result.ok ? result.sanitized : data;
   };
 
   const setField = (id: string, value: unknown) => {
-    const nextData = syncVisibility(fields, { ...formData, [id]: value });
+    const nextData = syncVisibility(fields, { ...formDataRef.current, [id]: value });
+    formDataRef.current = nextData;
     setFormData(nextData);
 
-    // Sau lần kiểm tra đầu tiên, phản hồi ngay khi người dân sửa dữ liệu:
-    // lỗi biến mất tại chỗ và trường vừa sửa đúng được xác nhận bằng màu xanh.
-    if (hasValidated && rules) {
-      const nextErrors = runRules(fields, rules, nextData);
-      const previousErrorIds = affectedFieldIds(clientErrors);
-      const nextErrorIds = affectedFieldIds(nextErrors);
+    onDirtyChange?.(true);
+  };
 
-      setResolvedFieldIds((previouslyResolved) => {
-        const nextResolved = new Set(previouslyResolved);
-        for (const fieldId of previousErrorIds) {
-          if (!nextErrorIds.has(fieldId)) {
-            nextResolved.add(fieldId);
-          }
-        }
-        for (const fieldId of nextErrorIds) {
-          nextResolved.delete(fieldId);
-        }
-        return nextResolved;
-      });
-      setClientErrors(nextErrors);
-      if (nextErrors.length === 0) {
-        setGuideOpen(false);
-        setGuidedErrorIndex(0);
-      } else if (guidedErrorIndex >= nextErrors.length) {
-        setGuidedErrorIndex(0);
-      }
+  const errorAffectsField = (error: ValidationErrorItem, fieldId: string): boolean =>
+    error.field === fieldId || (error.fields ?? []).includes(fieldId);
+
+  /**
+   * Text entry must stay uninterrupted: rules run only after the citizen leaves
+   * the control. Before the first submit, only errors belonging to fields that
+   * have been left are revealed; submit still validates and reveals the form as
+   * a whole.
+   */
+  const validateFieldOnBlur = (fieldId: string) => {
+    if (!rules) {
+      return;
     }
 
-    onDirtyChange?.(true);
+    const data = syncVisibility(fields, formDataRef.current);
+    formDataRef.current = data;
+    const allCurrentErrors = runRules(fields, rules, rulesView(data));
+    const nextErrors = hasValidated
+      ? allCurrentErrors
+      : [
+          ...clientErrors.filter((error) => !errorAffectsField(error, fieldId)),
+          ...allCurrentErrors.filter((error) => errorAffectsField(error, fieldId)),
+        ];
+    const previouslyHadError = clientErrors.some((error) =>
+      errorAffectsField(error, fieldId)
+    );
+    const currentlyHasError = nextErrors.some((error) =>
+      errorAffectsField(error, fieldId)
+    );
+
+    setValidationAttempt((attempt) => attempt + 1);
+    setClientErrors(nextErrors);
+    setResolvedFieldIds((previouslyResolved) => {
+      const nextResolved = new Set(previouslyResolved);
+      if (currentlyHasError) {
+        nextResolved.delete(fieldId);
+      } else if (previouslyHadError) {
+        nextResolved.add(fieldId);
+      }
+      return nextResolved;
+    });
+
+    if (nextErrors.length === 0) {
+      setGuideOpen(false);
+      setGuidedErrorIndex(0);
+    } else if (guidedErrorIndex >= nextErrors.length) {
+      setGuidedErrorIndex(0);
+    }
   };
 
   const setAttachmentError = (fieldId: string, message: string | null) => {
@@ -356,7 +417,14 @@ export default function DynamicForm({
       if (!res.ok) {
         throw new Error(result?.error?.message || 'Không thể tải tệp lên.');
       }
+      if (result?.check && typeof result.check.status === 'string') {
+        setAttachmentChecks((current) => ({
+          ...current,
+          [fieldId]: result.check as AttachmentCheck,
+        }));
+      }
       setField(fieldId, result.fileName);
+      validateFieldOnBlur(fieldId);
     } catch (err) {
       setAttachmentError(
         fieldId,
@@ -383,7 +451,13 @@ export default function DynamicForm({
       if (!res.ok) {
         throw new Error(result?.error?.message || 'Không thể xóa tệp đính kèm.');
       }
+      setAttachmentChecks((current) => {
+        const next = { ...current };
+        delete next[fieldId];
+        return next;
+      });
       setField(fieldId, '');
+      validateFieldOnBlur(fieldId);
     } catch (err) {
       setAttachmentError(
         fieldId,
@@ -461,8 +535,8 @@ export default function DynamicForm({
     if (submitting) {
       return;
     }
-    const data = syncVisibility(fields, formData);
-    const errs = rules ? runRules(fields, rules, data) : [];
+    const data = syncVisibility(fields, formDataRef.current);
+    const errs = rules ? runRules(fields, rules, rulesView(data)) : [];
     setHasValidated(true);
     setValidationAttempt((attempt) => attempt + 1);
     setResolvedFieldIds(new Set());
@@ -528,6 +602,7 @@ export default function DynamicForm({
             placeholder={field.placeholder}
             value={asInputString(value)}
             onChange={handleChange}
+            onBlur={() => validateFieldOnBlur(field.id)}
             maxLength={isIdentity ? 12 : 500}
             inputMode={isNumeric ? 'numeric' : undefined}
             {...a11y}
@@ -543,6 +618,7 @@ export default function DynamicForm({
             placeholder={field.placeholder}
             value={asInputString(value)}
             onChange={(e) => setField(field.id, e.target.value)}
+            onBlur={() => validateFieldOnBlur(field.id)}
             maxLength={500}
             {...a11y}
           />
@@ -558,6 +634,7 @@ export default function DynamicForm({
             onChange={(e) =>
               setField(field.id, e.target.value === '' ? '' : Number(e.target.value))
             }
+            onBlur={() => validateFieldOnBlur(field.id)}
             {...a11y}
           />
         );
@@ -571,6 +648,7 @@ export default function DynamicForm({
             required={!!field.required}
             describedBy={hasError ? errorId : undefined}
             onValueChange={(nextValue) => setField(field.id, nextValue)}
+            onBlur={() => validateFieldOnBlur(field.id)}
           />
         );
       case 'select': {
@@ -579,7 +657,6 @@ export default function DynamicForm({
           <select
             id={inputId}
             className={base}
-            {...a11y}
             value={asInputString(value)}
             onChange={(e) => {
               const raw = e.target.value;
@@ -590,6 +667,7 @@ export default function DynamicForm({
               const match = options.find((o) => String(o.value) === raw);
               setField(field.id, match ? match.value : raw);
             }}
+            onBlur={() => validateFieldOnBlur(field.id)}
             {...a11y}
           >
             <option value="">-- Chọn --</option>
@@ -605,12 +683,19 @@ export default function DynamicForm({
         const options = field.options ?? [];
         return (
           <div
+            id={inputId}
+            tabIndex={-1}
             className="flex flex-wrap gap-3"
             role="radiogroup"
             aria-label={field.label}
             aria-invalid={hasError || undefined}
             aria-required={field.required || undefined}
             aria-describedby={hasError ? errorId : undefined}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                validateFieldOnBlur(field.id);
+              }
+            }}
           >
             {options.map((o) => {
               const selected = value === o.value;
@@ -643,6 +728,7 @@ export default function DynamicForm({
             className="h-6 w-6 rounded border-surface-border text-brand-600 focus:ring-brand-600"
             checked={value === true}
             onChange={(e) => setField(field.id, e.target.checked)}
+            onBlur={() => validateFieldOnBlur(field.id)}
             {...a11y}
           />
         );
@@ -698,6 +784,29 @@ export default function DynamicForm({
                 </div>
               </div>
             )}
+            {attachmentChecks[field.id] && (
+              <div
+                className={`rounded-lg border p-3 text-sm ${
+                  attachmentChecks[field.id].status === 'PASSED'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : attachmentChecks[field.id].status === 'REVIEW'
+                      ? 'border-amber-200 bg-amber-50 text-amber-800'
+                      : 'border-slate-200 bg-slate-50 text-slate-700'
+                }`}
+                role="status"
+              >
+                <p className="font-semibold">
+                  {attachmentChecks[field.id].status === 'PASSED'
+                    ? '✓ Đã nhận diện đúng loại giấy tờ'
+                    : attachmentChecks[field.id].status === 'REVIEW'
+                      ? '⚠ Cần cán bộ kiểm tra thêm'
+                      : 'Chưa kiểm tra được nội dung'}
+                </p>
+                {attachmentChecks[field.id].reason && (
+                  <p className="mt-1">{attachmentChecks[field.id].reason}</p>
+                )}
+              </div>
+            )}
             {attachmentErrors[field.id] && (
               <p className="text-sm font-semibold text-red-700" role="alert">
                 {attachmentErrors[field.id]}
@@ -712,6 +821,7 @@ export default function DynamicForm({
             className={base}
             value={typeof value === 'string' ? value : ''}
             onChange={(e) => setField(field.id, e.target.value)}
+            onBlur={() => validateFieldOnBlur(field.id)}
             {...a11y}
           >
             <option value="">-- Chọn tỉnh/thành phố --</option>
@@ -733,7 +843,11 @@ export default function DynamicForm({
     const value = formData[field.id];
     const fieldErrors = errorsFor(field.id);
     const hasError = fieldErrors.length > 0;
-    const wasResolved = hasValidated && !hasError && resolvedFieldIds.has(field.id);
+    const wasResolved =
+      hasValidated &&
+      !hasError &&
+      resolvedFieldIds.has(field.id) &&
+      (field.type !== 'file' || attachmentChecks[field.id]?.status === 'PASSED');
     const isGuidedError = !!guidedError && guidedAnchor === field.id;
     const inputId = 'field-' + field.id;
     const errorId = 'field-' + field.id + '-error';
@@ -877,7 +991,7 @@ export default function DynamicForm({
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
-      {clientErrors.length > 0 && (
+      {hasValidated && clientErrors.length > 0 && (
         <div
           key={`validation-summary-${validationAttempt}`}
           className={

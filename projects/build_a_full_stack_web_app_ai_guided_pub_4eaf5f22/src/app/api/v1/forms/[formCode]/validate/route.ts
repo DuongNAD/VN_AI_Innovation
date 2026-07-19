@@ -90,7 +90,9 @@ export const POST = handleRoute(async (req: Request, { params }: { params: Promi
   }
 
   return jsonOk({
-    valid: errors.length === 0,
+    // Chỉ lỗi mức chặn mới ngăn nộp — nhất quán với route submit; cảnh báo
+    // (severity warning) vẫn trả về trong errors để hiển thị.
+    valid: errors.filter((e) => e.severity === 'error').length === 0,
     errors,
     ...(errors.length > 0 ? { aiExplanation } : {}),
     formCode,

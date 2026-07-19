@@ -4,6 +4,8 @@ import { enforceRateLimit } from '@/lib/rate-limit';
 import { loadOwnedApplication, EDITABLE_STATUSES } from '@/lib/application-access';
 import { requireStaffRole } from '@/lib/login-auth';
 import { STAFF_PERMISSIONS } from '@/lib/roles';
+import { verifySupportingDocument } from '@/lib/ai/document-check';
+import type { Prisma } from '@prisma/client';
 import {
   attachmentContentDisposition,
   detectSafeAttachmentMime,
@@ -143,7 +145,25 @@ export const POST = handleRoute(async (
     );
   }
 
+  const check = await verifySupportingDocument({
+    bytes,
+    mimeType: detectedMime,
+    expectedDocument: field.label,
+  });
+  if (check.status === 'REJECTED') {
+    throw new AppError(422, 'SUPPORTING_DOCUMENT_INVALID', check.reason, { check });
+  }
+  if (check.status === 'SKIPPED') {
+    throw new AppError(
+      503,
+      'DOCUMENT_CHECK_UNAVAILABLE',
+      `${check.reason} Tệp chưa được nhận; vui lòng thử tải lại.`,
+      { check }
+    );
+  }
+
   const fileName = sanitizeAttachmentFileName(file.name);
+  const checkJson = check as unknown as Prisma.InputJsonValue;
   await prisma.applicationAttachment.upsert({
     where: { applicationId_fieldId: { applicationId: id, fieldId } },
     update: {
@@ -151,6 +171,7 @@ export const POST = handleRoute(async (
       mimeType: detectedMime,
       byteSize: bytes.byteLength,
       content: Buffer.from(bytes),
+      checkJson,
     },
     create: {
       applicationId: id,
@@ -159,6 +180,7 @@ export const POST = handleRoute(async (
       mimeType: detectedMime,
       byteSize: bytes.byteLength,
       content: Buffer.from(bytes),
+      checkJson,
     },
   });
   await invalidateSignedDeclaration(id);
@@ -168,6 +190,7 @@ export const POST = handleRoute(async (
     fileName,
     mimeType: detectedMime,
     byteSize: bytes.byteLength,
+    check,
   }, { status: 201 });
 });
 

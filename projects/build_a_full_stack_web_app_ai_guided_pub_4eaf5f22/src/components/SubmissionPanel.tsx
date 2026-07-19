@@ -10,6 +10,8 @@ type SubmissionPanelProps = {
   valid: boolean;
   /** A signed declaration must be on file before the application can be submitted. */
   signed: boolean;
+  /** PASSED or REVIEW; SKIPPED/legacy files are uploaded but not submit-ready. */
+  signedReady: boolean;
   submittedAt?: string | Date | null;
   reviewedAt?: string | Date | null;
   reviewedBy?: string | null;
@@ -53,6 +55,7 @@ export default function SubmissionPanel({
   status,
   valid,
   signed,
+  signedReady,
   submittedAt,
   reviewedAt,
   reviewedBy,
@@ -172,7 +175,7 @@ export default function SubmissionPanel({
           >
             Sửa hồ sơ theo yêu cầu
           </Link>
-          {valid && signed && (
+          {valid && signedReady && (
             <button
               type="button"
               onClick={submit}
@@ -183,9 +186,11 @@ export default function SubmissionPanel({
             </button>
           )}
         </div>
-        {valid && !signed && (
+        {valid && !signedReady && (
           <p className="mt-3 text-sm font-medium text-amber-800">
-            Vui lòng tải lên tờ khai đã ký ở phần bên dưới trước khi nộp lại.
+            {signed
+              ? 'Tờ khai hiện tại chưa được kiểm tra nội dung. Vui lòng tải lại tệp để kiểm tra trước khi nộp lại.'
+              : 'Vui lòng tải lên tờ khai đã ký ở phần bên dưới trước khi nộp lại.'}
           </p>
         )}
         {errorBox}
@@ -226,22 +231,32 @@ export default function SubmissionPanel({
       <h2 className="text-xl font-bold text-blue-950">Nộp hồ sơ cho cơ quan tiếp nhận</h2>
       <p className="mt-2 text-lg text-blue-900">
         Hồ sơ đã qua kiểm tra và không còn lỗi.{' '}
-        {signed
+        {signedReady
           ? 'Khi bạn nộp, hồ sơ kèm tờ khai đã ký được chuyển tới cán bộ một cửa để xét duyệt; kết quả sẽ trả về ngay trang này.'
+          : signed
+            ? 'Tờ khai đã tải lên nhưng chưa được kiểm tra nội dung. Vui lòng tải lại tệp để hệ thống kiểm tra trước khi nộp.'
           : 'Chỉ còn một bước: tải lên tờ khai đã ký ở phần bên dưới, sau đó bạn mới có thể nộp hồ sơ.'}
       </p>
       <button
         type="button"
         onClick={submit}
-        disabled={busy !== null || !signed}
-        title={signed ? undefined : 'Cần tải lên tờ khai đã ký trước khi nộp'}
+        disabled={busy !== null || !signedReady}
+        title={
+          signedReady
+            ? undefined
+            : signed
+              ? 'Tờ khai cần được kiểm tra nội dung trước khi nộp'
+              : 'Cần tải lên tờ khai đã ký trước khi nộp'
+        }
         className="btn mt-4 bg-blue-700 text-white hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {busy === 'submit'
           ? 'Đang nộp hồ sơ...'
-          : signed
+          : signedReady
             ? 'Nộp hồ sơ để cán bộ duyệt'
-            : 'Cần tờ khai đã ký để nộp'}
+            : signed
+              ? 'Tờ khai chưa được kiểm tra'
+              : 'Cần tờ khai đã ký để nộp'}
       </button>
       {errorBox}
     </div>

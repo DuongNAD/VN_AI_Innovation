@@ -2,6 +2,7 @@ import { handleRoute, AppError } from '@/lib/errors';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { readJsonBody, requireString, optionalString } from '@/lib/http';
 import { requireLiveSession } from '@/lib/auth';
+import { getAuthUserFromRequest } from '@/lib/login-auth';
 import { LIMITS } from '@/lib/constants';
 import { TTS_VOICES, getTtsProvider, makeSynthesisCacheKey } from '@/lib/ai/tts';
 import { ttsCacheGet, ttsCacheSet } from '@/lib/ai/tts-cache';
@@ -12,7 +13,16 @@ export const POST = handleRoute(async (req: Request) => {
   const startTime = Date.now();
 
   enforceRateLimit('synthesize', req);
-  await requireLiveSession(req);
+  // Nút "Nghe" xuất hiện từ màn chào (chưa có phiên intake): chấp nhận phiên
+  // intake HOẶC tài khoản đã đăng nhập; rate-limit vẫn áp dụng.
+  if (req.headers.get('x-session-token')) {
+    await requireLiveSession(req);
+  } else {
+    const user = await getAuthUserFromRequest(req);
+    if (!user) {
+      throw new AppError(401, 'UNAUTHORIZED', 'Phiên truy cập không hợp lệ hoặc đã hết hạn.');
+    }
+  }
 
   const provider = getTtsProvider();
   const body = await readJsonBody(req);

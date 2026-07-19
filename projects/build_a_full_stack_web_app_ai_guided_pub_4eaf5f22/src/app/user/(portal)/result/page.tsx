@@ -153,9 +153,23 @@ function ResultPageContent() {
   if (error) {
     return (
       <div className="max-w-2xl mx-auto p-6">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-red-800">
-          <h2 className="text-lg font-bold mb-2">Lỗi xử lý</h2>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-red-800 space-y-4">
+          <h2 className="text-lg font-bold">Lỗi xử lý</h2>
           <p>{error}</p>
+          <div className="flex flex-wrap gap-3 pt-1">
+            <a
+              href="/user/chat"
+              className="inline-flex items-center rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800"
+            >
+              Bắt đầu lại tại Trang trò chuyện
+            </a>
+            <a
+              href="/user"
+              className="inline-flex items-center rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-100"
+            >
+              Về trang chủ
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -170,6 +184,9 @@ function ResultPageContent() {
   const editable = appStatus === 'DRAFT' || appStatus === 'RETURNED';
   const signedDeclaration = appData.signedDeclaration ?? null;
   const hasSignedDeclaration = !!signedDeclaration;
+  const signedDeclarationReady =
+    signedDeclaration?.check?.status === 'PASSED' ||
+    signedDeclaration?.check?.status === 'REVIEW';
 
   const setSignedDeclaration = (next: SignedDeclaration | null) =>
     setAppData((prev) => (prev ? { ...prev, signedDeclaration: next } : prev));
@@ -200,6 +217,7 @@ function ResultPageContent() {
             status={appStatus}
             valid={validationResult.valid}
             signed={hasSignedDeclaration}
+            signedReady={signedDeclarationReady}
             submittedAt={appData.submittedAt}
             reviewedAt={appData.reviewedAt}
             reviewedBy={appData.reviewedBy}
@@ -221,6 +239,11 @@ function ResultPageContent() {
             formVersion={validationResult.formVersion || appData.formVersion}
             aiMode={validationResult.aiMode}
             degraded={validationResult.degraded}
+            fieldLabels={Object.fromEntries(
+              (appData.fields ?? [])
+                .filter((f: any) => f && typeof f.id === 'string')
+                .map((f: any) => [f.id, typeof f.label === 'string' ? f.label : f.id])
+            )}
           />
         )}
 
@@ -231,6 +254,7 @@ function ResultPageContent() {
             status={appStatus}
             valid={validationResult.valid}
             signed={hasSignedDeclaration}
+            signedReady={signedDeclarationReady}
             submittedAt={appData.submittedAt}
             reviewedAt={appData.reviewedAt}
             reviewedBy={appData.reviewedBy}
@@ -263,7 +287,7 @@ function ResultPageContent() {
           />
         )}
 
-        <div className="no-print pt-6 border-t border-slate-200">
+        <div className="no-print">
           <SourceFooter
             showDisclaimer={true}
             sourceUrl={appData.procedure?.sourceUrl}
