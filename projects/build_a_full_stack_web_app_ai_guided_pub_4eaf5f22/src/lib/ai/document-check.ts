@@ -261,7 +261,10 @@ export async function verifySignedDeclaration(input: {
   try {
     response = await fetchUpstreamJson(
       '/chat/completions',
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body },
+      // Marketplace keys are scoped per model: the vision model bills on its
+      // own VISION_API_KEY (OPENAI_API_KEY fallback), not the text LLM's key.
+      { service: 'vision' }
     );
   } catch {
     // Any config/network/timeout problem degrades to manual review rather than

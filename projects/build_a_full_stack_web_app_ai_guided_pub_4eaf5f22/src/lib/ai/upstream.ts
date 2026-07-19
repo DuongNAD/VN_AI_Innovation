@@ -69,7 +69,7 @@ function buildUpstreamUrl(path: string): URL {
 export async function fetchUpstreamJson(
   path: string,
   init: { method: string; headers?: Record<string, string>; body?: BodyInit },
-  opts?: { timeoutMs?: number; maxBytes?: number }
+  opts?: { timeoutMs?: number; maxBytes?: number; service?: AiService }
 ): Promise<unknown> {
   const url = buildUpstreamUrl(path);
 
@@ -83,7 +83,7 @@ export async function fetchUpstreamJson(
 
   let res: Response;
   try {
-    const key = getServiceApiKey(PATH_SERVICE[path]);
+    const key = getServiceApiKey(opts?.service ?? PATH_SERVICE[path]);
     res = await fetch(url.href, {
       method: init.method,
       headers: {

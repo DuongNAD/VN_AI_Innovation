@@ -67,12 +67,16 @@ export function getAiProvider(): 'mock' | 'openai' {
   return process.env.AI_PROVIDER === 'openai' ? 'openai' : 'mock';
 }
 
-export type AiService = 'llm' | 'stt' | 'tts';
+export type AiService = 'llm' | 'stt' | 'tts' | 'vision';
 
 const SERVICE_KEY_VARS: Record<AiService, string> = {
   llm: 'LLM_API_KEY',
   stt: 'STT_API_KEY',
   tts: 'TTS_API_KEY',
+  // Marketplaces issue one key per model, so the vision model (used for the
+  // signed-declaration check) carries its own key. Deliberately NOT validated
+  // in validateConfig: vision is optional and degrades to a SKIPPED verdict.
+  vision: 'VISION_API_KEY',
 };
 
 /**
