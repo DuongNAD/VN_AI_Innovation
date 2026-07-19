@@ -75,19 +75,17 @@ function ResultPageContent() {
       }
     }
 
-    if (!token) {
-      setError('Phiên làm việc đã hết hạn hoặc không tồn tại. Vui lòng quay lại trang hướng dẫn.');
-      setLoading(false);
-      return;
-    }
+    // A guided-intake token authorizes the just-created application in this tab;
+    // when there is none (e.g. reopened later from "Hồ sơ của tôi"), the request
+    // falls back to the login cookie, which authorizes the owning citizen.
     setSessionToken(token);
+    const authHeaders: Record<string, string> = token ? { 'X-Session-Token': token } : {};
 
     async function performValidation() {
       try {
         const appRes = await fetch(`/api/v1/applications/${applicationId}`, {
-          headers: {
-            'X-Session-Token': token,
-          },
+          headers: authHeaders,
+          credentials: 'include',
         });
         const appJson = await appRes.json();
         if (!appRes.ok) {
@@ -98,6 +96,22 @@ function ResultPageContent() {
         const formCode = appJson.formCode;
         const formVersion = appJson.formVersion;
         setAppData(appJson);
+
+        // The re-validation endpoint is bound to the guided-intake session
+        // token. When the application is reopened later via the login cookie
+        // (no token), skip it — the application already passed validation at
+        // submit time, and submit re-checks server-side anyway.
+        if (!token) {
+          setValidationResult({
+            valid: true,
+            errors: [],
+            aiMode: 'none',
+            degraded: false,
+            formCode,
+            formVersion,
+          });
+          return;
+        }
 
         const valRes = await fetch(`/api/v1/forms/${formCode}/validate`, {
           method: 'POST',

@@ -31,9 +31,12 @@ async function requireAttachmentAccess(
   req: Request,
   applicationId: string
 ): Promise<void> {
-  if (req.headers.get('x-session-token')) {
+  // Owner first — via the guided-intake token or the logged-in owner's cookie.
+  try {
     await loadOwnedApplication(applicationId, req);
     return;
+  } catch {
+    // Not the owner; fall through to the staff-review path.
   }
 
   await requireStaffRole(

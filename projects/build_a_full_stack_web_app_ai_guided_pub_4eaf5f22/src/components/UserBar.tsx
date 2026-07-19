@@ -184,23 +184,42 @@ export default function UserBar({ homeHref, user, loginNext }: Props) {
 
                 <div className="p-1.5">
                   {homeHref === '/user' ? (
-                    <Link
-                      href="/user/profile"
-                      role="menuitem"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-brand-50 hover:text-brand-700"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-[18px] text-slate-400">
-                        <circle cx="12" cy="8" r="3.4" stroke="currentColor" strokeWidth="1.7" />
-                        <path
-                          d="M5.5 19c.8-3 3.4-4.6 6.5-4.6s5.7 1.6 6.5 4.6"
-                          stroke="currentColor"
-                          strokeWidth="1.7"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                      Cài đặt tài khoản
-                    </Link>
+                    <>
+                      <Link
+                        href="/user/applications"
+                        role="menuitem"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-brand-50 hover:text-brand-700"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-[18px] text-slate-400">
+                          <path
+                            d="M7 4h7l4 4v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"
+                            stroke="currentColor"
+                            strokeWidth="1.7"
+                            strokeLinejoin="round"
+                          />
+                          <path d="M13 4v5h5M9 13h6M9 16h6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        Hồ sơ của tôi
+                      </Link>
+                      <Link
+                        href="/user/profile"
+                        role="menuitem"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-brand-50 hover:text-brand-700"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-[18px] text-slate-400">
+                          <circle cx="12" cy="8" r="3.4" stroke="currentColor" strokeWidth="1.7" />
+                          <path
+                            d="M5.5 19c.8-3 3.4-4.6 6.5-4.6s5.7 1.6 6.5 4.6"
+                            stroke="currentColor"
+                            strokeWidth="1.7"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        Cài đặt tài khoản
+                      </Link>
+                    </>
                   ) : null}
 
                   <button

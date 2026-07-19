@@ -131,6 +131,11 @@ model Application {
   session       Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   formVersionId String
   formVersion   FormVersion @relation(fields: [formVersionId], references: [id], onDelete: Cascade)
+  /// Optional owning citizen account. Set when the application is created while
+  /// logged in, so the citizen can find it later under "Hồ sơ của tôi" via their
+  /// login cookie. Null for anonymous guided-intake sessions.
+  userId        String?
+  user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   // DRAFT -> SUBMITTED -> APPROVED | RETURNED (RETURNED can be edited and re-submitted)
   status        String      @default("DRAFT")
   dataJson      Json
@@ -146,6 +151,7 @@ model Application {
   @@index([sessionId])
   @@index([formVersionId])
   @@index([status])
+  @@index([userId])
 }
 
 /// Private files uploaded for file fields in an application.
@@ -261,6 +267,7 @@ model User {
   loginSessions LoginSession[]
   oauthAccounts OAuthAccount[]
   identityDocument IdentityDocument?
+  applications  Application[]
 }
 
 /// Encrypted temporary images of the citizen's identity card.

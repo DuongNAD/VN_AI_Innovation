@@ -6,6 +6,7 @@ import { requireSessionToken } from '@/lib/auth';
 import { getProvider } from '@/lib/data-provider';
 import { sanitizeFormData } from '@/lib/rule-engine';
 import { buildIdempotencyKey, withIdempotency } from '@/lib/idempotency';
+import { getAuthUserFromRequest } from '@/lib/login-auth';
 
 export const POST = handleRoute(async (req: Request) => {
   enforceRateLimit('applications', req);
@@ -66,6 +67,11 @@ export const POST = handleRoute(async (req: Request) => {
     }
   }
 
+  // Link the application to the logged-in citizen (if any) so they can reopen it
+  // later under "Hồ sơ của tôi"; anonymous guided-intake sessions leave it null.
+  const authUser = await getAuthUserFromRequest(req);
+  const ownerId = authUser?.role === 'user' ? authUser.id : null;
+
   const key = buildIdempotencyKey({
     operation: 'application-create',
     resourceId: sessionId,
@@ -79,6 +85,7 @@ export const POST = handleRoute(async (req: Request) => {
       data: {
         sessionId,
         formVersionId: active.id,
+        userId: ownerId,
         status: 'DRAFT',
         dataJson: prefill as any,
       },

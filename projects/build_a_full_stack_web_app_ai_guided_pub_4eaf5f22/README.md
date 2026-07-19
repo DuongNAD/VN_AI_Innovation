@@ -61,6 +61,13 @@ từ chối chạy lệnh này để tránh ghi đè dữ liệu vận hành. Ch
 `ALLOW_DEMO_SEED=1` trong một môi trường production dùng thử, có chủ đích và có thể
 xóa bỏ hoàn toàn.
 
+**Tài khoản demo đã có sẵn dữ liệu đầy đủ:** đăng nhập cổng công dân bằng
+`congdan` / `UserDemo123!` — tài khoản này đã được điền **hồ sơ cá nhân đầy đủ** và có
+sẵn **hai hồ sơ** trong mục **“Hồ sơ của tôi”**: một hồ sơ đã duyệt (AI đối chiếu tên
+khớp) và một hồ sơ chờ duyệt (AI phát hiện tên trên tờ khai ký chưa khớp). Cùng hai hồ
+sơ này hiển thị trong hàng chờ của cán bộ (`quanly` / `ManagerDemo123!`). Chạy lại riêng
+phần dữ liệu này bằng `npm run db:seed-demo`.
+
 Container production sử dụng `npm run db:bootstrap`: dữ liệu demo chỉ được nạp khi
 cơ sở dữ liệu chưa có thủ tục nào. Khi đã có dữ liệu, bước bootstrap sẽ tự động bỏ
 qua và không ghi đè cấu hình đang vận hành.

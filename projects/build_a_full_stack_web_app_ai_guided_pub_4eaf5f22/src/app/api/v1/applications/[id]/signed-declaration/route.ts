@@ -26,11 +26,13 @@ import type { Prisma } from '@prisma/client';
 
 const FIELD = SIGNED_DECLARATION_FIELD_ID;
 
-/** Owner (X-Session-Token) or a reviewing officer may read the signed copy. */
+/** Owner (session token or login cookie) or a reviewing officer may read the signed copy. */
 async function requireSignedDeclarationAccess(req: Request, applicationId: string): Promise<void> {
-  if (req.headers.get('x-session-token')) {
+  try {
     await loadOwnedApplication(applicationId, req);
     return;
+  } catch {
+    // Not the owner; fall through to the staff-review path.
   }
 
   await requireStaffRole(
