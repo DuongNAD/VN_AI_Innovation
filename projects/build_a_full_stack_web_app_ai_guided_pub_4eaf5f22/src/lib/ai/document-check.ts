@@ -3,7 +3,7 @@ import { logAiUsage } from './usage';
 import { getAiProvider } from '@/lib/config';
 import type { FieldDef } from '@/lib/schema-guards';
 import {
-  PdfVisionError,
+  isPdfVisionError,
   renderPdfPagesForVision,
 } from '@/lib/ai/pdf-vision';
 
@@ -326,7 +326,7 @@ export async function verifySignedDeclaration(input: {
     try {
       visionImages = await renderPdfPagesForVision(input.bytes);
     } catch (error) {
-      if (error instanceof PdfVisionError && error.kind === 'invalid') {
+      if (isPdfVisionError(error) && error.kind === 'invalid') {
         return rejectedPdf(error.message, checkedAt);
       }
       console.error(
@@ -334,7 +334,9 @@ export async function verifySignedDeclaration(input: {
         error instanceof Error ? error.message : String(error)
       );
       return skipped(
-        'Máy chủ tạm thời chưa thể chuyển PDF thành ảnh để kiểm tra.',
+        isPdfVisionError(error)
+          ? error.message
+          : 'Máy chủ tạm thời chưa thể chuyển PDF thành ảnh để kiểm tra.',
         checkedAt
       );
     }
@@ -451,7 +453,7 @@ export async function verifySupportingDocument(input: {
     try {
       visionImages = await renderPdfPagesForVision(input.bytes);
     } catch (error) {
-      if (error instanceof PdfVisionError && error.kind === 'invalid') {
+      if (isPdfVisionError(error) && error.kind === 'invalid') {
         return supportingRejected(error.message, checkedAt);
       }
       console.error(
@@ -459,7 +461,9 @@ export async function verifySupportingDocument(input: {
         error instanceof Error ? error.message : String(error)
       );
       return supportingSkipped(
-        'Máy chủ chưa thể chuyển PDF thành ảnh để kiểm tra nội dung.',
+        isPdfVisionError(error)
+          ? error.message
+          : 'Máy chủ chưa thể chuyển PDF thành ảnh để kiểm tra nội dung.',
         checkedAt
       );
     }

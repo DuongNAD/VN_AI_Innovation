@@ -7,7 +7,11 @@ const MAX_PDF_PAGES = 20;
 const MAX_RENDERED_PAGES = 6;
 const MAX_RENDERED_IMAGE_BYTES = 4 * 1024 * 1024;
 const MAX_RENDERED_TOTAL_BYTES = 12 * 1024 * 1024;
-const POPPLER_TIMEOUT_MS = 20_000;
+// A scanned declaration can be considerably heavier after it has been
+// downloaded, signed and scanned again. Keep these bounded, but do not apply
+// the very small defaults that are suitable only for simple generated PDFs.
+const POPPLER_TIMEOUT_MS = 45_000;
+const POPPLER_MAX_OUTPUT_BYTES = 2 * 1024 * 1024;
 
 export class PdfVisionError extends Error {
   constructor(
@@ -16,7 +20,25 @@ export class PdfVisionError extends Error {
   ) {
     super(message);
     this.name = 'PdfVisionError';
+    // Keep instanceof reliable when this module crosses a transpiled/server
+    // bundle boundary (notably during Next.js development hot reloads).
+    Object.setPrototypeOf(this, PdfVisionError.prototype);
   }
+}
+
+export function isPdfVisionError(error: unknown): error is PdfVisionError {
+  if (error instanceof PdfVisionError) {
+    return true;
+  }
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+  const candidate = error as { name?: unknown; kind?: unknown; message?: unknown };
+  return (
+    candidate.name === 'PdfVisionError' &&
+    (candidate.kind === 'invalid' || candidate.kind === 'unavailable') &&
+    typeof candidate.message === 'string'
+  );
 }
 
 type CommandResult = { stdout: string; stderr: string };
@@ -45,7 +67,7 @@ function runPoppler(command: 'pdfinfo' | 'pdftoppm', args: string[]): Promise<Co
       {
         encoding: 'utf8',
         timeout: POPPLER_TIMEOUT_MS,
-        maxBuffer: 256 * 1024,
+        maxBuffer: POPPLER_MAX_OUTPUT_BYTES,
         env: {
           PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
           LC_ALL: 'C',
@@ -62,15 +84,29 @@ function runPoppler(command: 'pdfinfo' | 'pdftoppm', args: string[]): Promise<Co
           return;
         }
         const code = (error as NodeJS.ErrnoException).code;
-        if (
-          code === 'ENOENT' ||
-          code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER' ||
-          (error as NodeJS.ErrnoException & { killed?: boolean }).killed
-        ) {
+        if (code === 'ENOENT') {
           reject(
             new PdfVisionError(
               'unavailable',
               'Máy chủ chưa tìm thấy công cụ Poppler để kiểm tra PDF.'
+            )
+          );
+          return;
+        }
+        if (code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
+          reject(
+            new PdfVisionError(
+              'unavailable',
+              'PDF tạo ra quá nhiều dữ liệu khi chuyển đổi; máy chủ chưa thể kiểm tra tệp này.'
+            )
+          );
+          return;
+        }
+        if ((error as NodeJS.ErrnoException & { killed?: boolean }).killed) {
+          reject(
+            new PdfVisionError(
+              'unavailable',
+              'PDF mất quá nhiều thời gian để chuyển đổi; máy chủ chưa thể kiểm tra tệp này.'
             )
           );
           return;
