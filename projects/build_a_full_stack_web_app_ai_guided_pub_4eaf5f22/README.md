@@ -89,6 +89,7 @@ Mô tả các biến cấu hình trong tệp `.env.example`:
 | `OPENAI_API_KEY` | `(Trống)` | Khóa API dùng chung cho cả 3 dịch vụ (fallback khi không đặt khóa riêng từng dịch vụ). |
 | `LLM_API_KEY` / `STT_API_KEY` / `TTS_API_KEY` | `(Trống)` | Khóa API riêng từng dịch vụ, ưu tiên hơn `OPENAI_API_KEY` — phù hợp với FPT AI Marketplace vốn cấp khóa theo từng model. |
 | `VISION_API_KEY` / `VISION_MODEL` | `(Trống)` / `gpt-4o-mini` | Khóa và mô hình thị giác dùng để kiểm tra ảnh hoặc PDF tờ khai đã ký. PDF được render bằng Poppler trước khi gửi kiểm tra. |
+| `POPPLER_BIN_DIR` | `(Trống)` | Thư mục tuyệt đối chứa `pdfinfo` và `pdftoppm` (`.exe` trên Windows). Chỉ cần đặt khi tiến trình web không tìm thấy Poppler qua `PATH`; container Docker đã cài sẵn nên để trống. |
 | `OPENAI_BASE_URL` | `https://mkp-api.fptcloud.com/v1` | URL gốc của endpoint tương thích OpenAI (HTTPS bắt buộc trong production; production chỉ cho phép `api.openai.com` hoặc `mkp-api.fptcloud.com`). |
 | `LLM_MODEL` | `DeepSeek-V4-Flash` | Mô hình ngôn ngữ dùng cho phân loại ý định và giải thích lỗi logic. |
 | `STT_MODEL` | `FPT.AI-whisper-large-v3-turbo` | Mô hình nhận dạng giọng nói thành văn bản (Whisper tinh chỉnh cho tiếng Việt). |

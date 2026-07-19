@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 
 const MAX_PDF_PAGES = 20;
 const MAX_RENDERED_PAGES = 6;
@@ -21,10 +21,26 @@ export class PdfVisionError extends Error {
 
 type CommandResult = { stdout: string; stderr: string };
 
+export function resolvePopplerExecutable(command: 'pdfinfo' | 'pdftoppm'): string {
+  const configuredDir = process.env.POPPLER_BIN_DIR?.trim();
+  if (!configuredDir) {
+    return command;
+  }
+  if (!isAbsolute(configuredDir)) {
+    throw new PdfVisionError(
+      'unavailable',
+      'Cấu hình thư mục Poppler phải là đường dẫn tuyệt đối.'
+    );
+  }
+  const executable = process.platform === 'win32' ? `${command}.exe` : command;
+  return join(configuredDir, executable);
+}
+
 function runPoppler(command: 'pdfinfo' | 'pdftoppm', args: string[]): Promise<CommandResult> {
   return new Promise((resolve, reject) => {
+    const executable = resolvePopplerExecutable(command);
     execFile(
-      command,
+      executable,
       args,
       {
         encoding: 'utf8',
@@ -34,6 +50,10 @@ function runPoppler(command: 'pdfinfo' | 'pdftoppm', args: string[]): Promise<Co
           PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
           LC_ALL: 'C',
           NODE_ENV: process.env.NODE_ENV || 'production',
+          // Fontconfig is used by Poppler even for image-only PDFs. Without a
+          // writable cache it can emit hundreds of KB of warnings and make
+          // execFile abort with ERR_CHILD_PROCESS_STDIO_MAXBUFFER.
+          XDG_CACHE_HOME: tmpdir(),
         },
       },
       (error, stdout, stderr) => {
@@ -42,15 +62,25 @@ function runPoppler(command: 'pdfinfo' | 'pdftoppm', args: string[]): Promise<Co
           return;
         }
         const code = (error as NodeJS.ErrnoException).code;
-        if (code === 'ENOENT') {
+        if (
+          code === 'ENOENT' ||
+          code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER' ||
+          (error as NodeJS.ErrnoException & { killed?: boolean }).killed
+        ) {
           reject(
             new PdfVisionError(
               'unavailable',
-              'Máy chủ chưa có công cụ đọc PDF để kiểm tra tự động.'
+              'Máy chủ chưa tìm thấy công cụ Poppler để kiểm tra PDF.'
             )
           );
           return;
         }
+        console.error('Poppler command failed:', {
+          command,
+          code: code ?? 'UNKNOWN',
+          signal: (error as NodeJS.ErrnoException & { signal?: string }).signal ?? null,
+          stderr: String(stderr || '').trim().slice(0, 500),
+        });
         reject(
           new PdfVisionError(
             'invalid',
@@ -154,6 +184,16 @@ export async function renderPdfPagesForVision(
     }
     return rendered;
   } finally {
-    await rm(workDir, { recursive: true, force: true });
+    // Cleanup is best-effort. On Windows, antivirus/indexing can briefly retain
+    // a handle after Poppler exits; that must not turn a successful render into
+    // a failed citizen upload.
+    try {
+      await rm(workDir, { recursive: true, force: true });
+    } catch (error) {
+      console.error(
+        'PDF vision temporary-directory cleanup failed:',
+        error instanceof Error ? error.message : String(error)
+      );
+    }
   }
 }

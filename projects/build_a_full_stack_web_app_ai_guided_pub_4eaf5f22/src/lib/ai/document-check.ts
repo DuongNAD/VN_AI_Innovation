@@ -329,8 +329,12 @@ export async function verifySignedDeclaration(input: {
       if (error instanceof PdfVisionError && error.kind === 'invalid') {
         return rejectedPdf(error.message, checkedAt);
       }
+      console.error(
+        'Signed declaration PDF renderer unavailable:',
+        error instanceof Error ? error.message : String(error)
+      );
       return skipped(
-        'Máy chủ chưa thể chuyển PDF thành ảnh để kiểm tra; cán bộ sẽ xem trực tiếp bản đã ký.',
+        'Máy chủ tạm thời chưa thể chuyển PDF thành ảnh để kiểm tra.',
         checkedAt
       );
     }
@@ -341,7 +345,7 @@ export async function verifySignedDeclaration(input: {
   }
 
   if (getAiProvider() !== 'openai') {
-    return skipped('Bản demo không bật AI nên tờ khai chưa được kiểm tra tự động; cán bộ sẽ xem trực tiếp.', checkedAt);
+    return skipped('Bản demo không bật AI nên chưa thể kiểm tra tờ khai tự động.', checkedAt);
   }
 
   const expectedNames = (input.expectedNames ?? []).slice(0, MAX_SIGNER_NAMES);
@@ -383,9 +387,9 @@ export async function verifySignedDeclaration(input: {
       { service: 'vision' }
     );
   } catch {
-    // Any config/network/timeout problem degrades to manual review rather than
-    // blocking the citizen on infrastructure.
-    return skipped('Chưa kiểm tra được tự động lúc này; cán bộ sẽ xem trực tiếp bản đã ký.', checkedAt);
+    // Any config/network/timeout problem becomes SKIPPED; the upload route keeps
+    // unchecked files out of the review queue and asks the citizen to retry.
+    return skipped('Dịch vụ kiểm tra tờ khai tự động tạm thời không khả dụng.', checkedAt);
   }
 
   const usage = response?.usage;
@@ -399,13 +403,13 @@ export async function verifySignedDeclaration(input: {
 
   const reply = response?.choices?.[0]?.message?.content;
   if (typeof reply !== 'string') {
-    return skipped('Chưa đọc được kết quả kiểm tra tự động; cán bộ sẽ xem trực tiếp bản đã ký.', checkedAt);
+    return skipped('Chưa đọc được kết quả kiểm tra tờ khai tự động.', checkedAt);
   }
   let parsed: unknown;
   try {
     parsed = JSON.parse(reply);
   } catch {
-    return skipped('Chưa đọc được kết quả kiểm tra tự động; cán bộ sẽ xem trực tiếp bản đã ký.', checkedAt);
+    return skipped('Chưa đọc được kết quả kiểm tra tờ khai tự động.', checkedAt);
   }
 
   return decideSignatureCheck(parsed, VISION_MODEL, checkedAt);
@@ -450,6 +454,10 @@ export async function verifySupportingDocument(input: {
       if (error instanceof PdfVisionError && error.kind === 'invalid') {
         return supportingRejected(error.message, checkedAt);
       }
+      console.error(
+        'Supporting document PDF renderer unavailable:',
+        error instanceof Error ? error.message : String(error)
+      );
       return supportingSkipped(
         'Máy chủ chưa thể chuyển PDF thành ảnh để kiểm tra nội dung.',
         checkedAt
