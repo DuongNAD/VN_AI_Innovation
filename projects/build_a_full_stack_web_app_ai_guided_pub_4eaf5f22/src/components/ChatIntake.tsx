@@ -88,6 +88,30 @@ const PROVINCES = [
 
 const DISCLAIMER = 'Thông tin do trợ lý cung cấp chỉ mang tính tham khảo, vui lòng đối chiếu với cơ quan có thẩm quyền trước khi nộp hồ sơ.';
 
+export const INSECURE_MICROPHONE_MESSAGE =
+  'Trình duyệt chỉ cho phép dùng micro trên kết nối HTTPS. Vui lòng mở trang bằng đường dẫn HTTPS rồi thử lại.';
+
+export function microphoneErrorMessage(error: unknown): string {
+  const name =
+    error && typeof error === 'object' && 'name' in error
+      ? String((error as { name?: unknown }).name)
+      : '';
+
+  if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+    return 'Quyền dùng micro đang bị chặn. Hãy bấm biểu tượng ổ khóa cạnh địa chỉ trang, cho phép Microphone rồi tải lại trang.';
+  }
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+    return 'Không tìm thấy micro trên thiết bị. Hãy kiểm tra micro đã được kết nối và được Windows nhận diện.';
+  }
+  if (name === 'NotReadableError' || name === 'TrackStartError') {
+    return 'Micro đang được ứng dụng khác sử dụng hoặc Windows chưa cho trình duyệt truy cập. Hãy đóng ứng dụng đang dùng micro rồi thử lại.';
+  }
+  if (name === 'SecurityError') {
+    return INSECURE_MICROPHONE_MESSAGE;
+  }
+  return 'Không sử dụng được micro trên thiết bị này. Bạn có thể gõ nội dung vào ô bên dưới.';
+}
+
 function safeHttpsUrl(raw: unknown): string | null {
   if (typeof raw !== 'string') {
     return null;
@@ -210,6 +234,7 @@ export default function ChatIntake({
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastVoiceErrorRef = useRef<string | null>(null);
 
   // Sentinel ref for auto scroll
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -587,58 +612,33 @@ export default function ChatIntake({
 
     setRecordingDuration(0);
 
-    if (SpeechRecognition) {
-      try {
-        const rec = new SpeechRecognition();
-        rec.lang = 'vi-VN';
-        rec.interimResults = false;
-        rec.maxAlternatives = 1;
-
-        rec.onstart = () => {
-          setRecording(true);
-          // Start timer
-          recordingTimerRef.current = setInterval(() => {
-            setRecordingDuration((prev) => prev + 1);
-          }, 1000);
-        };
-
-        rec.onresult = (event: any) => {
-          const transcript = event.results[0][0].transcript;
-          if (transcript) {
-            setInput(transcript);
-          }
-        };
-
-        rec.onerror = (event: any) => {
-          setRecording(false);
-          if (recordingTimerRef.current) {
-            clearInterval(recordingTimerRef.current);
-          }
-          const code = event?.error;
-          // 'no-speech' = người dùng im lặng, 'aborted' = tự dừng — không phải
-          // lỗi thiết bị, đừng dọa người dùng là micro hỏng.
-          if (code === 'no-speech') {
-            appendBotMessage('Mình chưa nghe rõ. Bạn bấm micro nói lại, hoặc gõ nội dung vào ô bên dưới.');
-          } else if (code !== 'aborted') {
-            console.error(event);
-            appendBotMessage('Không sử dụng được micro trên thiết bị này. Bạn có thể gõ nội dung vào ô bên dưới.');
-          }
-        };
-
-        rec.onend = () => {
-          setRecording(false);
-          if (recordingTimerRef.current) {
-            clearInterval(recordingTimerRef.current);
-          }
-        };
-
-        recognitionRef.current = rec;
-        rec.start();
-      } catch (e) {
-        appendBotMessage('Không sử dụng được micro trên thiết bị này. Bạn có thể gõ nội dung vào ô bên dưới.');
-        setRecording(false);
+    const appendVoiceError = (message: string) => {
+      // Repeated clicks on a blocked microphone previously flooded the chat
+      // with the same error card. Keep one actionable message until capture
+      // succeeds or the reason changes.
+      if (lastVoiceErrorRef.current !== message) {
+        lastVoiceErrorRef.current = message;
+        appendBotMessage(message);
       }
-    } else if (typeof navigator !== 'undefined' && navigator.mediaDevices && WavRecorder.isSupported()) {
+    };
+
+    // Browsers make localhost a special secure origin, which is why this can
+    // work on the Mac hosting the app but fail from a Windows PC opening the
+    // same server through http://<LAN-IP>. No client code can bypass that
+    // browser security rule.
+    if (typeof window !== 'undefined' && window.isSecureContext === false) {
+      appendVoiceError(INSECURE_MICROPHONE_MESSAGE);
+      return;
+    }
+
+    // Prefer a real microphone capture sent to our own STT endpoint. Chromium
+    // variants such as Cốc Cốc may expose webkitSpeechRecognition even when
+    // their browser-managed recognition service is unavailable.
+    if (
+      typeof navigator !== 'undefined' &&
+      navigator.mediaDevices?.getUserMedia &&
+      WavRecorder.isSupported()
+    ) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaStreamRef.current = stream;
@@ -650,6 +650,8 @@ export default function ChatIntake({
 
         mediaRecorder.onstop = async (audioBlob: Blob) => {
           stream.getTracks().forEach((track) => track.stop());
+          mediaStreamRef.current = null;
+          mediaRecorderRef.current = null;
 
           if (audioBlob.size === 0) return;
 
@@ -667,14 +669,19 @@ export default function ChatIntake({
 
           if (res.ok) {
             if (res.data && res.data.text) {
+              lastVoiceErrorRef.current = null;
               setInput(res.data.text);
             }
           } else {
-            appendBotMessage(res.message);
+            appendVoiceError(res.message);
           }
         };
 
         mediaRecorder.start();
+        if (mediaRecorder.state !== 'recording') {
+          throw new Error('WAV_RECORDER_START_FAILED');
+        }
+        lastVoiceErrorRef.current = null;
         setRecording(true);
 
         // Start timer
@@ -694,11 +701,69 @@ export default function ChatIntake({
 
       } catch (err) {
         console.error(err);
-        appendBotMessage('Không sử dụng được micro trên thiết bị này. Bạn có thể gõ nội dung vào ô bên dưới.');
+        mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+        mediaRecorderRef.current = null;
+        appendVoiceError(microphoneErrorMessage(err));
+        setRecording(false);
+      }
+    } else if (SpeechRecognition) {
+      // Legacy fallback for browsers that implement recognition but do not
+      // expose Web Audio capture.
+      try {
+        const rec = new SpeechRecognition();
+        rec.lang = 'vi-VN';
+        rec.interimResults = false;
+        rec.maxAlternatives = 1;
+
+        rec.onstart = () => {
+          lastVoiceErrorRef.current = null;
+          setRecording(true);
+          recordingTimerRef.current = setInterval(() => {
+            setRecordingDuration((prev) => prev + 1);
+          }, 1000);
+        };
+
+        rec.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          if (transcript) {
+            setInput(transcript);
+          }
+        };
+
+        rec.onerror = (event: any) => {
+          setRecording(false);
+          if (recordingTimerRef.current) {
+            clearInterval(recordingTimerRef.current);
+          }
+          const code = event?.error;
+          if (code === 'no-speech') {
+            appendVoiceError('Mình chưa nghe rõ. Bạn bấm micro nói lại, hoặc gõ nội dung vào ô bên dưới.');
+          } else if (code === 'not-allowed' || code === 'service-not-allowed') {
+            appendVoiceError(microphoneErrorMessage({ name: 'NotAllowedError' }));
+          } else if (code === 'audio-capture') {
+            appendVoiceError(microphoneErrorMessage({ name: 'NotFoundError' }));
+          } else if (code !== 'aborted') {
+            console.error(event);
+            appendVoiceError(microphoneErrorMessage(event));
+          }
+        };
+
+        rec.onend = () => {
+          setRecording(false);
+          if (recordingTimerRef.current) {
+            clearInterval(recordingTimerRef.current);
+          }
+        };
+
+        recognitionRef.current = rec;
+        rec.start();
+      } catch (error) {
+        appendVoiceError(microphoneErrorMessage(error));
         setRecording(false);
       }
     } else {
-      appendBotMessage('Không sử dụng được micro trên thiết bị này. Bạn có thể gõ nội dung vào ô bên dưới.');
+      appendVoiceError(microphoneErrorMessage(null));
     }
   };
 
